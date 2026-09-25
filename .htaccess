@@ -1,0 +1,63 @@
+# ===========================================================================
+#  The Pie Technologies — Apache configuration
+# ===========================================================================
+Options -Indexes
+RewriteEngine On
+
+# ----------------------------- Force HTTPS ---------------------------------
+RewriteCond %{HTTPS} off
+RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# --------------------- Remove .php extension (pretty URLs) -----------------
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^(.+)$ $1.php [L,QSA]
+
+# ---------------------- Blog single post clean URL -------------------------
+RewriteRule ^blog/([a-z0-9-]+)/?$ blog-single.php?slug=$1 [L,QSA]
+
+# ------------------- Portfolio case study clean URL ------------------------
+RewriteRule ^portfolio/([a-z0-9-]+)/?$ portfolio/case-study.php?slug=$1 [L,QSA]
+
+# ---------------- Protect includes and uploads PHP execution ---------------
+RewriteRule ^includes/.*\.php$ - [F,L]
+RewriteRule ^uploads/.*\.(php|php[0-9]|phtml|pl|py|cgi)$ - [F,L]
+
+# --------------------------- Block sensitive files -------------------------
+<FilesMatch "\.(sql|log|md|ini|sh)$">
+    Require all denied
+</FilesMatch>
+<FilesMatch "^(config\.php)$">
+    Require all denied
+</FilesMatch>
+
+# ------------------------------ Custom 404 ---------------------------------
+ErrorDocument 404 /404.php
+
+# --------------------------- Gzip compression ------------------------------
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml application/javascript application/json image/svg+xml
+</IfModule>
+
+# ---------------------------- Browser caching ------------------------------
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/jpg "access plus 1 year"
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/webp "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType font/woff2 "access plus 1 year"
+</IfModule>
+
+# ---------------------------- Security headers -----------------------------
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options nosniff
+    Header always set X-Frame-Options SAMEORIGIN
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+</IfModule>
