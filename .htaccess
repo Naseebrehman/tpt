@@ -4,6 +4,11 @@
 Options -Indexes
 RewriteEngine On
 
+# Never expose Git metadata or other hidden files if the repository is cloned
+# directly into Hostinger's public_html document root. Keep ACME challenge files
+# available for SSL certificate validation.
+RewriteRule (^|/)\.(?!well-known(?:/|$)) - [F,L]
+
 # ----------------------------- Force HTTPS ---------------------------------
 RewriteCond %{HTTPS} off
 RewriteCond %{HTTP:X-Forwarded-Proto} !=https

@@ -10,28 +10,41 @@ Swiper testimonials, Chart.js graphs, AOS reveals — all with graceful CDN fall
 
 ---
 
-## 1. Installation (Hostinger / any cPanel-style PHP host)
+## 1. Installation and Hostinger Git deployment
 
-1. **Upload all files** to `public_html` via File Manager or FTP (keep folder structure).
-2. **Create a MySQL database** in hPanel → Databases. Note name, user and password.
-3. **Import `database.sql`** via phpMyAdmin (select your database → Import → upload the file).
-4. **Edit `/includes/config.php`** and set `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS`.
-   (`SITE_URL` should stay your real domain — it drives canonical/OG tags.)
-5. **Folder permissions:** `/uploads/` → `755` (and its subfolders). PHP files stay `644`.
-6. **Visit yoursite.com** — the frontend should render with the seeded demo content.
-7. **Visit `yoursite.com/admin/login.php`**.
-8. **Login:** `admin@thepietechnologies.com` / `Admin@123`
-9. **IMMEDIATELY** go to *Settings → Change Password* and set your own.
-10. **Add SMTP credentials** in *Settings → SMTP*, then click **Send Test Email**.
-11. **Add your Gemini API key** in *Settings → Gemini API*, then click **Test Connection**
-    (free key from Google AI Studio). This powers PIE Bot.
-12. **Replace placeholder images** in `/assets/images/` with real photography
-    (keep the same file names and the site updates everywhere instantly).
-13. **Update agency info** in *Settings → Site Settings* (name, phone, email, address,
-    WhatsApp number, Analytics/Pixel IDs, founder name, OG image).
+This repository is already arranged as the **web document root**: `index.php`, `.htaccess`,
+`assets/`, `includes/`, `admin/`, and the other public PHP pages are at the repository root.
+There should not be another `public_html/` folder inside the repository. When connecting it in
+Hostinger hPanel → **Git**, set the deployment directory to the domain's document root:
+`public_html` (or `domains/your-domain.com/public_html` for an addon domain). Deploy the
+repository root contents there, not into `public_html/public_html`. The `.git` metadata is
+blocked from web requests by the included `.htaccess`.
 
-> The site degrades gracefully: before the database is configured, pages still render and
-> dynamic sections simply stay empty instead of throwing errors at visitors.
+1. In hPanel, connect this GitHub repository and select the branch you want to publish. Set
+   its destination to the correct domain document root as described above, then deploy.
+2. Confirm `index.php` and `.htaccess` are directly inside that document root. If your domain
+   uses a different document root, use that folder instead.
+3. **Create a MySQL database** in hPanel → Databases. Note the database name, user, password,
+   and host shown by Hostinger.
+4. **Import `database.sql`** through phpMyAdmin (select the new database → Import).
+5. In the deployed `includes/` folder, copy `config.local.php.example` to
+   `config.local.php` and enter your DB credentials and real domain. This live-only file is
+   ignored by Git, so future Git deployments will not overwrite it. Do not put production
+   credentials in a committed file. `DB_HOST` is often `localhost`, but use the host shown in
+   hPanel. Alternatively, configure the documented `TPT_*` environment variables.
+6. **Folder permissions:** `/uploads/` → `755` (and its subfolders); PHP files → `644`.
+   Ensure `/uploads/` is writable by PHP so admin uploads work.
+7. Visit your domain, then `your-domain.com/admin/login.php`.
+8. **Login:** `admin@thepietechnologies.com` / `Admin@123`, then immediately change the
+   password in the admin dashboard.
+9. Add SMTP credentials in *Settings → SMTP* and click **Send Test Email**.
+10. Add your Gemini API key in *Settings → Gemini API* and click **Test Connection**.
+11. Replace placeholder images in `/assets/images/` with real photography and update agency
+    information in *Settings → Site Settings*.
+
+> The site degrades gracefully if the database is not yet configured: public pages still render,
+> but database-backed content and admin features will not be available. Make sure the live-only
+> `includes/config.local.php` exists before launch.
 
 ---
 
@@ -69,12 +82,16 @@ to a friendly offline message if the API is unreachable or unconfigured.
 
 ---
 
-## 3. Configuration reference (`/includes/config.php`)
+## 3. Configuration reference
+
+Set deployment-specific values in the untracked `/includes/config.local.php` file (start from
+`config.local.php.example`) or provide the matching `TPT_*` environment variables. `config.php`
+contains safe defaults and computes the paths automatically.
 
 | Constant | Meaning |
 |---|---|
 | `APP_ENV` | `production` hides PHP errors (default). Use `development` while debugging. |
-| `DB_*` | MySQL credentials. |
+| `DB_*` | MySQL host, database name, username, and password. |
 | `SITE_URL` | Canonical domain for SEO/OG/sitemap. |
 | `PRETTY_URLS` | `true` = extension-less links (needs the bundled `.htaccess`). Set `false` on hosts without mod_rewrite. |
 | `BASE_URL` | Auto-detected, so sub-folder installs work too. |
