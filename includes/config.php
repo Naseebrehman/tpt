@@ -3,26 +3,47 @@
  * ---------------------------------------------------------------------------
  *  The Pie Technologies — Core configuration
  * ---------------------------------------------------------------------------
- *  Edit the database credentials below after importing database.sql.
+ *  Set deployment credentials in config.local.php (see the example file).
  *  Everything else in the site reads its configuration from the `settings`
  *  table in MySQL (see /admin/settings.php).
  * ---------------------------------------------------------------------------
  */
 
+/*
+ * Deployment overrides stay out of Git. On Hostinger, copy
+ * includes/config.local.php.example to includes/config.local.php and enter
+ * the database/domain values there. Environment variables are also supported.
+ */
+$pieLocalConfig = array();
+$pieLocalConfigFile = __DIR__ . '/config.local.php';
+if (is_file($pieLocalConfigFile)) {
+    $pieLoadedConfig = require $pieLocalConfigFile;
+    if (is_array($pieLoadedConfig)) {
+        $pieLocalConfig = $pieLoadedConfig;
+    }
+}
+$pieConfigValue = function ($key, $environmentVariable, $default) use ($pieLocalConfig) {
+    if (array_key_exists($key, $pieLocalConfig)) {
+        return $pieLocalConfig[$key];
+    }
+    $environmentValue = getenv($environmentVariable);
+    return $environmentValue !== false && $environmentValue !== '' ? $environmentValue : $default;
+};
+
 /* 'production' hides all PHP errors from visitors. Switch to 'development'
    only while debugging on a private server. */
-define('APP_ENV', 'production');
+define('APP_ENV', (string) $pieConfigValue('APP_ENV', 'TPT_APP_ENV', 'production'));
 
 /* ------------------------- Database (MySQL) ------------------------------ */
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'your_database');
-define('DB_USER', 'your_username');
-define('DB_PASS', 'your_password');
+define('DB_HOST', (string) $pieConfigValue('DB_HOST', 'TPT_DB_HOST', 'localhost'));
+define('DB_NAME', (string) $pieConfigValue('DB_NAME', 'TPT_DB_NAME', 'your_database'));
+define('DB_USER', (string) $pieConfigValue('DB_USER', 'TPT_DB_USER', 'your_username'));
+define('DB_PASS', (string) $pieConfigValue('DB_PASS', 'TPT_DB_PASS', 'your_password'));
 
 /* ------------------------- Site ------------------------------------------ */
-define('SITE_URL', 'https://thepietechnologies.com');   // canonical domain (SEO / OG tags)
-define('SITE_NAME', 'The Pie Technologies');
-define('ADMIN_EMAIL', 'admin@thepietechnologies.com');
+define('SITE_URL', rtrim((string) $pieConfigValue('SITE_URL', 'TPT_SITE_URL', 'https://thepietechnologies.com'), '/'));
+define('SITE_NAME', (string) $pieConfigValue('SITE_NAME', 'TPT_SITE_NAME', 'The Pie Technologies'));
+define('ADMIN_EMAIL', (string) $pieConfigValue('ADMIN_EMAIL', 'TPT_ADMIN_EMAIL', 'admin@thepietechnologies.com'));
 
 /* ------------------------- Paths ----------------------------------------- */
 define('BASE_PATH', dirname(__DIR__));                   // absolute filesystem path of the site root
@@ -32,7 +53,11 @@ define('VENDOR_PATH', BASE_PATH . '/vendor/');           // optional: composer (
 /* When true, links are generated without the .php extension (requires the
    bundled .htaccess / mod_rewrite). Set to false on servers without rewrite
    support and every link falls back to plain .php URLs. */
-define('PRETTY_URLS', true);
+$piePrettyUrls = $pieConfigValue('PRETTY_URLS', 'TPT_PRETTY_URLS', true);
+if (is_string($piePrettyUrls)) {
+    $piePrettyUrls = filter_var($piePrettyUrls, FILTER_VALIDATE_BOOLEAN);
+}
+define('PRETTY_URLS', (bool) $piePrettyUrls);
 
 /* Base URL of the install, detected automatically so the site also works in
    a sub-folder (e.g. https://host/~user/tpt/). */
