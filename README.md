@@ -42,13 +42,19 @@ blocked from web requests by the included `.htaccess`.
    uses a different document root, use that folder instead.
 3. **Create a MySQL database** in hPanel → Databases. Note the database name, user, password,
    and host shown by Hostinger.
-4. For a fresh installation, follow the guarded CLI installation in DEPLOYMENT.md.
-   For an existing installation, run migrations only; never reimport seed SQL.
-5. In the deployed `includes/` folder, copy `config.local.php.example` to
-   `config.local.php` and enter your DB credentials and real domain. This live-only file is
-   ignored by Git, so future Git deployments will not overwrite it. Do not put production
-   credentials in a committed file. `DB_HOST` is often `localhost`, but use the host shown in
-   hPanel. Alternatively, configure the documented `TPT_*` environment variables.
+4. For a fresh installation, run `php bin/cli.php install` over SSH — see the
+   "Fresh installation" section of DEPLOYMENT.md. It applies the schema
+   statement-by-statement, seeds starter content, and prompts for your own
+   admin email/password. For an existing installation, run
+   `php bin/cli.php migrate` only; never reimport seed SQL into production.
+5. Copy `config/config.local.php.example` to `config/config.local.php` and enter
+   your DB credentials (`DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS`) and real
+   domain. This is the only file that should hold live credentials. It is
+   ignored by Git, so future Git deployments will not overwrite it, and the
+   bundled `.htaccess` denies web access to it. `DB_HOST` is often `localhost`,
+   but use the host shown in hPanel. The legacy `includes/config.local.php`
+   location is still read if the new file does not exist. Alternatively,
+   configure the documented `TPT_*` environment variables.
 6. **Folder permissions:** `/uploads/` → `755` (and its subfolders); PHP files → `644`.
    Ensure `/uploads/` is writable by PHP so admin uploads work.
 7. Visit your domain, then `your-domain.com/admin/login.php`.

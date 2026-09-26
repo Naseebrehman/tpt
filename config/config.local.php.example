@@ -1,17 +1,28 @@
 <?php
 /**
- * Copy this file to config.local.php on the server and fill in your values.
- * config.local.php is intentionally ignored by Git so deploys never overwrite
- * your live secrets. Do not commit the copied file.
+ * ---------------------------------------------------------------------------
+ *  DEPLOYMENT CREDENTIALS — the ONLY file you edit with real values.
+ * ---------------------------------------------------------------------------
+ *  1. Copy this file to config/config.local.php   (same folder)
+ *         cp config/config.local.php.example config/config.local.php
+ *  2. Fill in the five values below from Hostinger:
+ *         hPanel → Databases → MySQL Databases  (and → Websites → PHP/DB details)
+ *  3. Run:  php bin/cli.php install
+ *
+ *  config/config.local.php is git-ignored: deploys never overwrite your live
+ *  secrets, and the file is blocked from web access by .htaccess.
+ *  The legacy location includes/config.local.php is still read if this file
+ *  does not exist. Do not commit real credentials anywhere.
+ * ---------------------------------------------------------------------------
  */
 return array(
-    'APP_ENV'    => 'production',
-    'DB_HOST'    => 'localhost',
+    'APP_ENV'    => 'production',              // 'production' hides PHP errors from visitors
+    'DB_HOST'    => 'localhost',               // Hostinger shows this as localhost or a mysql host
     'DB_NAME'    => 'YOUR_HOSTINGER_DATABASE_NAME',
     'DB_USER'    => 'YOUR_HOSTINGER_DATABASE_USER',
     'DB_PASS'    => 'YOUR_HOSTINGER_DATABASE_PASSWORD',
-    'SITE_URL'   => 'https://your-domain.com',
+    'SITE_URL'   => 'https://your-domain.com', // no trailing slash — used for links/canonicals
     'SITE_NAME'  => 'The Pie Technologies',
     'ADMIN_EMAIL'=> 'you@your-domain.com',
-    'PRETTY_URLS'=> true,
+    'PRETTY_URLS'=> true,                      // false only if mod_rewrite is unavailable
 );

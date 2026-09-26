@@ -50,18 +50,32 @@ is provided.
 
 ## Fresh installation
 
-1. Create an **empty** MySQL database in hPanel.
+1. Create an **empty** MySQL database in hPanel (Databases → MySQL Databases)
+   and note the database name, user, password and host it shows.
 2. Copy `config/config.local.php.example` to `config/config.local.php`; enter the
-   DB connection and canonical HTTPS SITE_URL. Keep APP_ENV production.
+   DB connection (`DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS`) and the canonical
+   HTTPS `SITE_URL`. Keep APP_ENV production. This file is the only place real
+   credentials go; it is git-ignored and blocked from web access.
 3. Run `php bin/cli.php install`. It prompts for the initial admin email and a
-   password of at least 12 characters. It creates the original schema, preserves
-   the original seed website content, then runs additive migrations. It does
+   password of at least 12 characters (bcrypt-hashed), verifies the database is
+   reachable, applies `database/schema-mysql.sql` **statement by statement**
+   (PDO cannot execute multi-statement scripts), imports the idempotent starter
+   content and default settings, then records the schema version. It does
    **not** install the legacy known-password admin account.
-4. Installation refuses any database that already contains tables. An installation
-   marker is also written under storage/runtime. There is intentionally no public
-   web installer and no remotely reachable installer switch.
-5. If installation fails partway through schema creation, inspect the error and
-   use a new empty staging database before retrying; never delete a live database.
+4. Safety behaviour: a database that is already installed (has an admin account)
+   is refused — use `php bin/cli.php migrate` for upgrades. A database with an
+   incomplete previous install is resumed **additively** (existing rows are
+   never overwritten; seeds skip rows that already exist). A database with
+   unknown tables is refused so foreign data is never touched. There is
+   intentionally no public web installer and no remotely reachable installer
+   switch.
+5. Errors are reported with their cause (access denied, unknown database, SQL
+   syntax, missing table, unknown column, permission problem …) without ever
+   printing the database password. `php bin/cli.php status` re-checks
+   connectivity, tables, admin account and pending migrations read-only. If an
+   install fails partway, fix the reported cause and re-run: it resumes.
+6. Log in at `https://YOUR-DOMAIN/admin/` with the email/password chosen in
+   step 3, then configure SMTP, Gemini/Alia, payments and branding in Settings.
 
 The installer uses configuration supplied beforehand rather than collecting DB
 credentials in a public web form. A hosting operator with CLI access is required.
