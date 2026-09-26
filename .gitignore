@@ -1,0 +1,12 @@
+# dependencies / composer (optional PHPMailer install)
+/vendor/
+/node_modules/
+
+# user-generated uploads (seeded resource files are tracked)
+/uploads/*
+!/uploads/resources/
+
+# environment & editor
+.env
+.DS_Store
+*.log

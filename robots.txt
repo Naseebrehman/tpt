@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /includes/
+Disallow: /uploads/blog/
+Disallow: /*?page=
+Disallow: /download.php
+
+Sitemap: https://thepietechnologies.com/sitemap.php
