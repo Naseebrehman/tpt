@@ -14,6 +14,7 @@ $flash      = getFlash();
 $adminNav = array(
     array('key' => 'dashboard',    'label' => 'Dashboard',     'href' => 'index.php',        'icon' => 'grid'),
     array('key' => 'submissions',  'label' => 'Submissions',   'href' => 'submissions.php',  'icon' => 'mail'),
+    array('key' => 'payments',     'label' => 'Payments',      'href' => 'payments.php',     'icon' => 'card'),
     array('key' => 'blog',         'label' => 'Blog',          'href' => 'blog.php',         'icon' => 'edit'),
     array('key' => 'comments',     'label' => 'Comments',      'href' => 'comments.php',     'icon' => 'chat'),
     array('key' => 'resources',    'label' => 'Resources',     'href' => 'resources.php',    'icon' => 'download'),

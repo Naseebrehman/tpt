@@ -1,85 +1,121 @@
 <?php
 /**
- * The Pie Technologies — Meta Ads service page
+ * The Pie Technologies — Meta Ads service page (GROW)
  * NOTE: by brand rule this page never shows pricing or price-implying
- * package names. Outcomes and process only.
+ * package names, and never claims fabricated performance numbers.
  */
 require_once dirname(__DIR__) . '/includes/init.php';
 
 $service = array(
     'key'   => 'meta-ads',
-    'title' => 'Turn Every Scroll Into a Sale.',
-    'lead'  => 'Full-funnel Facebook & Instagram advertising built around one scoreboard: your return on ad spend. Strategy, creative, testing and scaling — handled end to end.',
-    'seoTitle' => 'Meta Ads Management Agency | Facebook & Instagram Ads That Convert',
-    'seoDesc'  => 'We plan, build and scale Meta Ads campaigns for eCommerce, local and service businesses. Lead gen, retargeting, creative strategy and ROAS optimisation — no fluff.',
-    'intro'   => array(
-        'heading'    => 'What we do',
-        'title'      => 'Paid social, run like a P&L.',
-        'paragraphs' => array(
-            'Most agencies buy impressions. We buy outcomes. Every campaign we launch is wired to a revenue event — a purchase, a booked call, a qualified lead — and managed against the cost of getting it.',
-            'That means full-funnel structure: cold audiences built from real signal, retargeting that follows intent instead of haunting people, and creative tested on a cadence that keeps fatigue away. You see every number. We answer for every number.',
-        ),
-        'features' => array(
-            array('icon' => 'target',  'title' => 'Lead Generation',      'text' => 'Instant forms and landing-page funnels that fill your pipeline with qualified, contactable leads.'),
-            array('icon' => 'zap',     'title' => 'Retargeting',          'text' => 'Sequential retargeting that moves warm audiences forward instead of spamming the same ad twice.'),
-            array('icon' => 'pen',     'title' => 'Creative Strategy',    'text' => 'Hook-first ad concepts, UGC direction and static/Reels production built for the feed, not the boardroom.'),
-            array('icon' => 'filter',  'title' => 'A/B Testing',          'text' => 'Structured tests on hooks, angles, audiences and offers — with a weekly read-out of what won and why.'),
-            array('icon' => 'users',   'title' => 'Lookalike Audiences',  'text' => 'Seed audiences built from your best customers, so Meta finds more people exactly like them.'),
-            array('icon' => 'chart',   'title' => 'ROAS Optimization',    'text' => 'Budget shifted daily toward the ads, audiences and placements that actually print money.'),
-        ),
-    ),
-    'platformsTitle' => 'One account. Every Meta surface.',
-    'platforms' => array(
-        array('icon' => 'facebook',  'label' => 'Facebook'),
-        array('icon' => 'instagram', 'label' => 'Instagram'),
-        array('icon' => 'whatsapp',  'label' => 'WhatsApp'),
-        array('icon' => 'chat',      'label' => 'Messenger'),
-        array('icon' => 'play',      'label' => 'Reels'),
-    ),
-    'accordion' => array(
-        'heading' => 'Campaign types we run.',
-        'items'   => array(
-            array('title' => 'Lead Generation',  'body' => 'Instant-form and landing-page campaigns optimised on cost per qualified lead — not cost per click. We qualify inside the form so your sales team never chases tyre-kickers.'),
-            array('title' => 'Traffic',          'body' => 'Cheap, clean, intent-filtered traffic to your site or offer — used deliberately as a top-of-funnel feeder for retargeting pools, never as a vanity metric.'),
-            array('title' => 'Conversions',      'body' => 'Purchase and lead-event campaigns with server-side tracking (CAPI) so bidding works even after iOS privacy changes. This is where the revenue lives.'),
-            array('title' => 'Brand Awareness',  'body' => 'Reach and frequency-bought campaigns for launches and new markets — measured on recall lifts and branded search volume, not just impressions.'),
-            array('title' => 'Retargeting',      'body' => 'Dynamic product ads, view-content sequences and offer-led warm campaigns that recover the 97% who didn\'t buy the first time.'),
-            array('title' => 'Catalogue',        'body' => 'Advantage+ catalogue campaigns feeding your full product set into Meta\'s delivery system, with feed hygiene and margin-aware exclusions handled by us.'),
-            array('title' => 'Engagement',       'body' => 'Reels and video-view campaigns that build cheap, warm audiences and social proof — then hand them to your conversion campaigns at a discount.'),
-        ),
-    ),
-    'steps' => array(
-        array('title' => 'Research',   'text' => 'Account, pixel, competitor and offer audit. We find the leaks before we spend a riyal.'),
-        array('title' => 'Strategy',   'text' => 'Funnel architecture, audience map, budget split and the KPI each campaign is hired to hit.'),
-        array('title' => 'Creative',   'text' => 'Hooks, scripts, statics and Reels produced in batches — built to be tested, not admired.'),
-        array('title' => 'Launch',     'text' => 'Clean tracking (pixel + CAPI), structured campaigns, negative audiences and spend caps from day one.'),
-        array('title' => 'Optimize',   'text' => 'Daily reads, weekly test cycles, budget migration to winners and ruthless kills of losers.'),
-        array('title' => 'Scale',      'text' => 'Vertical and horizontal scaling — new angles, new geos, new placements — without breaking CPA.'),
-    ),
-    'stats' => array(
-        array('value' => 4.2, 'decimals' => 1, 'suffix' => '×', 'label' => 'Average ROAS across managed accounts'),
-        array('value' => 68,  'suffix' => '%', 'label' => 'Lower cost per lead after 90 days'),
-        array('value' => 120, 'suffix' => '+', 'label' => 'Meta campaigns launched and scaled'),
-    ),
-    'who' => array(
-        array('icon' => 'grid', 'title' => 'eCommerce Brands',      'text' => 'Catalogue owners who need profitable acquisition and a retargeting engine that recovers abandoned carts every single day.'),
-        array('icon' => 'pin',  'title' => 'Local Businesses',      'text' => 'Clinics, restaurants, gyms and studios that need a steady stream of booked appointments from a 10 km radius.'),
-        array('icon' => 'users','title' => 'Service Businesses',    'text' => 'Agencies, consultants and B2B teams that need qualified calls on the calendar — not a folder full of cold clicks.'),
-    ),
-    'testimonial' => true,
-    'faq' => array(
-        array('q' => 'How much ad budget do I need to start?', 'a' => 'Meta needs enough conversion data to exit the learning phase — for most accounts that means a budget that can buy 30–50 conversion events per campaign per month. On a strategy call we\'ll reverse-engineer the number from your average order value or lead value, so you never guess.'),
-        array('q' => 'How fast will I see results?', 'a' => 'Tracking and structure are fixed in week one. Early signal (CTR, CPC, hook rates) appears in the first 7–14 days. Stable cost-per-result usually lands between weeks 3 and 6, and scaling decisions start once a campaign has 50+ conversions of history.'),
-        array('q' => 'Do you produce the ad creative?', 'a' => 'Yes. Creative strategy, copywriting, static design and short-form video editing are all in-house. We ship test batches on a fixed cadence so there is always fresh ammunition in the account.'),
-        array('q' => 'Who owns the ad account?', 'a' => 'You do — always. We work inside your Business Manager with partner access. If we ever part ways, every campaign, pixel and audience stays with you. No hostage-taking, ever.'),
-        array('q' => 'What about iOS tracking and lost data?', 'a' => 'We implement the Conversions API server-side plus clean UTM and modelling-friendly event deduplication, so bidding still works with partial signal. Your reported numbers get reconciled against real revenue, not just Ads Manager.'),
-        array('q' => 'Do you guarantee results?', 'a' => 'Anyone who guarantees a ROAS number is selling you fiction. What we guarantee is the system: full-funnel structure, weekly testing cadence, transparent reporting and a team that treats your budget like its own P&L.'),
+    'title' => 'Meta Ads',
+    'lead'  => 'Facebook & Instagram campaigns engineered to turn attention into pipeline.',
+    'seoTitle' => 'Meta Ads Management — Facebook & Instagram Advertising | TPT',
+    'seoDesc'  => 'Campaign architecture, audience strategy, creative testing, retargeting and server-side conversion tracking for Facebook & Instagram — managed against cost per result, not clicks.',
+    'heroDesc' => 'Attention is cheap to buy and easy to waste. We build Meta campaigns the way we build software: architecture first, clean tracking, structured creative tests, and budget that moves toward evidence — every week.',
+    'bullets'  => array(
+        'One offer per campaign, one job per ad set',
+        'Creative testing on a weekly rhythm',
+        'Pixel + Conversions API tracking that survives iOS',
+        'Cost per qualified lead as the scoreboard',
     ),
     'cta' => array(
-        'title'  => 'Get a Free Meta Ads Audit.',
-        'text'   => 'We\'ll tear down your current account (or build your first one) and show you exactly where the money is leaking — free, no strings.',
-        'button' => 'Get My Free Audit',
+        'title'  => 'Spending on Meta but can’t say what it produced?',
+        'text'   => 'Get a Meta Ads audit: account structure, tracking integrity, creative fatigue and where the budget is actually going — with the leaks marked. You’ll get a straight answer, even if it’s “pause and fix first.”',
+        'button' => 'Get a Meta Ads Audit',
     ),
+    'problem' => array(
+        'eyebrow'    => 'The problem',
+        'title'      => 'Boosting is not a media strategy.',
+        'paragraphs' => array(
+            'Most Meta accounts we inherit look the same: boosted posts, a dozen overlapping audiences, a pixel that fired once in 2022, and creative chosen by whoever shouted last. Spend goes out; enquiries come back sporadic, unqualified and untraceable to any ad.',
+            'The platform isn’t the problem. Meta’s delivery system is extraordinary — when it’s fed clean signals. Give it muddy events, muddled offers and fatigued creative, and it will efficiently buy you nothing.',
+        ),
+        'familiarTitle' => 'Sound familiar?',
+        'familiar' => array(
+            'Leads arrive, but sales says they’re cold or unreachable',
+            'Nobody can tell which ad or audience produced which enquiry',
+            'Cost per result creeps up every month until the account is paused',
+            'The same three ads have been running since launch',
+        ),
+    ),
+    'machine' => array(
+        'eyebrow' => 'The machine',
+        'title'   => 'From scroll to signed.',
+        'lead'    => 'A funnel, not a feed. Every stage has one job and one number.',
+        'steps'   => array(
+            array('title' => 'Signal',   'text' => 'Pixel + Conversions API wired to real outcomes — leads, calls, purchases — before a dollar is spent.'),
+            array('title' => 'Offer',    'text' => 'One campaign, one offer, one audience temperature. Clarity the delivery algorithm can actually optimize against.'),
+            array('title' => 'Creative', 'text' => 'Hooks, angles and formats produced in batches — built to be tested, not admired.'),
+            array('title' => 'Capture',  'text' => 'A landing page or instant form that matches the ad’s promise and qualifies before it collects.'),
+            array('title' => 'Follow-up','text' => 'Speed-to-lead under five minutes: routing, SMS/email sequences and retargeting for the not-yet-ready.'),
+            array('title' => 'Scale',    'text' => 'Winners get budget, new angles and new audiences. Losers get retired early and cheaply.'),
+        ),
+        'note' => 'Creative is the biggest performance lever on Meta today. We treat it like a testing program, because it is one.',
+    ),
+    'pillarsEyebrow' => 'What we actually do',
+    'pillarsTitle'   => 'The Meta Ads operating stack.',
+    'pillarsLead'    => 'Four workstreams, run continuously:',
+    'pillars' => array(
+        array('title' => 'Architecture & audiences', 'text' => 'Account structure that keeps signals clean and scaling predictable.', 'points' => array(
+            'Campaigns split by audience temperature: cold, warm, hot',
+            'Broad + interest + lookalike stacks tested against each other',
+            'Consolidated ad sets — enough budget per cell to exit learning',
+            'Exclusions and frequency caps so retargeting never haunts',
+        )),
+        array('title' => 'Creative & testing', 'text' => 'A weekly testing matrix: hook × format × angle.', 'points' => array(
+            'Hook-first statics, UGC-style video, carousels and Reels cuts',
+            'Kill rules and budgets defined before tests launch',
+            'Fatigue monitoring by frequency and first-time impression ratio',
+            'Winning angles briefed back into the next creative batch',
+        )),
+        array('title' => 'Tracking & attribution', 'text' => 'Measurement that survives privacy changes and platform wobbles.', 'points' => array(
+            'Meta Pixel plus server-side Conversions API with deduplication',
+            'UTM discipline and offline conversions where sales close offline',
+            'Lead-quality feedback loop from your CRM back into optimization',
+            'Honest reporting: platform numbers vs. actual pipeline',
+        )),
+        array('title' => 'Landing & conversion', 'text' => 'The click is halfway; the page is the other half.', 'points' => array(
+            'Purpose-built landing pages per campaign, matched to the ad',
+            'Forms that qualify — budget, timing, fit — before they collect',
+            'Instant forms with follow-up automation for speed-to-lead',
+            'Page speed and mobile UX treated as media-buying variables',
+        )),
+    ),
+    'timelineEyebrow' => 'How it works',
+    'timelineTitle'   => 'The first ninety days.',
+    'timeline' => array(
+        array('when' => 'Week 1–2', 'title' => 'Audit & baseline',   'text' => 'Account, pixel, offer and competitor teardown. Historical numbers reconciled against CRM reality. Baselines agreed in writing.'),
+        array('when' => 'Week 2–3', 'title' => 'Tracking rebuild',   'text' => 'Pixel + CAPI verified, events mapped to real outcomes, UTM scheme published, dashboards wired.'),
+        array('when' => 'Week 3–4', 'title' => 'Architecture & creative', 'text' => 'Campaign structure built by temperature; first creative batch briefed, produced and QA’d against the hooks matrix.'),
+        array('when' => 'Week 5–6', 'title' => 'Launch',             'text' => 'Staged go-live with spend caps. Daily delivery checks; weekly test cycles begin. Landing pages tuned against behavior.'),
+        array('when' => 'Week 7–10','title' => 'Optimize',           'text' => 'Budget migrates to winning cells; losing angles retired. Lead-quality loop with your sales team tightens targeting and forms.'),
+        array('when' => 'Week 11–13','title' => 'Scale',             'text' => 'New angles, audiences and placements added on evidence. Monthly review with real numbers and the next quarter’s plan.'),
+    ),
+    'faqTitle' => 'Meta Ads, straight answers.',
+    'faq' => array(
+        array('q' => 'How much ad spend do we need to start?', 'a' => 'Enough to buy statistically meaningful tests in your market — that number differs wildly between, say, roofing leads in New Jersey and e-commerce in the Gulf. We model it from your price point and target cost per result before you commit, and we tell you honestly if your budget can’t support the channel yet.'),
+        array('q' => 'Do we need a big existing audience or email list?', 'a' => 'No. Cold-audience prospecting is where most lead-gen budgets live anyway. Existing customers, site visitors and engagement data help — they seed lookalikes and retargeting — but we build the signal layer from scratch when needed.'),
+        array('q' => 'Who owns the ad account and pixel?', 'a' => 'You do, always. We work as a partner inside your Business Manager. If we ever part ways, campaigns, audiences, pixel history and creative files stay with you — no hostage situations.'),
+        array('q' => 'How is this different from boosting posts ourselves?', 'a' => 'Boosting optimizes for engagement; we optimize for a business event — a qualified lead, a booked call, a purchase — with server-side tracking, structured tests and landing pages built to convert. Different machinery, different scoreboard.'),
+    ),
+    'deeper' => array(
+        array('label' => 'Blueprint', 'title' => 'The Meta Ads Lead Generation Blueprint', 'note' => 'The exact 90-day framework, free', 'url' => url('resources/meta-ads-lead-generation-blueprint')),
+        array('label' => 'Playbook',  'title' => 'Meta Ads Creative Testing Playbook',     'note' => 'Hook × format × angle, with kill rules', 'url' => url('resources/meta-ads-creative-testing-playbook')),
+        array('label' => 'Case study','title' => 'Lead Generation Engine',                 'note' => 'Meta Ads × landing pages, end to end', 'url' => url('portfolio/lead-generation-engine-meta-ads')),
+    ),
+    'deliverables' => array(
+        'Campaign architecture by audience temperature',
+        'Pixel + Conversions API implementation and event mapping',
+        'Creative testing matrix with weekly production batches',
+        'Audience research, lookalike seeding and exclusion logic',
+        'Purpose-built landing pages or qualified instant forms',
+        'Lead routing and speed-to-lead follow-up automation',
+        'Weekly optimization and monthly performance reporting',
+    ),
+    'gallery'     => true,
+    'testimonial' => true,
+    'related'     => array('graphic-design', 'web-development', 'data-analytics'),
 );
 
-require dirname(__DIR__) . '/includes/service-page.php';
+require_once dirname(__DIR__) . '/includes/service-page.php';

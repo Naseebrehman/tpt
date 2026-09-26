@@ -41,12 +41,14 @@ require_once dirname(__DIR__) . '/includes/header.php';
 <section class="page-hero">
     <div class="container">
         <p class="eyebrow crumbs">
-            <a href="<?= url('') ?>">Home</a> &nbsp;/&nbsp; <a href="<?= url('portfolio') ?>">Portfolio</a> &nbsp;/&nbsp; <?= esc($item['client_name']) ?>
+            <a href="<?= url('') ?>">Home</a> &nbsp;/&nbsp; <a href="<?= url('portfolio') ?>">Work</a> &nbsp;/&nbsp; <?= esc($item['client_name']) ?>
         </p>
         <h1><?= esc($item['client_name']) ?></h1>
+        <?php $caseServices = array_map('trim', explode(',', $item['service_category'])); ?>
         <p class="lead"><?= esc($item['service_category']) ?> · Case study</p>
         <div class="case-hero-meta">
-            <span class="chip chip-violet"><?= esc($item['service_category']) ?></span>
+            <?php if (!empty($item['industry'])): ?><span class="chip chip-violet"><?= esc($item['industry']) ?></span><?php endif; ?>
+            <?php foreach ($caseServices as $caseSvcName): ?><span class="chip"><?= esc($caseSvcName) ?></span><?php endforeach; ?>
             <?php foreach ($stats as $stat): ?>
             <span class="chip"><?= esc(is_array($stat) ? ($stat['value'] . (isset($stat['label']) ? ' ' . $stat['label'] : '')) : $stat) ?></span>
             <?php endforeach; ?>
@@ -103,6 +105,36 @@ require_once dirname(__DIR__) . '/includes/header.php';
             <div class="chart-wrap">
                 <canvas data-chart="<?= esc(json_encode(array('type' => 'line', 'data' => $chart))) ?>" role="img" aria-label="Results chart for <?= esc($item['client_name']) ?>"></canvas>
             </div>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
+
+<?php
+/* "Behind this result" — link the services named on this case study. */
+$behindLinks = array();
+foreach ($caseServices as $caseSvcName) {
+    foreach (pieServices() as $mapSvc) {
+        $a = strtolower(str_replace(array('—', 'the ', '&'), array('', '', 'and'), $caseSvcName));
+        $b = strtolower(str_replace(array('—', 'the ', '&'), array('', '', 'and'), $mapSvc['name']));
+        if ($a === $b || strpos($b, $a) === 0 || strpos($a, $b) === 0) {
+            $behindLinks[] = $mapSvc;
+            break;
+        }
+    }
+}
+if ($behindLinks): ?>
+<section class="case-section">
+    <div class="container">
+        <h2 data-aos="fade-up">Behind this result</h2>
+        <div class="feature-grid" style="margin-top:22px">
+            <?php foreach ($behindLinks as $bi => $bSvc): ?>
+            <a class="feature-card" href="<?= url('services/' . $bSvc['key']) ?>" data-aos="fade-up" data-aos-delay="<?= $bi * 80 ?>" style="text-decoration:none;color:inherit">
+                <?= icon($bSvc['icon'], 24) ?>
+                <h3><?= esc($bSvc['name']) ?></h3>
+                <p><?= esc($bSvc['tagline']) ?></p>
+            </a>
+            <?php endforeach; ?>
         </div>
     </div>
 </section>

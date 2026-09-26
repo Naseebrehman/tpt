@@ -9,6 +9,19 @@ RewriteCond %{HTTPS} off
 RewriteCond %{HTTP:X-Forwarded-Proto} !=https
 RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
+# ------------------- Services index (services/ is a directory) -------------
+RewriteRule ^services/?$ services-index.php [L,QSA]
+
+# --------------------- Resource single clean URL ---------------------------
+RewriteRule ^resources/([a-z0-9-]+)/?$ resource-single.php?slug=$1 [L,QSA]
+
+# --------------------- Secure payment link clean URL -----------------------
+RewriteRule ^pay/secure/([a-f0-9]{16,64})/?$ pay-secure.php?token=$1 [L,QSA]
+
+# ---------------------- Work alias for /portfolio --------------------------
+RewriteRule ^work/?$ portfolio.php [L,QSA]
+RewriteRule ^work/([a-z0-9-]+)/?$ portfolio/case-study.php?slug=$1 [L,QSA]
+
 # --------------------- Remove .php extension (pretty URLs) -----------------
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_FILENAME} !-f

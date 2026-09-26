@@ -127,7 +127,7 @@ switch ($action) {
         $apiKey = getSetting('gemini_api_key');
         if ($apiKey === '') { actionJson(false, 'No API key saved yet — save your settings first.'); }
         $payload = array(
-            'contents'         => array(array('role' => 'user', 'parts' => array(array('text' => 'Reply with exactly: PIE Bot connection OK')))),
+            'contents'         => array(array('role' => 'user', 'parts' => array(array('text' => 'Reply with exactly: Alia connection OK')))),
             'generationConfig' => array('maxOutputTokens' => 40, 'temperature' => 0.2),
         );
         $decoded = chatbotCallGemini($apiKey, $payload);

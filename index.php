@@ -1,13 +1,16 @@
 <?php
 require_once __DIR__ . '/includes/init.php';
 
-$pageTitle = getSetting('meta_title', 'Digital Marketing Agency That Actually Moves Numbers');
-$metaDesc  = getSetting('meta_description', 'The Pie Technologies is a full-service growth agency: Meta Ads, SEO, Social Media Management, Web Development, Email Marketing, Google Ads and Branding & Design for brands that mean business.');
+$pageTitle = getSetting('meta_title', 'Clicks Are Easy. Growth Is Engineered.');
+$metaDesc  = getSetting('meta_description', 'The Pie Technologies is a growth agency across five disciplines — GROW, GET FOUND, BUILD, CREATE and MEASURE. Meta Ads, Google Ads, SEO, Local SEO, social, web, apps, design, AI and analytics — one system, one owner.');
 $activeNav = 'home';
 $bodyClass = 'page-home';
 $pageLibs  = array('typed' => true, 'particles' => true, 'swiper' => true);
 
 $services     = pieServices();
+$disciplines  = pieDisciplines();
+$industries   = pieIndustries();
+$homeFaq      = pieHomeFaq();
 $portfolio    = array_slice(getPortfolioItems(''), 0, 4);
 $testimonials = getActiveTestimonials();
 $posts        = getRecentPosts(3);
@@ -29,14 +32,15 @@ $jsonLd = json_encode(array(
     '@type'       => 'MarketingAgency',
     'name'        => getSetting('site_name', SITE_NAME),
     'url'         => SITE_URL,
-    'description' => 'Full-service digital marketing agency specializing in Meta Ads, SEO, Social Media Management, and Web Development.',
-    'telephone'   => getSetting('site_phone', '+1-XXX-XXX-XXXX'),
-    'email'       => getSetting('site_email', 'hello@thepietechnologies.com'),
-    'address'     => array('@type' => 'PostalAddress', 'streetAddress' => getSetting('site_address', '')),
+    'description' => 'Growth agency across five disciplines: GROW, GET FOUND, BUILD, CREATE and MEASURE — paid media, search, websites, apps, design, AI and analytics run as one system.',
+    'telephone'   => getSetting('site_phone', '+1 (213) 257 8242'),
+    'email'       => getSetting('site_email', 'info@thepietechnologies.com'),
+    'address'     => array('@type' => 'PostalAddress', 'streetAddress' => getSetting('site_address', 'Collingswood, NJ, USA')),
     'sameAs'      => $sameAs,
 ), JSON_UNESCAPED_SLASHES);
 
-$clients = array('Aurelia Fashion', 'Brew Theory', 'IronCore Fitness', 'Nimbus SaaS', 'Zayn Estates', 'Lumen Skincare', 'Kardee Foods', 'Vela Studio');
+/* Real clients, named in the testimonials and case studies we publish. */
+$clients = array('Alpha Global', 'Pay Stream', 'Nicks Roofing');
 
 require_once __DIR__ . '/includes/header.php';
 ?>
@@ -45,22 +49,30 @@ require_once __DIR__ . '/includes/header.php';
 <section class="hero">
     <div id="particles-js" aria-hidden="true"></div>
     <div class="container hero-inner">
-        <span class="hero-eyebrow"><?= icon('sparkle', 14) ?> Full-Service Growth Agency</span>
+        <span class="hero-eyebrow"><?= icon('sparkle', 14) ?> Five Disciplines · One Growth System</span>
         <h1 class="display hero-title">
-            <span class="line">The Growth Agency.</span>
-            <span class="typed-line"><span id="typed-text" data-strings="For Brands That Mean Business.|Built to Scale You.|Results or Nothing.|Growth, Engineered."></span><span class="typed-caret" aria-hidden="true"></span></span>
+            <span class="line">Clicks are easy.</span>
+            <span class="typed-line"><span id="typed-text" data-strings="Growth is engineered.|Systems beat tactics.|One owner. One scoreboard.|Engineered to compound."></span><span class="typed-caret" aria-hidden="true"></span></span>
         </h1>
-        <p class="hero-sub">We run Meta Ads, SEO, Social Media and Web Development for ambitious brands. No fluff. Just growth.</p>
+        </h1>
+        <p class="hero-sub">Most agencies sell tactics. We build the system under them — strategy, creative, media, websites and data working as one engine, with a single team accountable for the only number that matters: yours.</p>
         <div class="hero-ctas">
-            <a href="<?= url('contact') ?>" class="btn btn-primary btn-lg btn-magnetic">Start a Project <?= icon('arrow-r', 18) ?></a>
-            <a href="<?= url('portfolio') ?>" class="btn btn-ghost btn-lg btn-magnetic">See Our Work</a>
+            <a href="<?= url('contact') ?>" class="btn btn-primary btn-lg btn-magnetic">Start here <?= icon('arrow-r', 18) ?></a>
+            <a href="<?= url('portfolio') ?>" class="btn btn-ghost btn-lg btn-magnetic">See the work</a>
+        </div>
+
+        <div class="hero-loop" aria-label="The TPT growth loop">
+            <?php foreach (array('Discover', 'Build', 'Launch', 'Measure', 'Grow') as $li => $loopStep): ?>
+            <span class="loop-step"><i class="mono"><?= str_pad((string) ($li + 1), 2, '0', STR_PAD_LEFT) ?></i><?= esc($loopStep) ?></span>
+            <?php if ($li < 4): ?><span class="loop-arrow" aria-hidden="true"><?= icon('arrow-r', 14) ?></span><?php endif; ?>
+            <?php endforeach; ?>
         </div>
 
         <div class="hero-visual" data-aos="fade-up" data-aos-delay="150">
             <img src="<?= asset('assets/images/hero-studio.jpg') ?>" alt="The Pie Technologies studio at night, screens glowing with campaign dashboards" width="1376" height="768" fetchpriority="high">
             <div class="hero-float-stat">
-                <strong>4.2&times;</strong>
-                <span>average ROAS across<br>managed ad accounts</span>
+                <strong>11 services</strong>
+                <span>five disciplines,<br>one accountable team</span>
             </div>
         </div>
     </div>
@@ -71,47 +83,65 @@ require_once __DIR__ . '/includes/header.php';
 </section>
 
 <!-- ============================== MARQUEE =============================== -->
-<section class="marquee-section" aria-label="Client logos">
-    <p class="marquee-label">Trusted by brands that mean business.</p>
+<section class="marquee-section" aria-label="Clients">
+    <p class="marquee-label">Working with businesses that measure.</p>
     <div class="marquee">
         <div class="marquee-track">
-            <?php for ($loop = 0; $loop < 2; $loop++): foreach ($clients as $client): ?>
+            <?php for ($loop = 0; $loop < 4; $loop++): foreach ($clients as $client): ?>
             <span class="marquee-item"><i class="dot"></i><?= esc($client) ?></span>
             <?php endforeach; endfor; ?>
         </div>
     </div>
     <div class="marquee rev">
         <div class="marquee-track">
-            <?php for ($loop = 0; $loop < 2; $loop++): foreach (array_reverse($clients) as $client): ?>
+            <?php for ($loop = 0; $loop < 4; $loop++): foreach (array_reverse($clients) as $client): ?>
             <span class="marquee-item"><i class="dot"></i><?= esc($client) ?></span>
             <?php endforeach; endfor; ?>
         </div>
     </div>
 </section>
 
+<!-- ========================= PROBLEM / THE WAY ========================== -->
+<section class="section" aria-label="The problem and the way">
+    <div class="container">
+        <div class="split">
+            <div class="copy" data-aos="fade-up">
+                <p class="eyebrow">The problem</p>
+                <h2 class="section-title" style="font-size:clamp(1.8rem,3.6vw,2.9rem)">Five vendors.<br>Zero accountability.</h2>
+                <p>The ad freelancer blames the website. The web guy blames the leads. The social team blames the algorithm. Everyone reports “success” — and nobody owns the number that actually decides whether the business grows.</p>
+            </div>
+            <div class="copy" data-aos="fade-up" data-aos-delay="120">
+                <p class="eyebrow">The way</p>
+                <h2 class="section-title" style="font-size:clamp(1.8rem,3.6vw,2.9rem)">One system.<br>One owner.</h2>
+                <p>TPT runs every discipline under one roof and one scoreboard. Strategy, creative, media, websites and data connect by design — so when something underperforms, there’s one team accountable for fixing it, not five teams accountable for explaining it.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
 <!-- =============================== STATS ================================ -->
-<section class="section" aria-label="Agency results in numbers">
+<section class="section" style="padding-top:0" aria-label="TPT by the numbers">
     <div class="container">
         <div class="stats-grid">
             <div class="stat-card" data-aos="fade-up">
                 <span class="stat-index mono">01</span>
-                <div class="stat-value"><span data-countup="120" data-suffix="">0</span><span class="suffix">+</span></div>
-                <p class="stat-label">Campaigns launched across Meta, Google &amp; email.</p>
+                <div class="stat-value"><span data-countup="5">0</span></div>
+                <p class="stat-label">Disciplines — GROW, GET FOUND, BUILD, CREATE and MEASURE.</p>
             </div>
             <div class="stat-card" data-aos="fade-up" data-aos-delay="80">
                 <span class="stat-index mono">02</span>
-                <div class="stat-value"><span data-countup="4.2" data-decimals="1">0</span><span class="suffix">&times;</span></div>
-                <p class="stat-label">Average ROAS across managed ad spend.</p>
+                <div class="stat-value"><span data-countup="11">0</span></div>
+                <p class="stat-label">Services that plug into one system instead of eleven silos.</p>
             </div>
             <div class="stat-card" data-aos="fade-up" data-aos-delay="160">
                 <span class="stat-index mono">03</span>
-                <div class="stat-value"><span data-countup="98">0</span><span class="suffix">%</span></div>
-                <p class="stat-label">Client retention — partners stay because it works.</p>
+                <div class="stat-value"><span data-countup="12">0</span></div>
+                <p class="stat-label">Free playbooks in the Growth Library — the frameworks we run.</p>
             </div>
             <div class="stat-card" data-aos="fade-up" data-aos-delay="240">
                 <span class="stat-index mono">04</span>
-                <div class="stat-value"><span data-countup="50">0</span><span class="suffix">+</span></div>
-                <p class="stat-label">Brands scaled from first campaign to market leader.</p>
+                <div class="stat-value"><span data-countup="2">0</span></div>
+                <p class="stat-label">Locations — Collingswood, NJ and Punjab, Pakistan. One team.</p>
             </div>
         </div>
     </div>
@@ -123,8 +153,8 @@ require_once __DIR__ . '/includes/header.php';
     <div class="container">
         <div class="section-head" data-aos="fade-up">
             <p class="eyebrow">Selected Work</p>
-            <h2 class="section-title">Work that drives results.</h2>
-            <p class="section-lead">Not vanity metrics. Revenue, leads and rankings our clients can take to the bank.</p>
+            <h2 class="section-title">Systems in the field.</h2>
+            <p class="section-lead">Case studies told the honest way: the challenge, the strategy, the execution — without invented numbers.</p>
         </div>
         <div class="work-grid">
             <?php foreach ($portfolio as $i => $item): $stats = jsonCol($item['stats_json']); $firstStat = $stats ? array_slice($stats, 0, 1) : array(); ?>
@@ -154,7 +184,7 @@ require_once __DIR__ . '/includes/header.php';
     <div class="container">
         <div class="section-head" data-aos="fade-up">
             <p class="eyebrow">Services</p>
-            <h2 class="section-title">Everything you need.<br>Nothing you don&rsquo;t.</h2>
+            <h2 class="section-title">Eleven services.<br>One connected system.</h2>
         </div>
 
         <div class="services-acc" data-accordion="single">
@@ -162,7 +192,7 @@ require_once __DIR__ . '/includes/header.php';
             <div class="acc-item<?= $i === 0 ? ' open' : '' ?>">
                 <button class="acc-head" type="button">
                     <span class="acc-num mono"><?= esc($svc['num']) ?></span>
-                    <span class="acc-title"><?= esc($svc['name']) ?></span>
+                    <span class="acc-title"><?= esc($svc['name']) ?><?= !empty($svc['core']) ? '<span class="dd-core">Core</span>' : '' ?></span>
                     <span class="acc-tag"><?= esc($svc['tagline']) ?></span>
                     <span class="acc-icon"><?= icon('plus', 16) ?></span>
                 </button>
@@ -192,7 +222,7 @@ require_once __DIR__ . '/includes/header.php';
 </section>
 
 <!-- ====================== THE SYSTEM (pinned scroll) ==================== -->
-<section class="system" aria-label="The Pie Technologies system">
+<section class="system" aria-label="The five disciplines">
     <div class="system-sticky">
         <aside class="system-side">
             <div>
@@ -200,53 +230,63 @@ require_once __DIR__ . '/includes/header.php';
                 <h2>Explore the disciplines.</h2>
             </div>
             <ul class="system-progress">
-                <?php $systemItems = array(array('01','Meta Ads'),array('02','Social Media'),array('03','SEO'),array('04','Web Development'),array('05','Growth & AI Automation')); foreach ($systemItems as $si => $sItem): ?>
-                <li<?= $si === 0 ? ' class="current"' : '' ?>><span class="mono"><?= esc($sItem[0]) ?></span><span class="bar"><i></i></span></li>
+                <?php foreach ($disciplines as $di => $disc): ?>
+                <li<?= $di === 0 ? ' class="current"' : '' ?>><span class="mono"><?= esc($disc['num']) ?></span><span class="bar"><i></i></span></li>
                 <?php endforeach; ?>
             </ul>
         </aside>
         <div class="system-stage">
             <?php
-            $systemPanels = array(
-                array('dir' => 'left',   'num' => '01', 'title' => 'Meta Ads',              'svc' => $services[0]),
-                array('dir' => 'bottom', 'num' => '02', 'title' => 'Social Media',          'svc' => $services[1]),
-                array('dir' => 'right',  'num' => '03', 'title' => 'SEO',                   'svc' => $services[2]),
-                array('dir' => 'top',    'num' => '04', 'title' => 'Web Development',       'svc' => $services[3]),
-                array('dir' => 'scale',  'num' => '05', 'title' => 'Growth & AI Automation','svc' => null),
-            );
-            foreach ($systemPanels as $pi => $panel): ?>
-            <article class="system-panel<?= $pi === 0 ? ' is-active' : '' ?>" data-dir="<?= esc($panel['dir']) ?>">
-                <span class="system-num"><?= esc($panel['num']) ?></span>
-                <h3><?= esc($panel['title']) ?></h3>
-                <?php if ($panel['svc']): ?>
-                <p class="desc"><?= esc($panel['svc']['desc']) ?></p>
-                <div class="system-tags"><?php foreach ($panel['svc']['tags'] as $tag): ?><span class="chip"><?= esc($tag) ?></span><?php endforeach; ?></div>
-                <div class="system-metrics">
-                    <?php foreach ($panel['svc']['metrics'] as $metric): ?>
-                    <div><strong><?= esc($metric[0]) ?></strong><span><?= esc($metric[1]) ?></span></div>
+            $panelDirs = array('left', 'bottom', 'right', 'top', 'scale');
+            foreach ($disciplines as $di => $disc):
+                $discServices = pieServicesByDiscipline($disc['key']);
+            ?>
+            <article class="system-panel<?= $di === 0 ? ' is-active' : '' ?>" data-dir="<?= esc($panelDirs[$di % 5]) ?>">
+                <span class="system-num"><?= esc($disc['num']) ?></span>
+                <h3><?= esc($disc['name']) ?></h3>
+                <p class="desc"><?= esc($disc['desc']) ?></p>
+                <div class="system-tags">
+                    <?php foreach ($discServices as $discSvc): ?>
+                    <a class="chip" href="<?= url('services/' . $discSvc['key']) ?>" style="text-decoration:none"><?= icon($discSvc['icon'], 13) ?> <?= esc($discSvc['name']) ?></a>
                     <?php endforeach; ?>
                 </div>
-                <?php else: ?>
-                <p class="desc">The layer that ties it all together: dashboards, attribution, AI-assisted reporting and automation that removes busywork — so every decision across every channel is made on live data, not gut feel.</p>
-                <div class="system-tags">
-                    <span class="chip">Attribution</span><span class="chip">Live Dashboards</span><span class="chip">AI Reporting</span><span class="chip">Workflow Automation</span>
-                </div>
                 <div class="system-metrics">
-                    <div><strong>24h</strong><span>Reporting refresh cycle</span></div>
-                    <div><strong>100%</strong><span>Spend attributed</span></div>
-                    <div><strong>-12h</strong><span>Manual work saved / week</span></div>
+                    <div><strong><?= count($discServices) ?></strong><span>Services in this discipline</span></div>
+                    <div><strong><?= esc($disc['num']) ?></strong><span><?= esc($disc['label']) ?></span></div>
                 </div>
-                <?php endif; ?>
             </article>
             <?php endforeach; ?>
         </div>
     </div>
     <div class="system-spacer" aria-hidden="true">
-        <div class="system-trigger" data-index="0"></div>
-        <div class="system-trigger" data-index="1"></div>
-        <div class="system-trigger" data-index="2"></div>
-        <div class="system-trigger" data-index="3"></div>
-        <div class="system-trigger" data-index="4"></div>
+        <?php foreach ($disciplines as $di => $disc): ?>
+        <div class="system-trigger" data-index="<?= $di ?>"></div>
+        <?php endforeach; ?>
+    </div>
+</section>
+
+<!-- ============================== INDUSTRIES ============================ -->
+<section class="section" aria-label="Industries we know">
+    <div class="container">
+        <div class="section-head" data-aos="fade-up">
+            <p class="eyebrow">Industries</p>
+            <h2 class="section-title">We learn your trade before we touch your funnel.</h2>
+            <p class="section-lead">Generic marketing wastes budget on the wrong message. These are the industries where we know the sales cycle, the season and the objections.</p>
+        </div>
+        <div class="industry-grid">
+            <?php foreach ($industries as $ii => $ind): ?>
+            <article class="industry-card" data-aos="fade-up" data-aos-delay="<?= ($ii % 4) * 80 ?>">
+                <span class="industry-abbr mono"><?= esc($ind['abbr']) ?></span>
+                <h3><?= esc($ind['name']) ?></h3>
+                <p><?= esc($ind['copy']) ?></p>
+                <div class="industry-services">
+                    <?php foreach ($ind['services'] as $indSvcKey): $indSvc = pieServiceByKey($indSvcKey); if ($indSvc): ?>
+                    <a href="<?= url('services/' . $indSvc['key']) ?>"><?= esc($indSvc['name']) ?></a>
+                    <?php endif; endforeach; ?>
+                </div>
+            </article>
+            <?php endforeach; ?>
+        </div>
     </div>
 </section>
 
@@ -260,7 +300,7 @@ require_once __DIR__ . '/includes/header.php';
             <div class="founder-copy">
                 <span class="wave" aria-hidden="true">👋</span>
                 <h2>Hey, I&rsquo;m <?= esc(getSetting('founder_name', 'the founder')) ?> — Founder of The Pie Technologies.</h2>
-                <p>I started this agency after watching too many good brands burn budget on agencies that reported impressions instead of revenue. We built the opposite: a team obsessed with one number — yours. Let&rsquo;s talk about your growth.</p>
+                <p>I started this agency after watching too many good businesses burn budget on vendors who reported impressions instead of outcomes. We built the opposite: five disciplines under one roof, connected by design, accountable to one number — yours. Let&rsquo;s talk about your growth.</p>
                 <p class="founder-sig">— <?= esc(getSetting('founder_name', 'The Founder')) ?></p>
                 <div>
                     <a href="<?= url('contact') ?>" class="btn btn-primary btn-magnetic">Book a Free Call <?= icon('arrow-r', 18) ?></a>
@@ -275,7 +315,7 @@ require_once __DIR__ . '/includes/header.php';
 <section class="section" style="padding-top:0">
     <div class="container">
         <div class="section-head" data-aos="fade-up">
-            <span class="google-badge"><span class="g-stars">★★★★★</span> <?= esc(number_format($avgRating, 1)) ?> average · <?= count($testimonials) ?> verified client reviews</span>
+            <span class="google-badge"><span class="g-stars">★★★★★</span> <?= esc(number_format($avgRating, 1)) ?> average · <?= count($testimonials) ?> client reviews</span>
             <h2 class="section-title">Don&rsquo;t take our word for it.</h2>
         </div>
 
@@ -328,25 +368,56 @@ require_once __DIR__ . '/includes/header.php';
                 <div class="why-copy">
                     <?= icon('chart', 26) ?>
                     <h3>Data-Driven</h3>
-                    <p>Every decision backed by numbers. 50M+ in ad spend managed, every riyal attributed.</p>
+                    <p>Every decision backed by numbers. Tracking rebuilt around real outcomes, and every dollar of spend attributed — no platform dashboards taken on faith.</p>
                 </div>
             </article>
             <article class="why-card" data-aos="fade-up" data-aos-delay="100">
                 <img src="<?= asset('assets/images/why-team.jpg') ?>" alt="The Pie Technologies team collaborating" loading="lazy">
                 <div class="why-copy">
                     <?= icon('layers', 26) ?>
-                    <h3>Full-Service</h3>
-                    <p>Meta Ads to Web Dev, under one team. No outsourcing, no telephone game, no excuses.</p>
+                    <h3>Full-System</h3>
+                    <p>Meta Ads to web development to analytics, under one team. No outsourcing, no telephone game, no vendor pointing at another vendor.</p>
                 </div>
             </article>
             <article class="why-card" data-aos="fade-up" data-aos-delay="200">
                 <img src="<?= asset('assets/images/hero-studio.jpg') ?>" alt="The Pie Technologies studio" loading="lazy">
                 <div class="why-copy">
                     <?= icon('target', 26) ?>
-                    <h3>Results-First</h3>
-                    <p>We don&rsquo;t charge for effort. We deliver outcomes — and we report on them brutally honestly.</p>
+                    <h3>Honest by Default</h3>
+                    <p>No invented statistics, no guaranteed rankings, no fake urgency. If a channel isn&rsquo;t right for you yet, we&rsquo;ll say so — and tell you what is.</p>
                 </div>
             </article>
+        </div>
+    </div>
+</section>
+
+<!-- ========================== GROWTH LIBRARY ============================ -->
+<section class="section" style="padding-top:0">
+    <div class="container">
+        <div class="library-band" data-aos="fade-up">
+            <div class="library-copy">
+                <p class="eyebrow">Growth Library</p>
+                <h2 class="section-title" style="font-size:clamp(1.7rem,3.4vw,2.6rem)">The frameworks we run — free.</h2>
+                <p>Twelve blueprints, playbooks and checklists: the actual systems behind our campaigns, sites and SEO. No gatekeeping, no email drip — just the thinking, written down.</p>
+                <div class="library-links">
+                    <a href="<?= url('resources/lead-generation-blueprint') ?>"><?= icon('download', 15) ?> Lead Generation Blueprint</a>
+                    <a href="<?= url('resources/seo-blueprint') ?>"><?= icon('search', 15) ?> The SEO Blueprint</a>
+                    <a href="<?= url('resources/local-seo-blueprint') ?>"><?= icon('pin', 15) ?> Local SEO Blueprint</a>
+                </div>
+                <a class="link-arrow" href="<?= url('resources') ?>" style="margin-top:18px;display:inline-flex">Browse all 12 resources <?= icon('arrow-r', 16) ?></a>
+            </div>
+            <div class="library-visual" aria-hidden="true">
+                <div class="chart-card">
+                    <p class="eyebrow">Inside the library</p>
+                    <ul style="display:grid;gap:10px;list-style:none;padding:0;margin:0">
+                        <li><?= icon('check', 15) ?> Meta Ads Lead Generation Blueprint</li>
+                        <li><?= icon('check', 15) ?> Google Ads Blueprint</li>
+                        <li><?= icon('check', 15) ?> Website Conversion Blueprint</li>
+                        <li><?= icon('check', 15) ?> AI Search Visibility Blueprint</li>
+                        <li><?= icon('check', 15) ?> Website Launch Checklist</li>
+                    </ul>
+                </div>
+            </div>
         </div>
     </div>
 </section>
@@ -356,8 +427,8 @@ require_once __DIR__ . '/includes/header.php';
 <section class="section" style="padding-top:0">
     <div class="container">
         <div class="section-head" data-aos="fade-up">
-            <p class="eyebrow">Insights</p>
-            <h2 class="section-title">Latest from the blog.</h2>
+            <p class="eyebrow">Journal</p>
+            <h2 class="section-title">Latest from the TPT Strategy Team.</h2>
         </div>
         <div class="blog-grid">
             <?php foreach ($posts as $i => $post): ?>
@@ -382,14 +453,38 @@ require_once __DIR__ . '/includes/header.php';
 </section>
 <?php endif; ?>
 
+<!-- ============================ HOME FAQ ================================ -->
+<section class="section" style="padding-top:0">
+    <div class="container">
+        <div class="section-head center" data-aos="fade-up">
+            <p class="eyebrow">FAQ</p>
+            <h2 class="section-title">Before you ask — answered.</h2>
+        </div>
+        <div class="faq" data-accordion="single">
+            <?php foreach ($homeFaq as $fi => $faqItem): ?>
+            <div class="acc-item<?= $fi === 0 ? ' open' : '' ?>">
+                <button class="acc-head" type="button" aria-expanded="<?= $fi === 0 ? 'true' : 'false' ?>">
+                    <span class="acc-title"><?= esc($faqItem['q']) ?></span>
+                    <span class="acc-icon"><?= icon('plus', 16) ?></span>
+                </button>
+                <div class="acc-body">
+                    <p class="acc-copy"><?= esc($faqItem['a']) ?></p>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <p class="text-muted" data-aos="fade-up" style="text-align:center;margin-top:22px;font-size:.92rem">Still deciding? Ask <strong style="color:var(--text)">Alia</strong>, our growth assistant — bottom-right corner. She answers from real TPT content and hands you to a human when she doesn&rsquo;t know.</p>
+    </div>
+</section>
+
 <!-- ============================= FINAL CTA ============================== -->
 <section class="final-cta">
     <div class="container">
-        <h2 data-aos="fade-up">Ready to grow? Let&rsquo;s build something that actually works.</h2>
-        <p data-aos="fade-up" data-aos-delay="80">Free strategy call. No pressure, no jargon — just a clear plan for your next 90 days of growth.</p>
+        <h2 data-aos="fade-up">Start here. Tell us the goal — we&rsquo;ll build the system.</h2>
+        <p data-aos="fade-up" data-aos-delay="80">A free strategy call with a clear plan for your next 90 days: which disciplines apply, what they&rsquo;d cost, and what we&rsquo;d measure. No pressure, no jargon — and an honest &ldquo;not yet&rdquo; when that&rsquo;s the answer.</p>
         <div class="hero-ctas" data-aos="fade-up" data-aos-delay="140">
             <a href="<?= url('contact') ?>" class="btn btn-primary btn-lg btn-magnetic">Start a Project <?= icon('arrow-r', 18) ?></a>
-            <a href="<?= url('services/meta-ads') ?>" class="btn btn-ghost btn-lg btn-magnetic">Browse Services</a>
+            <a href="<?= url('services') ?>" class="btn btn-ghost btn-lg btn-magnetic">Browse Services</a>
         </div>
     </div>
 </section>

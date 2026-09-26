@@ -402,8 +402,10 @@
         tab.classList.add('active');
         tab.setAttribute('aria-pressed', 'true');
         var filter = tab.getAttribute('data-filter');
+        var visible = 0;
         cards.forEach(function (card) {
           var show = filter === 'all' || card.getAttribute('data-category') === filter;
+          if (show) visible++;
           if (show) {
             card.classList.remove('hidden');
             requestAnimationFrame(function () { card.classList.remove('is-hiding'); });
@@ -414,6 +416,49 @@
             }, 320);
           }
         });
+        var emptyState = document.getElementById('pfEmpty');
+        if (emptyState) emptyState.classList.toggle('hidden', visible > 0);
+      });
+    });
+  }
+
+  /* ---------------------------------------------------------------------
+     Growth Library filter (two dimensions: type + category)
+     --------------------------------------------------------------------- */
+  function initLibraryFilter() {
+    var cards = document.querySelectorAll('.resource-card[data-type]');
+    if (!cards.length) return;
+    var state = { type: 'all', cat: 'all' };
+    var empty = document.getElementById('libEmpty');
+    function apply() {
+      var visible = 0;
+      cards.forEach(function (card) {
+        var okT = state.type === 'all' || card.getAttribute('data-type') === state.type;
+        var okC = state.cat === 'all' || card.getAttribute('data-category') === state.cat;
+        var show = okT && okC;
+        if (show) {
+          visible++;
+          card.classList.remove('hidden');
+          requestAnimationFrame(function () { card.classList.remove('is-hiding'); });
+        } else {
+          card.classList.add('is-hiding');
+          setTimeout(function () {
+            if (card.classList.contains('is-hiding')) card.classList.add('hidden');
+          }, 320);
+        }
+      });
+      if (empty) empty.classList.toggle('hidden', visible > 0);
+    }
+    document.querySelectorAll('[data-libfilter]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var dim = btn.getAttribute('data-libfilter');
+        var group = document.querySelectorAll('[data-libfilter="' + dim + '"]');
+        group.forEach(function (b) { b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); });
+        btn.classList.add('active');
+        btn.setAttribute('aria-pressed', 'true');
+        if (dim === 'type') state.type = btn.getAttribute('data-value');
+        else state.cat = btn.getAttribute('data-value');
+        apply();
       });
     });
   }
@@ -576,6 +621,7 @@
     initSystem();
     initTestimonials();
     initPortfolioFilter();
+    initLibraryFilter();
     initCharts();
     initContactForm();
     initNewsletterForms();

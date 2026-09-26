@@ -361,8 +361,13 @@ function getResources($type = null, $activeOnly = true)
     if ($where) {
         $sql .= ' WHERE ' . implode(' AND ', $where);
     }
-    $sql .= ' ORDER BY resource_type ASC, id ASC';
+    $sql .= ' ORDER BY id ASC';
     return dbAll($sql, $params);
+}
+
+function getResourceBySlug($slug)
+{
+    return dbOne('SELECT * FROM resources WHERE slug = ? AND is_active = 1', array($slug));
 }
 
 function getTeamMembers()

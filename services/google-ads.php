@@ -1,71 +1,119 @@
 <?php
 /**
- * The Pie Technologies — Google Ads service page
+ * The Pie Technologies — Google Ads service page (GROW)
  */
 require_once dirname(__DIR__) . '/includes/init.php';
 
 $service = array(
     'key'   => 'google-ads',
-    'title' => 'Be the Answer at the Exact Moment Intent Appears.',
-    'lead'  => 'Search, Shopping, Performance Max and YouTube campaigns built on tight intent mapping and ruthless negative-keyword discipline. High-intent traffic, measured to the last click.',
-    'seoTitle' => 'Google Ads Management Agency | Search, Shopping & PMax',
-    'seoDesc'  => 'Google Ads managed properly: search, Performance Max, Shopping, YouTube and display — with conversion tracking, negative keyword discipline and transparent ROAS reporting.',
-    'intro'   => array(
-        'heading'    => 'What we do',
-        'title'      => 'Intent is the cheapest traffic on earth.',
-        'paragraphs' => array(
-            'Someone typing "buy running shoes lahore delivery" is not browsing — they\'re shopping. Google Ads puts you in front of that moment. Our job is to win it at a cost that makes sense for your margins.',
-            'That means surgical account structure, ad copy that pre-qualifies the click, landing pages that continue the promise, and a negative-keyword list we treat as a living document. Wasted spend is a bug we hunt daily.',
-        ),
-        'features' => array(
-            array('icon' => 'search',  'title' => 'Search Campaigns',     'text' => 'Tightly themed ad groups, RSA copy tested per intent tier and bids managed against CPA — not average position.'),
-            array('icon' => 'sparkle', 'title' => 'Performance Max',      'text' => 'PMax fed with good assets, clean audiences and brand exclusions — so Google\'s automation works for you, not against you.'),
-            array('icon' => 'grid',    'title' => 'Shopping / Merchant',  'text' => 'Feed optimisation, title engineering and margin-aware bidding for product advertisers.'),
-            array('icon' => 'youtube', 'title' => 'YouTube Ads',          'text' => 'Skippable in-stream and Shorts campaigns that build demand at CPMs social can\'t touch.'),
-            array('icon' => 'globe',   'title' => 'Display & Remarketing','text' => 'Audience-led display for reach and sequential remarketing that closes the loop on warm traffic.'),
-            array('icon' => 'target',  'title' => 'Landing Page CRO',     'text' => 'Message-matched landing pages and form friction audits, because the click is only half the job.'),
-        ),
-    ),
-    'platformsTitle' => 'Every Google surface that carries intent.',
-    'platforms' => array(
-        array('icon' => 'search',  'label' => 'Search'),
-        array('icon' => 'grid',    'label' => 'Shopping'),
-        array('icon' => 'sparkle', 'label' => 'Performance Max'),
-        array('icon' => 'youtube', 'label' => 'YouTube'),
-        array('icon' => 'globe',   'label' => 'Display'),
-    ),
-    'steps' => array(
-        array('title' => 'Research',  'text' => 'Keyword intent mapping, competitor ad analysis and margin maths per product or service.'),
-        array('title' => 'Structure', 'text' => 'Account architecture by intent tier, with conversion tracking and enhanced conversions verified first.'),
-        array('title' => 'Copy',      'text' => 'RSAs and assets written to pre-qualify clicks — every headline earns its place.'),
-        array('title' => 'Launch',    'text' => 'Campaigns go live with budgets, negatives and bid strategies matched to data volume.'),
-        array('title' => 'Optimize',  'text' => 'Search-term mining weekly, bid and budget shifts daily, creatives refreshed on fatigue signals.'),
-        array('title' => 'Scale',     'text' => 'New intent tiers, geos and PMax asset groups added only when core CPA holds.'),
-    ),
-    'stats' => array(
-        array('value' => 5.6, 'decimals' => 1, 'suffix' => '×', 'label' => 'Average ROAS on managed search accounts'),
-        array('value' => 41,  'suffix' => '%', 'label' => 'Average reduction in cost per acquisition'),
-        array('value' => 24,  'suffix' => '/7', 'label' => 'Intent captured — your ads never sleep'),
-    ),
-    'who' => array(
-        array('icon' => 'grid',  'title' => 'E-commerce Stores',   'text' => 'Shopping and PMax operators who need margin-aware bidding and a feed that actually converts.'),
-        array('icon' => 'users', 'title' => 'Service & B2B',       'text' => 'High-consideration sellers who need qualified enquiries from search intent, tracked all the way to closed revenue.'),
-        array('icon' => 'pin',   'title' => 'Local & Multi-Location', 'text' => 'Brands that need to own their city\'s searches and map-adjacent intent without paying national CPCs.'),
-    ),
-    'testimonial' => true,
-    'faq' => array(
-        array('q' => 'Google Ads or Meta Ads — where should my budget go?', 'a' => 'Google captures existing demand; Meta creates it. If people already search for what you sell, Google converts fastest. If your category needs education or impulse, Meta wins. Most scaling brands run both — we\'ll tell you the right split for your margins on a call.'),
-        array('q' => 'How much should I budget for Google Ads?', 'a' => 'Start from your economics, not from a guess: target CPA × the conversions you need per month, plus enough click volume for Smart Bidding to learn (roughly 30 conversions/month per campaign). We\'ll model it with you before you spend anything.'),
-        array('q' => 'Why is my current account wasting budget?', 'a' => 'The classic leaks: broad match without negatives, one giant ad group, tracking that optimises for clicks instead of revenue, and PMax cannibalising branded search. Our audit names your exact leaks with screenshots and numbers.'),
-        array('q' => 'Do you set up conversion tracking?', 'a' => 'Always, first. Google Tag Manager, enhanced conversions, offline/imported conversions where relevant — because every bidding decision is only as good as the data feeding it.'),
-        array('q' => 'How is Performance Max different from normal campaigns?', 'a' => 'PMax lets Google\'s automation buy across all its inventory from one campaign. It\'s powerful and opaque — so we control what we can: asset quality, audience signals, brand exclusions and search-term insights, reviewed weekly.'),
-        array('q' => 'What reporting will I see?', 'a' => 'A live dashboard plus a monthly read-out: spend, conversions, CPA/ROAS by campaign, search-term wins and losses, and the exact changes we made because of them.'),
+    'title' => 'Google Ads',
+    'lead'  => 'Capture demand that already exists — and pay only for clicks worth having.',
+    'seoTitle' => 'Google Ads Management — Search, Performance Max & Local | TPT',
+    'seoDesc'  => 'Keyword research, ad copy, landing pages, negative keywords, conversion tracking and budget management across Search, Performance Max, Display and YouTube — governed by cost per qualified result.',
+    'heroDesc' => 'Search is intent, captured at the exact moment someone wants what you sell. But intent without structure is expensive: broad match spills, missing negatives, ads that don’t match pages. We run Google Ads like an investment portfolio — every keyword, ad and dollar with a job.',
+    'bullets'  => array(
+        'Keyword research mapped to buying intent, not volume',
+        'Tight ad groups with copy that mirrors the query',
+        'Negative keyword lists built before spend starts',
+        'Conversion tracking that counts leads, not clicks',
     ),
     'cta' => array(
-        'title'  => 'Get a Free Google Ads Audit.',
-        'text'   => 'We\'ll review your account structure, search terms and tracking — and show you where the budget is bleeding.',
-        'button' => 'Get My Free Audit',
+        'title'  => 'Paying for clicks that never become customers?',
+        'text'   => 'Get a Google Ads audit: search terms actually triggering your ads, quality scores, tracking integrity and wasted spend — with the fixes priced against the savings. Often the audit pays for itself.',
+        'button' => 'Get a Google Ads Audit',
     ),
+    'problem' => array(
+        'eyebrow'    => 'The problem',
+        'title'      => 'Google Ads punishes lazy structure.',
+        'paragraphs' => array(
+            'Unmanaged accounts drift: broad match sends your ads to searches you’d never bid on, negatives never get added, and every click teaches the system to find more of the same mistake. The budget disappears into queries one honest search-terms report would have exposed.',
+            'Meanwhile your landing pages promise something different than the ad, quality scores sag, and Google charges you a tax for the mismatch — the least efficient media buy in digital, wearing the costume of the most efficient one.',
+        ),
+        'familiarTitle' => 'Sound familiar?',
+        'familiar' => array(
+            'Search terms report full of queries that aren’t your customers',
+            'Cost per click rising while conversion rate falls',
+            '“Just set it to Performance Max and let Google handle it”',
+            'No one can say what a lead from Google actually costs',
+        ),
+    ),
+    'machine' => array(
+        'eyebrow' => 'The machine',
+        'title'   => 'From query to customer.',
+        'lead'    => 'Six governed stages between someone typing and someone buying.',
+        'steps'   => array(
+            array('title' => 'Query',     'text' => 'Someone searches with intent. Keyword architecture decides whether your ad earns the right to answer.'),
+            array('title' => 'Ad',        'text' => 'Copy that mirrors the query’s language, with every extension loaded — sitelinks, callouts, structured snippets.'),
+            array('title' => 'Page',      'text' => 'A landing page that continues the conversation, answers the objection and makes one ask.'),
+            array('title' => 'Convert',   'text' => 'Tracked conversion — form, call, purchase — with server-side verification so the data is real.'),
+            array('title' => 'Govern',    'text' => 'Search terms reviewed weekly: negatives added, matches tightened, budget moved toward what converts.'),
+            array('title' => 'Compound',  'text' => 'Clean conversion data trains Smart Bidding properly; quality scores rise; cost per result falls.'),
+        ),
+        'note' => 'Every week we ask one question of every keyword: did it produce a customer, a reason to say no, or noise?',
+    ),
+    'pillarsEyebrow' => 'What we actually do',
+    'pillarsTitle'   => 'The Google Ads operating stack.',
+    'pillarsLead'    => 'Four workstreams, run continuously:',
+    'pillars' => array(
+        array('title' => 'Research & structure', 'text' => 'Intent-mapped keywords in tight, sane ad groups.', 'points' => array(
+            'Keyword research organized by buying intent, not search volume',
+            'Tight ad groups so every ad answers its own query',
+            'Match types used deliberately — broad only where negatives guard it',
+            'Campaign budgets split across search, local and remarketing by role',
+        )),
+        array('title' => 'Ads & landing pages', 'text' => 'Message match from query to form.', 'points' => array(
+            'RSA copy tested against real queries; extensions fully loaded',
+            'Landing pages built per campaign, continuing the ad’s promise',
+            'Forms and call tracking that capture and qualify the lead',
+            'Page speed and mobile experience treated as bid variables',
+        )),
+        array('title' => 'Negatives & quality', 'text' => 'The work that makes everything else cheaper.', 'points' => array(
+            'Weekly search-terms reviews; negative lists grown continuously',
+            'Shared negative libraries across campaigns',
+            'Quality score improvement via relevance, not bid brute-force',
+            'Geo, device and daypart bid adjustments from real conversion data',
+        )),
+        array('title' => 'Tracking & bidding', 'text' => 'Clean signals feeding disciplined automation.', 'points' => array(
+            'GA4 + Google Ads conversion linking with enhanced conversions',
+            'Call tracking and offline conversion import where sales close offline',
+            'Smart Bidding introduced only after conversion volume justifies it',
+            'Budget scaling rules tied to cost per qualified result',
+        )),
+    ),
+    'timelineEyebrow' => 'How it works',
+    'timelineTitle'   => 'The first ninety days.',
+    'timeline' => array(
+        array('when' => 'Week 1–2', 'title' => 'Audit & research',      'text' => 'Account and search-terms teardown; keyword universe mapped by intent; competitor auction insights reviewed; baselines recorded.'),
+        array('when' => 'Week 2–3', 'title' => 'Structure & tracking',  'text' => 'Campaign architecture rebuilt; GA4 and conversion tracking verified; enhanced conversions and call tracking wired.'),
+        array('when' => 'Week 3–4', 'title' => 'Ads & pages',           'text' => 'RSAs written per ad group; extensions loaded; landing pages built or fixed for message match.'),
+        array('when' => 'Week 5–6', 'title' => 'Launch & govern',       'text' => 'Staged launch with budgets guarded; first negative lists seeded; daily delivery and weekly search-terms reviews begin.'),
+        array('when' => 'Week 7–10','title' => 'Optimize',              'text' => 'Bids and budgets move toward converting terms; quality scores lifted; ad copy iterated against real query data.'),
+        array('when' => 'Week 11–13','title' => 'Scale',                'text' => 'New keyword themes, remarketing and Performance Max added where evidence supports them. Quarterly plan agreed.'),
+    ),
+    'faqTitle' => 'Google Ads, straight answers.',
+    'faq' => array(
+        array('q' => 'Google Ads or Meta Ads — which should we run?', 'a' => 'They answer different moments: Google captures existing demand, Meta creates it. If people already search for what you sell, Google usually earns budget first. Many businesses run both deliberately — we model the blend from your market’s search volume and costs, then recommend honestly.'),
+        array('q' => 'What does a click cost in our industry?', 'a' => 'It varies by market, keyword and quality score — a home-services click and a legal click are different universes. During discovery we pull auction and keyword data for your specific geography and model cost per lead before you commit a dollar.'),
+        array('q' => 'Can you take over an existing account?', 'a' => 'Yes, and we often do. We audit before touching anything: what’s working gets kept, what’s leaking gets fixed, and the account history — quality scores, conversion data — is preserved rather than restarted from zero.'),
+        array('q' => 'Do we need a landing page, or can ads go to our website?', 'a' => 'You can, and you’ll pay more for it. A homepage answers everyone; a landing page answers the person who clicked this ad. We build message-matched pages per campaign and measure the difference in conversion rate, not opinion.'),
+    ),
+    'deeper' => array(
+        array('label' => 'Blueprint', 'title' => 'The Google Ads Blueprint',        'note' => 'Structure, negatives and bidding, free', 'url' => url('resources/google-ads-blueprint')),
+        array('label' => 'Playbook',  'title' => 'The Lead Generation Blueprint',   'note' => 'Full-funnel context for paid search', 'url' => url('resources/lead-generation-blueprint')),
+        array('label' => 'Service',   'title' => 'Web Development',                 'note' => 'Landing pages built to convert', 'url' => url('services/web-development')),
+    ),
+    'deliverables' => array(
+        'Keyword research mapped to buying intent',
+        'Campaign and ad-group architecture with deliberate match types',
+        'Responsive search ads and every applicable extension',
+        'Negative keyword libraries grown from weekly search-terms reviews',
+        'Landing pages with message match per campaign',
+        'GA4 conversion tracking, enhanced conversions and call tracking',
+        'Bid and budget management with monthly performance reporting',
+    ),
+    'gallery'     => true,
+    'testimonial' => true,
+    'related'     => array('seo', 'web-development', 'data-analytics'),
 );
 
-require dirname(__DIR__) . '/includes/service-page.php';
+require_once dirname(__DIR__) . '/includes/service-page.php';

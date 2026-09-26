@@ -110,7 +110,7 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
     <h3>System status</h3>
     <ul class="status-list">
         <li><span>SMTP email delivery</span><span class="<?= $smtpOk ? 'ok' : 'bad' ?>"><?= $smtpOk ? '✅ Connected (' . esc(getSetting('smtp_host')) . ')' : '❌ Not configured' ?></span></li>
-        <li><span>Gemini API (PIE Bot)</span><span class="<?= $geminiOk ? 'ok' : 'bad' ?>"><?= $geminiOk ? '✅ Key set' : '❌ Missing' ?></span></li>
+        <li><span>Gemini API (Alia)</span><span class="<?= $geminiOk ? 'ok' : 'bad' ?>"><?= $geminiOk ? '✅ Key set' : '❌ Missing' ?></span></li>
         <li><span>PHP version</span><span class="ok"><?= esc($phpVersion) ?></span></li>
         <li><span>MySQL database</span><span class="<?= $mysqlOk ? 'ok' : 'bad' ?>"><?= $mysqlOk ? '✅ Connected' : '❌ Not connected — check includes/config.php' ?></span></li>
         <li><span>Maintenance mode</span><span class="<?= getSetting('maintenance_mode', '0') === '1' ? 'bad' : 'ok' ?>"><?= getSetting('maintenance_mode', '0') === '1' ? '⚠️ ON — visitors see maintenance page' : '✅ Off' ?></span></li>

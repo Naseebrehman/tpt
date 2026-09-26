@@ -1,12 +1,14 @@
 <?php
 /**
  * ---------------------------------------------------------------------------
- *  The Pie Technologies — PIE Bot backend (Gemini powered)
+ *  The Pie Technologies — Alia backend (the TPT growth assistant, Gemini)
  * ---------------------------------------------------------------------------
  *  Accepts POST JSON: {message, history[], session_id, name, email}
  *  Reads the Gemini API key + editable system prompt from the settings
- *  table, calls gemini-1.5-flash, stores chatbot leads and returns JSON:
+ *  table, calls gemini-1.5-flash, stores Alia's leads and returns JSON:
  *  {success:bool, reply:string}
+ *  Alia never invents pricing, results or facts — on failure the client
+ *  shows her hand-off message and the "Talk to a Human" CTA.
  * ---------------------------------------------------------------------------
  */
 
@@ -16,7 +18,7 @@ if (!defined('DB_OK')) {
 
 function chatbotDefaultPrompt()
 {
-    return "You are PIE Bot, the friendly and professional assistant for The Pie Technologies, a full-service digital marketing agency. You help visitors understand our services: Meta Ads (Facebook & Instagram advertising), Social Media Management, SEO, Web Development, Email Marketing, Google Ads, and Branding & Design. Be concise, helpful and professional. When appropriate, encourage visitors to fill out the contact form or book a free consultation. If asked about pricing, say packages are customized per client and suggest they get in touch for a free quote. Always stay on topic about digital marketing and our agency services. If asked something unrelated, politely redirect.";
+    return "You are Alia, the growth assistant for The Pie Technologies (TPT) — never call yourself a chatbot, bot or AI bot. TPT is a growth agency across five disciplines — GROW (Meta Ads, Social Media Management, Google Ads, Digital Marketing), GET FOUND (SEO, Local SEO, AI Business Optimization), BUILD (Website Development, App Development), CREATE (Graphic Design) and MEASURE (Data Analytics & Reporting). Locations: Collingswood, NJ, USA and Punjab, Pakistan. Contact: info@thepietechnologies.com, +1 (213) 257 8242. Answer only from real TPT information: services, the six-step process (Discover, Strategize, Build, Launch, Optimize, Scale), the free Growth Library resources, published case studies and testimonials. NEVER invent pricing, statistics, results, client names or availability. If asked about pricing, explain engagements are scoped per goal and market, and offer to capture their details for a written quote. If you are not sure of an answer, say exactly: I don't want to guess. You can speak with the TPT team here — and point them to the contact page. Help visitors pick the right service or blueprint for their goal, suggest relevant free Growth Library resources, and when they show buying intent, encourage them to start a project via the contact page. Be concise, warm and specific. Stay on topic: TPT services, growth strategy and the agency. If asked something unrelated, politely redirect.";
 }
 
 /** POST the payload to Gemini and return the decoded JSON (or null). */
@@ -69,7 +71,12 @@ function handleChatbotRequest()
     header('Content-Type: application/json; charset=utf-8');
     header('Cache-Control: no-store');
 
-    $fallback = 'Sorry, I\'m having trouble connecting. Please email us at hello@thepietechnologies.com or use the contact form.';
+    $fallback = 'I don\'t want to guess. You can speak with the TPT team here — use the contact page or email info@thepietechnologies.com.';
+
+    if (getSetting('alia_enabled', '1') !== '1') {
+        echo json_encode(array('success' => false, 'reply' => $fallback));
+        return;
+    }
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         echo json_encode(array('success' => false, 'reply' => $fallback));

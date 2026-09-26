@@ -28,17 +28,64 @@ $svcName = $svcMeta ? $svcMeta['name'] : $service['key'];
 ?>
 
 <!-- ================================ HERO ================================ -->
+<?php
+$svcDiscipline = '';
+if ($svcMeta) {
+    foreach (pieDisciplines() as $disc) {
+        if ($disc['key'] === $svcMeta['discipline']) { $svcDiscipline = $disc['name']; break; }
+    }
+}
+?>
 <section class="page-hero">
     <div class="container">
-        <p class="eyebrow crumbs"><a href="<?= url('') ?>">Home</a> &nbsp;/&nbsp; <a href="<?= url('services/' . $service['key']) ?>"><?= esc($svcName) ?></a></p>
+        <p class="eyebrow crumbs"><a href="<?= url('') ?>">Home</a> &nbsp;/&nbsp; <a href="<?= url('services/meta-ads') ?>">Services</a> &nbsp;/&nbsp; <?php if ($svcDiscipline !== ''): ?><?= esc(ucwords(strtolower($svcDiscipline))) ?> · <?php endif; ?><?= esc($svcName) ?></p>
         <h1><?= esc($service['title']) ?></h1>
         <?php if (!empty($service['lead'])): ?><p class="lead"><?= esc($service['lead']) ?></p><?php endif; ?>
         <div class="page-hero-actions">
-            <a href="<?= url('contact') ?>" class="btn btn-primary btn-magnetic"><?= esc(isset($service['cta']['button']) ? $service['cta']['button'] : 'Start a Project') ?> <?= icon('arrow-r', 18) ?></a>
-            <a href="<?= url('portfolio') ?>" class="btn btn-ghost btn-magnetic">See Results</a>
+            <a href="<?= url('contact') ?>?service=<?= rawurlencode($svcName) ?>" class="btn btn-primary btn-magnetic"><?= esc(isset($service['cta']['button']) ? $service['cta']['button'] : 'Start a Project') ?> <?= icon('arrow-r', 18) ?></a>
+            <a href="<?= url('portfolio') ?>" class="btn btn-ghost btn-magnetic">See related work</a>
+        </div>
+        <?php if (!empty($service['heroDesc'])): ?>
+        <p class="hero-desc" style="margin-top:26px;max-width:62ch;color:var(--muted);line-height:1.75"><?= esc($service['heroDesc']) ?></p>
+        <?php endif; ?>
+        <?php if (!empty($service['bullets'])): ?>
+        <ul class="hero-bullets" style="margin-top:22px;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px 26px;list-style:none;padding:0">
+            <?php foreach ($service['bullets'] as $hb): ?>
+            <li style="display:flex;gap:10px;align-items:flex-start;color:var(--muted);font-size:.95rem"><span style="color:var(--violet);flex:none;margin-top:2px"><?= icon('check', 16) ?></span><span><?= esc($hb) ?></span></li>
+            <?php endforeach; ?>
+        </ul>
+        <?php endif; ?>
+    </div>
+</section>
+
+<!-- ============================== PROBLEM =============================== -->
+<?php if (!empty($service['problem'])): ?>
+<section class="section">
+    <div class="container">
+        <div class="split">
+            <div class="copy" data-aos="fade-up">
+                <p class="eyebrow"><?= esc(isset($service['problem']['eyebrow']) ? $service['problem']['eyebrow'] : 'The problem') ?></p>
+                <h2 class="section-title" style="font-size:clamp(1.8rem,3.6vw,2.9rem)"><?= esc($service['problem']['title']) ?></h2>
+                <?php foreach ((array) $service['problem']['paragraphs'] as $pp): ?>
+                <p><?= esc($pp) ?></p>
+                <?php endforeach; ?>
+            </div>
+            <?php if (!empty($service['problem']['familiar'])): ?>
+            <div class="copy" data-aos="fade-up" data-aos-delay="100">
+                <div class="chart-card">
+                    <p class="eyebrow" style="margin-bottom:14px"><?= esc(isset($service['problem']['familiarTitle']) ? $service['problem']['familiarTitle'] : 'Sound familiar?') ?></p>
+                    <ul style="display:grid;gap:12px;list-style:none;padding:0">
+                        <?php foreach ($service['problem']['familiar'] as $fam): ?>
+                        <li style="display:flex;gap:10px;color:var(--muted);font-size:.92rem;align-items:flex-start"><span style="color:#f87171;flex:none"><?= icon('close', 15) ?></span><span><?= esc($fam) ?></span></li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            </div>
+            <?php endif; ?>
         </div>
     </div>
 </section>
+<?php endif; ?>
 
 <!-- ============================ WHAT WE DO ============================== -->
 <?php if (!empty($service['intro'])): ?>
@@ -139,8 +186,9 @@ $svcName = $svcMeta ? $svcMeta['name'] : $service['key'];
 <section class="section" style="padding-top:0">
     <div class="container">
         <div class="section-head" data-aos="fade-up">
-            <p class="eyebrow">Strategy</p>
+            <p class="eyebrow"><?= esc(isset($service['pillarsEyebrow']) ? $service['pillarsEyebrow'] : 'Strategy') ?></p>
             <h2 class="section-title" style="font-size:clamp(1.7rem,3.4vw,2.6rem)"><?= esc(isset($service['pillarsTitle']) ? $service['pillarsTitle'] : 'The strategy, in three pillars.') ?></h2>
+            <?php if (!empty($service['pillarsLead'])): ?><p class="section-lead"><?= esc($service['pillarsLead']) ?></p><?php endif; ?>
         </div>
         <div class="pillar-grid">
             <?php foreach ($service['pillars'] as $pi => $pillar): ?>
@@ -158,6 +206,33 @@ $svcName = $svcMeta ? $svcMeta['name'] : $service['key'];
             </article>
             <?php endforeach; ?>
         </div>
+    </div>
+</section>
+<?php endif; ?>
+
+<!-- ============================== MACHINE =============================== -->
+<?php if (!empty($service['machine'])): ?>
+<section class="section" style="padding-top:0">
+    <div class="container">
+        <div class="section-head" data-aos="fade-up">
+            <p class="eyebrow"><?= esc(isset($service['machine']['eyebrow']) ? $service['machine']['eyebrow'] : 'The machine') ?></p>
+            <h2 class="section-title" style="font-size:clamp(1.7rem,3.4vw,2.6rem)"><?= esc($service['machine']['title']) ?></h2>
+            <?php if (!empty($service['machine']['lead'])): ?><p class="section-lead"><?= esc($service['machine']['lead']) ?></p><?php endif; ?>
+        </div>
+        <div class="stepper stepper-<?= count($service['machine']['steps']) ?>">
+            <?php foreach ($service['machine']['steps'] as $mi => $mstep): ?>
+            <div class="step" data-aos="fade-up" data-aos-delay="<?= $mi * 70 ?>">
+                <span class="dot mono"><?= str_pad((string) ($mi + 1), 2, '0', STR_PAD_LEFT) ?></span>
+                <div>
+                    <h4><?= esc($mstep['title']) ?></h4>
+                    <p><?= esc($mstep['text']) ?></p>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php if (!empty($service['machine']['note'])): ?>
+        <p class="text-muted" data-aos="fade-up" style="margin-top:26px;font-style:italic"><?= esc($service['machine']['note']) ?></p>
+        <?php endif; ?>
     </div>
 </section>
 <?php endif; ?>
@@ -190,8 +265,9 @@ $svcName = $svcMeta ? $svcMeta['name'] : $service['key'];
 <section class="section" style="padding-top:0">
     <div class="container">
         <div class="section-head" data-aos="fade-up">
-            <p class="eyebrow">Our Process</p>
-            <h2 class="section-title" style="font-size:clamp(1.7rem,3.4vw,2.6rem)">How we work.</h2>
+            <p class="eyebrow"><?= esc(isset($service['stepsEyebrow']) ? $service['stepsEyebrow'] : 'Our Process') ?></p>
+            <h2 class="section-title" style="font-size:clamp(1.7rem,3.4vw,2.6rem)"><?= esc(isset($service['stepsTitle']) ? $service['stepsTitle'] : 'How we work.') ?></h2>
+            <?php if (!empty($service['stepsLead'])): ?><p class="section-lead"><?= esc($service['stepsLead']) ?></p><?php endif; ?>
         </div>
         <div class="stepper<?= count($service['steps']) === 5 ? ' stepper-5' : (count($service['steps']) === 7 ? ' stepper-7' : '') ?>">
             <?php foreach ($service['steps'] as $si => $step): ?>
@@ -267,8 +343,9 @@ $svcName = $svcMeta ? $svcMeta['name'] : $service['key'];
 <section class="section" style="padding-top:0">
     <div class="container">
         <div class="section-head" data-aos="fade-up">
-            <p class="eyebrow">Expectations</p>
-            <h2 class="section-title" style="font-size:clamp(1.7rem,3.4vw,2.6rem)">What happens, and when.</h2>
+            <p class="eyebrow"><?= esc(isset($service['timelineEyebrow']) ? $service['timelineEyebrow'] : 'Expectations') ?></p>
+            <h2 class="section-title" style="font-size:clamp(1.7rem,3.4vw,2.6rem)"><?= esc(isset($service['timelineTitle']) ? $service['timelineTitle'] : 'What happens, and when.') ?></h2>
+            <?php if (!empty($service['timelineLead'])): ?><p class="section-lead"><?= esc($service['timelineLead']) ?></p><?php endif; ?>
         </div>
         <div class="timeline">
             <?php foreach ($service['timeline'] as $ti => $milestone): ?>
@@ -313,6 +390,48 @@ $svcName = $svcMeta ? $svcMeta['name'] : $service['key'];
 </section>
 <?php endif; ?>
 
+<!-- ============================== DEEPER ================================ -->
+<?php if (!empty($service['deeper'])): ?>
+<section class="section" style="padding-top:0">
+    <div class="container">
+        <div class="section-head" data-aos="fade-up">
+            <p class="eyebrow"><?= esc(isset($service['deeperEyebrow']) ? $service['deeperEyebrow'] : 'Go deeper') ?></p>
+            <h2 class="section-title" style="font-size:clamp(1.7rem,3.4vw,2.6rem)"><?= esc(isset($service['deeperTitle']) ? $service['deeperTitle'] : 'From the TPT Growth Library.') ?></h2>
+        </div>
+        <div class="deeper-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px">
+            <?php foreach ($service['deeper'] as $di => $deep): ?>
+            <a class="chart-card" href="<?= esc($deep['url']) ?>" data-aos="fade-up" data-aos-delay="<?= $di * 80 ?>" style="display:block;text-decoration:none;transition:transform .25s ease,border-color .25s ease" onfocus="this.style.transform='translateY(-4px)'" onblur="this.style.transform=''">
+                <p class="eyebrow" style="margin-bottom:10px"><?= esc($deep['label']) ?></p>
+                <strong style="display:block;font-size:1.05rem;color:var(--text);margin-bottom:8px"><?= esc($deep['title']) ?></strong>
+                <span class="text-muted" style="font-size:.88rem"><?= esc($deep['note']) ?> →</span>
+            </a>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
+
+<!-- ============================ DELIVERABLES ============================ -->
+<?php if (!empty($service['deliverables'])): ?>
+<section class="section" style="padding-top:0">
+    <div class="container">
+        <div class="split">
+            <div class="copy" data-aos="fade-up">
+                <p class="eyebrow"><?= esc(isset($service['deliverablesEyebrow']) ? $service['deliverablesEyebrow'] : 'Scope of engagement') ?></p>
+                <h2 class="section-title" style="font-size:clamp(1.7rem,3.4vw,2.6rem)"><?= esc(isset($service['deliverablesTitle']) ? $service['deliverablesTitle'] : 'Every deliverable, named upfront.') ?></h2>
+            </div>
+            <div class="copy" data-aos="fade-up" data-aos-delay="100">
+                <ul style="display:grid;gap:12px;list-style:none;padding:0">
+                    <?php foreach ($service['deliverables'] as $dl): ?>
+                    <li style="display:flex;gap:10px;align-items:flex-start;color:var(--muted);font-size:.95rem"><span style="color:#34d399;flex:none;margin-top:2px"><?= icon('check', 16) ?></span><span><?= esc($dl) ?></span></li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
+
 <!-- ========================== PORTFOLIO MINI ============================ -->
 <?php if (!empty($service['gallery'])):
     $galleryItems = array_slice(getPortfolioItems($svcName), 0, 3);
@@ -321,8 +440,8 @@ $svcName = $svcMeta ? $svcMeta['name'] : $service['key'];
 <section class="section" style="padding-top:0">
     <div class="container">
         <div class="section-head" data-aos="fade-up">
-            <p class="eyebrow">Proof</p>
-            <h2 class="section-title" style="font-size:clamp(1.7rem,3.4vw,2.6rem)">Recent <?= esc($svcName) ?> work.</h2>
+            <p class="eyebrow"><?= esc(isset($service['galleryEyebrow']) ? $service['galleryEyebrow'] : 'Proof') ?></p>
+            <h2 class="section-title" style="font-size:clamp(1.7rem,3.4vw,2.6rem)"><?= esc(isset($service['galleryTitle']) ? $service['galleryTitle'] : 'Recent ' . $svcName . ' work.') ?></h2>
         </div>
         <div class="work-grid" style="grid-template-columns:repeat(3,1fr)">
             <?php foreach ($galleryItems as $gi => $gItem): ?>
@@ -374,8 +493,8 @@ if ($serviceTestimonial): ?>
 <section class="section" style="padding-top:0">
     <div class="container">
         <div class="section-head center" data-aos="fade-up">
-            <p class="eyebrow">FAQ</p>
-            <h2 class="section-title" style="font-size:clamp(1.7rem,3.4vw,2.6rem)">Questions, answered honestly.</h2>
+            <p class="eyebrow"><?= esc(isset($service['faqEyebrow']) ? $service['faqEyebrow'] : 'FAQ') ?></p>
+            <h2 class="section-title" style="font-size:clamp(1.7rem,3.4vw,2.6rem)"><?= esc(isset($service['faqTitle']) ? $service['faqTitle'] : 'Questions, answered honestly.') ?></h2>
         </div>
         <div class="faq" data-accordion="single">
             <?php foreach ($service['faq'] as $fi => $faqItem): ?>
@@ -394,15 +513,46 @@ if ($serviceTestimonial): ?>
 </section>
 <?php endif; ?>
 
+<!-- ============================ PAIRS WELL WITH ========================= -->
+<?php
+$relatedServices = array();
+if (!empty($service['related'])) {
+    foreach ($service['related'] as $relKey) {
+        $relSvc = pieServiceByKey($relKey);
+        if ($relSvc) { $relatedServices[] = $relSvc; }
+    }
+}
+if ($relatedServices): ?>
+<section class="section" style="padding-top:0">
+    <div class="container">
+        <div class="section-head" data-aos="fade-up">
+            <p class="eyebrow">Connected by design</p>
+            <h2 class="section-title" style="font-size:clamp(1.7rem,3.4vw,2.6rem)">Pairs well with.</h2>
+        </div>
+        <div class="feature-grid">
+            <?php foreach ($relatedServices as $ri => $relSvc): ?>
+            <a class="feature-card" href="<?= url('services/' . $relSvc['key']) ?>" data-aos="fade-up" data-aos-delay="<?= $ri * 90 ?>" style="text-decoration:none;color:inherit">
+                <?= icon($relSvc['icon'], 24) ?>
+                <h3><?= esc($relSvc['name']) ?></h3>
+                <p><?= esc($relSvc['tagline']) ?></p>
+            </a>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
+
 <!-- ============================== FINAL CTA ============================= -->
 <section class="final-cta">
     <div class="container">
         <h2 data-aos="fade-up"><?= esc(isset($service['cta']['title']) ? $service['cta']['title'] : 'Ready when you are.') ?></h2>
         <?php if (!empty($service['cta']['text'])): ?><p data-aos="fade-up" data-aos-delay="80"><?= esc($service['cta']['text']) ?></p><?php endif; ?>
         <div class="hero-ctas" data-aos="fade-up" data-aos-delay="140">
-            <a href="<?= url('contact') ?>" class="btn btn-primary btn-lg btn-magnetic"><?= esc(isset($service['cta']['button']) ? $service['cta']['button'] : 'Get Started') ?> <?= icon('arrow-r', 18) ?></a>
-            <a href="<?= url('contact') ?>" class="btn btn-ghost btn-lg btn-magnetic">Book a Free Call</a>
+            <a href="<?= url('contact') ?>?service=<?= rawurlencode($svcName) ?>" class="btn btn-primary btn-lg btn-magnetic"><?= esc(isset($service['cta']['button']) ? $service['cta']['button'] : 'Start a Project') ?> <?= icon('arrow-r', 18) ?></a>
+            <?php $ctaPhone = preg_replace('/[^0-9+]/', '', (string) getSetting('site_phone', '+1 (213) 257 8242')); ?>
+            <a href="tel:<?= esc($ctaPhone) ?>" class="btn btn-ghost btn-lg btn-magnetic"><?= icon('phone', 17) ?> <?= esc(getSetting('site_phone', '+1 (213) 257 8242')) ?></a>
         </div>
+        <p class="text-muted" data-aos="fade-up" data-aos-delay="200" style="margin-top:20px;font-size:.88rem">Still comparing options? Ask <strong style="color:var(--text)">Alia</strong>, our growth assistant — bottom-right corner. She&rsquo;ll point you to the right service or blueprint, and hand you to a human when she doesn&rsquo;t know.</p>
     </div>
 </section>
 

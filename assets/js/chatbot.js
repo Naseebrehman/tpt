@@ -1,6 +1,7 @@
 /* ===========================================================================
-   PIE Bot — Gemini-powered chat widget client
+   Alia — the TPT growth assistant (Gemini-powered chat widget client)
    History lives in sessionStorage; optional lead capture (name + email).
+   Alia never invents facts: when unsure she hands off to a human.
    =========================================================================== */
 (function () {
   'use strict';
@@ -89,9 +90,24 @@
     }
   }
   function startConversation() {
-    push('bot', 'Hey 👋 I\'m PIE Bot, the assistant for The Pie Technologies. Ask me anything about our services — Meta Ads, SEO, social media, web development and more.');
+    push('bot', 'Hey — I\'m Alia, the TPT growth assistant. Ask me anything about our services, how we work, or where to start. I can also point you to the right free blueprint.');
+    pushHtml('<div class="chat-suggests">'
+      + '<button type="button" data-ask="What services do you offer?">What services do you offer?</button>'
+      + '<button type="button" data-ask="I need more leads">I need more leads</button>'
+      + '<button type="button" data-ask="Tell me about your SEO approach">Your SEO approach</button>'
+      + '<button type="button" data-ask="I want to start a project">Start a project</button>'
+      + '</div>');
     if (state.leadStage !== 'done') askLeadStage();
   }
+
+  /* suggested-question chips */
+  messages.addEventListener('click', function (e) {
+    var chip = e.target.closest('[data-ask]');
+    if (!chip) return;
+    var wrap = chip.closest('.chat-msg');
+    if (wrap) wrap.parentNode.removeChild(wrap);
+    send(chip.getAttribute('data-ask'));
+  });
 
   messages.addEventListener('click', function (e) {
     var skip = e.target.closest('[data-skip]');
@@ -111,6 +127,13 @@
       push('bot', 'No problem! How can I help you grow today?');
     }
   });
+
+  /* Alia never guesses — when she can't answer, she hands off to a human. */
+  function aliaFallback() {
+    var base = (window.PIE && window.PIE.base) ? window.PIE.base : '';
+    pushHtml('I don&#39;t want to guess. You can speak with the TPT team here.'
+      + '<div class="chat-lead-actions"><a href="' + esc(base) + 'contact">Talk to a Human →</a></div>');
+  }
 
   /* ------------------------------- sending ----------------------------- */
   function send(text) {
@@ -165,14 +188,17 @@
       .then(function (res) { return res.json(); })
       .then(function (json) {
         typing(false);
-        var reply = (json && json.reply) ? json.reply : 'Sorry, I\'m having trouble connecting. Please email us at hello@thepietechnologies.com or use the contact form.';
-        push('bot', reply);
-        state.history.push({ role: 'model', parts: [{ text: reply }] });
-        saveHistory();
+        if (json && json.success && json.reply) {
+          push('bot', json.reply);
+          state.history.push({ role: 'model', parts: [{ text: json.reply }] });
+          saveHistory();
+        } else {
+          aliaFallback();
+        }
       })
       .catch(function () {
         typing(false);
-        push('bot', 'Sorry, I\'m having trouble connecting. Please email us at hello@thepietechnologies.com or use the contact form.');
+        aliaFallback();
       })
       .then(function () { state.busy = false; });
   }

@@ -27,8 +27,13 @@ sitemapAdd($urls, 'portfolio', '0.9', 'weekly');
 sitemapAdd($urls, 'resources', '0.8', 'weekly');
 sitemapAdd($urls, 'blog', '0.9', 'daily');
 sitemapAdd($urls, 'contact', '0.8', 'monthly');
+sitemapAdd($urls, 'pay-online', '0.6', 'monthly');
+sitemapAdd($urls, 'services', '0.9', 'weekly');
 foreach (pieServices() as $svc) {
     sitemapAdd($urls, 'services/' . $svc['key'], '0.9', 'monthly');
+}
+foreach (dbAll("SELECT slug FROM resources WHERE is_active = 1 AND slug IS NOT NULL AND slug != ''") as $libItem) {
+    sitemapAdd($urls, 'resources/' . $libItem['slug'], '0.7', 'monthly');
 }
 foreach (dbAll("SELECT slug, published_at FROM blog_posts WHERE status = 'published' ORDER BY published_at DESC") as $post) {
     sitemapAdd($urls, 'blog/' . $post['slug'], '0.7', 'monthly', $post['published_at']);

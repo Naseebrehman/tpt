@@ -11,7 +11,11 @@ $textKeys = array(
     'site_name', 'site_tagline', 'site_phone', 'site_email', 'site_address', 'whatsapp_number',
     'google_analytics_id', 'facebook_pixel_id', 'meta_title', 'meta_description', 'founder_name', 'maintenance_ip',
     'instagram_url', 'facebook_url', 'linkedin_url', 'tiktok_url', 'twitter_url', 'youtube_url',
+    'stripe_mode', 'stripe_publishable_key', 'stripe_secret_key',
+    'paypal_mode', 'paypal_client_id', 'paypal_secret',
 );
+
+$toggleKeys = array('maintenance_mode', 'alia_enabled', 'stripe_enabled', 'paypal_enabled', 'pay_online_enabled');
 
 function saveSetting($key, $value)
 {
@@ -31,7 +35,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 saveSetting($key, sanitizeMultiline($_POST[$key]));
             }
         }
-        saveSetting('maintenance_mode', isset($_POST['maintenance_mode']) ? '1' : '0');
+        foreach ($toggleKeys as $toggleKey) {
+            saveSetting($toggleKey, isset($_POST[$toggleKey]) ? '1' : '0');
+        }
 
         $ogUp = uploadFile('og_image', 'settings', array('jpg', 'jpeg', 'png', 'webp'));
         if ($ogUp['ok'] && $ogUp['path'] !== '') {
@@ -59,7 +65,8 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
 
     <div class="a-tabs">
         <button class="a-tab active" type="button" data-tab="smtp">SMTP</button>
-        <button class="a-tab" type="button" data-tab="gemini">Gemini API</button>
+        <button class="a-tab" type="button" data-tab="gemini">Alia (Gemini)</button>
+        <button class="a-tab" type="button" data-tab="payments">Payments</button>
         <button class="a-tab" type="button" data-tab="site">Site Settings</button>
         <button class="a-tab" type="button" data-tab="social">Social Media</button>
         <button class="a-tab" type="button" data-tab="maintenance">Maintenance</button>
@@ -104,21 +111,80 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
 
     <div class="a-tabpanel" data-panel="gemini">
         <div class="a-card">
-            <h3>Gemini API (PIE Bot)</h3>
+            <h3>Alia — the TPT growth assistant</h3>
             <div class="a-field">
-                <label for="gemini_api_key">API key</label>
-                <span class="pw-wrap"><input id="gemini_api_key" name="gemini_api_key" type="password" value="<?= esc(getSetting('gemini_api_key')) ?>" autocomplete="new-password" placeholder="AIza…"><button class="pw-toggle" type="button" data-target="gemini_api_key">Show</button></span>
-                <div class="hint">Create a free key at Google AI Studio → &ldquo;Get API key&rdquo;. Stored only in your database.</div>
+                <label class="a-check"><input type="checkbox" name="alia_enabled" value="1"<?= getSetting('alia_enabled', '1') === '1' ? ' checked' : '' ?>> Alia is ON — widget visible site-wide and the API answers requests</label>
+                <div class="hint">Turning this off removes the widget from every page and disables the chat endpoint.</div>
             </div>
             <div class="a-field">
-                <label for="chatbot_system_prompt">Chatbot system prompt</label>
+                <label for="gemini_api_key">Gemini API key</label>
+                <span class="pw-wrap"><input id="gemini_api_key" name="gemini_api_key" type="password" value="<?= esc(getSetting('gemini_api_key')) ?>" autocomplete="new-password" placeholder="AIza…"><button class="pw-toggle" type="button" data-target="gemini_api_key">Show</button></span>
+                <div class="hint">Create a free key at Google AI Studio → &ldquo;Get API key&rdquo;. Stored only in your database — never exposed to the frontend.</div>
+            </div>
+            <div class="a-field">
+                <label for="chatbot_system_prompt">Alia system prompt</label>
                 <textarea id="chatbot_system_prompt" name="chatbot_system_prompt" style="min-height:160px"><?= esc(getSetting('chatbot_system_prompt')) ?></textarea>
-                <div class="hint">Edit how PIE Bot behaves. Leave empty to restore the default prompt on next save.</div>
+                <div class="hint">Edit how Alia behaves. She must never invent pricing or results — keep the hand-off rule (&ldquo;I don&rsquo;t want to guess…&rdquo;) in the prompt. Leave empty to restore the default on next save.</div>
             </div>
             <div class="a-toolbar">
                 <button class="a-btn" type="button" data-ajax-action="test_gemini" data-result="geminiTest">Test Connection</button>
             </div>
             <div class="inline-test" id="geminiTest"></div>
+        </div>
+    </div>
+
+    <div class="a-tabpanel" data-panel="payments">
+        <div class="a-card">
+            <h3>Pay Online page</h3>
+            <div class="a-field">
+                <label class="a-check"><input type="checkbox" name="pay_online_enabled" value="1"<?= getSetting('pay_online_enabled', '1') === '1' ? ' checked' : '' ?>> Pay Online page is ON</label>
+                <div class="hint">When off, /pay-online shows a &ldquo;payments currently unavailable&rdquo; notice and providers are hidden. Only providers enabled below ever appear on the page.</div>
+            </div>
+        </div>
+        <div class="a-card">
+            <h3>Stripe</h3>
+            <div class="a-field">
+                <label class="a-check"><input type="checkbox" name="stripe_enabled" value="1"<?= getSetting('stripe_enabled', '0') === '1' ? ' checked' : '' ?>> Stripe enabled — shown as a payment option</label>
+            </div>
+            <div class="a-field">
+                <label for="stripe_mode">Mode</label>
+                <select id="stripe_mode" name="stripe_mode">
+                    <option value="test"<?= getSetting('stripe_mode', 'test') === 'test' ? ' selected' : '' ?>>Test mode (no real charges)</option>
+                    <option value="live"<?= getSetting('stripe_mode', 'test') === 'live' ? ' selected' : '' ?>>Live mode (real charges)</option>
+                </select>
+                <div class="hint">Use test keys in test mode and live keys in live mode — mixing them will fail.</div>
+            </div>
+            <div class="a-field">
+                <label for="stripe_publishable_key">Publishable key</label>
+                <input id="stripe_publishable_key" name="stripe_publishable_key" type="text" value="<?= esc(getSetting('stripe_publishable_key')) ?>" placeholder="pk_test_…" autocomplete="off">
+            </div>
+            <div class="a-field">
+                <label for="stripe_secret_key">Secret key</label>
+                <span class="pw-wrap"><input id="stripe_secret_key" name="stripe_secret_key" type="password" value="<?= esc(getSetting('stripe_secret_key')) ?>" autocomplete="new-password" placeholder="sk_test…"><button class="pw-toggle" type="button" data-target="stripe_secret_key">Show</button></span>
+                <div class="hint">Server-side only. Never printed into page source or JavaScript.</div>
+            </div>
+        </div>
+        <div class="a-card">
+            <h3>PayPal</h3>
+            <div class="a-field">
+                <label class="a-check"><input type="checkbox" name="paypal_enabled" value="1"<?= getSetting('paypal_enabled', '0') === '1' ? ' checked' : '' ?>> PayPal enabled — shown as a payment option</label>
+            </div>
+            <div class="a-field">
+                <label for="paypal_mode">Mode</label>
+                <select id="paypal_mode" name="paypal_mode">
+                    <option value="sandbox"<?= getSetting('paypal_mode', 'sandbox') === 'sandbox' ? ' selected' : '' ?>>Sandbox (no real charges)</option>
+                    <option value="live"<?= getSetting('paypal_mode', 'sandbox') === 'live' ? ' selected' : '' ?>>Live (real charges)</option>
+                </select>
+            </div>
+            <div class="a-field">
+                <label for="paypal_client_id">Client ID</label>
+                <input id="paypal_client_id" name="paypal_client_id" type="text" value="<?= esc(getSetting('paypal_client_id')) ?>" autocomplete="off">
+            </div>
+            <div class="a-field">
+                <label for="paypal_secret">Secret</label>
+                <span class="pw-wrap"><input id="paypal_secret" name="paypal_secret" type="password" value="<?= esc(getSetting('paypal_secret')) ?>" autocomplete="new-password"><button class="pw-toggle" type="button" data-target="paypal_secret">Show</button></span>
+                <div class="hint">Server-side only, like the Stripe secret.</div>
+            </div>
         </div>
     </div>
 

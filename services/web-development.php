@@ -1,74 +1,119 @@
 <?php
 /**
- * The Pie Technologies — Web Development service page
+ * The Pie Technologies — Web Development service page (BUILD)
  */
 require_once dirname(__DIR__) . '/includes/init.php';
 
 $service = array(
     'key'   => 'web-development',
-    'title' => 'Websites That Work As Hard As You Do.',
-    'lead'  => 'Fast, secure, conversion-engineered websites — landing pages, business sites, e-commerce and web apps. Built to load in under a second and turn traffic into pipeline.',
-    'seoTitle' => 'Web Development Agency | Fast, Conversion-Focused Websites',
-    'seoDesc'  => 'Landing pages, business sites, e-commerce, web apps, WordPress and Shopify builds. Sub-second load times, 98+ Lighthouse scores and 100% mobile responsive — always.',
-    'intro'   => array(
-        'heading'    => 'What we build',
-        'title'      => 'A website is a sales employee. We hire it properly.',
-        'paragraphs' => array(
-            'Beautiful websites that don\'t convert are expensive brochures. We design and build around the action you need — a purchase, a booking, an enquiry — and we engineer the speed, structure and copy that make people take it.',
-            'Every build ships with clean semantic code, Core Web Vitals in the green, accessibility baked in and an admin panel your team can actually use. No bloated page builders, no 40-plugin spaghetti.',
-        ),
-        'features' => array(
-            array('icon' => 'target',  'title' => 'Landing Pages',    'text' => 'Single-purpose pages for campaigns: one goal, zero distractions, message-matched to the ad that sent the click.'),
-            array('icon' => 'globe',   'title' => 'Business Sites',   'text' => 'Multi-page corporate sites with clear architecture, SEO-ready markup and a CMS your team won\'t fight.'),
-            array('icon' => 'grid',    'title' => 'E-Commerce',       'text' => 'Stores built for conversion: fast product pages, frictionless checkout and upsell flows that lift order value.'),
-            array('icon' => 'cpu',     'title' => 'Web Apps',         'text' => 'Dashboards, portals and custom tools — PHP/MySQL or JavaScript stacks, built clean and documented.'),
-            array('icon' => 'edit',    'title' => 'WordPress',        'text' => 'Custom themes (not bought templates) with lightweight blocks, so editing stays easy and the site stays fast.'),
-            array('icon' => 'layers',  'title' => 'Shopify',          'text' => 'Theme customisation, app rationalisation and CRO-focused product pages for Shopify merchants.'),
-        ),
-    ),
-    'platformsTitle' => 'The stack we build on.',
-    'platforms' => array(
-        array('icon' => 'code',   'label' => 'HTML / CSS'),
-        array('icon' => 'cpu',    'label' => 'PHP'),
-        array('icon' => 'zap',    'label' => 'JavaScript'),
-        array('icon' => 'edit',   'label' => 'WordPress'),
-        array('icon' => 'grid',   'label' => 'Shopify'),
-        array('icon' => 'layers', 'label' => 'MySQL'),
-    ),
-    'steps' => array(
-        array('title' => 'Discovery',  'text' => 'Goals, users, competitors and the one action the site must drive. Sitemap and scope locked.'),
-        array('title' => 'Wireframe',  'text' => 'Low-fi structure first: hierarchy, flow and conversion path before a single pixel is styled.'),
-        array('title' => 'Design',     'text' => 'High-fidelity UI in your brand system, designed mobile-first and reviewed on real devices.'),
-        array('title' => 'Build',      'text' => 'Clean, hand-written front-end and CMS integration. Semantic HTML, lazy media, zero junk scripts.'),
-        array('title' => 'Test',       'text' => 'Cross-browser, cross-device, forms, speed and accessibility QA with a written test log.'),
-        array('title' => 'Launch',     'text' => 'DNS, SSL, redirects, analytics, pixel and Search Console — flipped without losing rankings.'),
-        array('title' => 'Support',    'text' => 'Monitoring, backups, updates and a retainer option for continuous improvement.'),
-    ),
-    'stats' => array(
-        array('value' => 98,  'suffix' => '',  'label' => 'Average Lighthouse performance score'),
-        array('value' => 0.9, 'decimals' => 1, 'suffix' => 's', 'label' => 'Median load time on 4G'),
-        array('value' => 100, 'suffix' => '%', 'label' => 'Mobile responsive, every breakpoint'),
-    ),
-    'metrics' => array(
-        array('value' => '<1s',   'label' => 'Load time target on mid-range mobile over 4G — because every extra second costs you ~7% of conversions.'),
-        array('value' => '98',    'label' => 'Lighthouse performance score we design and build to, verified before launch and after every release.'),
-        array('value' => '100%',  'label' => 'Mobile responsive from 320px to 2560px, tested on real devices — not just a browser resize.'),
-    ),
-    'gallery' => true,
-    'testimonial' => true,
-    'faq' => array(
-        array('q' => 'How long does a website take to build?', 'a' => 'A focused landing page: 1–2 weeks. A full business site: 3–5 weeks. E-commerce or custom web apps: 6–12 weeks depending on catalogue size and integrations. You get a dated milestone plan at kickoff, and we hit it.'),
-        array('q' => 'WordPress, Shopify or custom — which is right for me?', 'a' => 'Content-led business site: WordPress with a custom theme. Product catalogue and payments: Shopify. Unusual logic, portals or dashboards: custom PHP/JS. We recommend based on what you need to run in year two, not what\'s quickest to sell.'),
-        array('q' => 'Will I be able to edit it myself?', 'a' => 'Yes. Every build ships with an admin area scoped to exactly what you should change — text, images, blog posts, products — with the structural parts locked so the design can\'t be broken by accident.'),
-        array('q' => 'Can you rebuild my slow existing site without losing SEO?', 'a' => 'That\'s our favourite project. We map every ranking URL, build 301 redirects, preserve on-page signals and usually ship the new site faster and higher-ranking than the old one. Traffic dips are prevented, not recovered.'),
-        array('q' => 'Do you handle hosting and domain setup?', 'a' => 'We\'ll recommend hosting that matches your traffic and budget, configure SSL, CDN, caching and backups, and handle the DNS cutover. You keep ownership of every account and credential.'),
-        array('q' => 'What happens after launch?', 'a' => '30 days of post-launch fixes are included. After that, most clients take a care plan: monitoring, updates, backups and a monthly block of improvement work driven by analytics — because a website is never finished.'),
+    'title' => 'Web Development',
+    'lead'  => 'Websites built as sales assets — fast, secure, and measured on conversion.',
+    'seoTitle' => 'Web Development — Custom Websites, eCommerce & CMS | TPT',
+    'seoDesc'  => 'Custom responsive websites, eCommerce stores and CMS builds engineered for speed, security and SEO-ready architecture — with maintenance that keeps the asset compounding.',
+    'heroDesc' => 'A brochure website costs you every day it fails to convert. We build sales assets: fast loads, clear paths, forms and journeys designed around one question — did the visitor take the action the business needed? Then we instrument it so the answer is measurable.',
+    'bullets'  => array(
+        'Custom design and build — no recycled templates',
+        'Mobile-first, tested from 375px to desktop',
+        'Speed and Core Web Vitals engineered in, not bolted on',
+        'SEO-ready architecture and analytics from day one',
     ),
     'cta' => array(
-        'title'  => 'Let\'s build your next website.',
-        'text'   => 'Tell us the goal and we\'ll come back with a scope, a timeline and a fixed quote — free.',
-        'button' => 'Scope My Project',
+        'title'  => 'Is your website a brochure or a salesperson?',
+        'text'   => 'Get a website conversion review: speed, mobile experience, journey clarity and what visitors do before they leave — with the fixes ranked by revenue impact.',
+        'button' => 'Get a Website Conversion Review',
     ),
+    'problem' => array(
+        'eyebrow'    => 'The problem',
+        'title'      => 'Beautiful sites that don’t sell.',
+        'paragraphs' => array(
+            'The graveyard of web projects is full of sites that look great and perform quietly: three seconds to first paint, forms nobody fills, content that can’t be edited without calling a developer, and analytics that track nothing. Traffic arrives — from ads you’re paying for — and leaks away.',
+            'A website is the conversion layer under every other channel you run. When it’s weak, every marketing dollar is taxed. When it’s built as a system — fast, clear, instrumented — the same traffic produces measurably more pipeline.',
+        ),
+        'familiarTitle' => 'Sound familiar?',
+        'familiar' => array(
+            'The site is slow on phones, where most visitors actually are',
+            'Content changes require a developer or a support ticket',
+            'Traffic comes in; nobody can say where it goes or why it leaves',
+            'Forms capture leads that arrive late, duplicated or untracked',
+        ),
+    ),
+    'machine' => array(
+        'eyebrow' => 'The machine',
+        'title'   => 'From visitor to customer.',
+        'lead'    => 'Every stage of the site is designed as a conversion system.',
+        'steps'   => array(
+            array('title' => 'Arrive',   'text' => 'Sub-second loads and mobile-first layout — speed is the first conversion rate optimization.'),
+            array('title' => 'Orient',   'text' => 'Within five seconds: what you do, for whom, and why you. Clear architecture, no maze.'),
+            array('title' => 'Trust',    'text' => 'Proof placed where doubt forms — work, testimonials, credentials, real photos.'),
+            array('title' => 'Act',      'text' => 'One primary action per page: form, call, booking or cart — designed to qualify, not just collect.'),
+            array('title' => 'Route',    'text' => 'Submissions routed instantly to the right human or system, with confirmations that set expectations.'),
+            array('title' => 'Measure',  'text' => 'Every journey tracked: what converted, where visitors left, what to fix next.'),
+        ),
+        'note' => 'We ship with analytics, search console and uptime monitoring already wired — a site you can’t measure is a site you can’t improve.',
+    ),
+    'pillarsEyebrow' => 'What we actually do',
+    'pillarsTitle'   => 'The web build stack.',
+    'pillarsLead'    => 'Four workstreams, from first wireframe to long-term care:',
+    'pillars' => array(
+        array('title' => 'Design & build', 'text' => 'Custom, responsive, conversion-shaped.', 'points' => array(
+            'Custom UI/UX designed around your buyer’s journey',
+            'Responsive development tested from 375px to ultrawide',
+            'CMS integration so your team edits without developers',
+            'eCommerce builds with clean product and checkout flows',
+        )),
+        array('title' => 'Performance', 'text' => 'Speed engineered in, verified after.', 'points' => array(
+            'Core Web Vitals budgets enforced during development',
+            'Image, font and script loading optimized',
+            'Caching and CDN strategy per hosting environment',
+            'Performance tested on real mobile devices, not just lab scores',
+        )),
+        array('title' => 'Security & foundations', 'text' => 'Boring, decisive, non-negotiable.', 'points' => array(
+            'SSL, hardened configurations and dependency hygiene',
+            'Input validation and prepared statements across every form',
+            'Backups, updates and a disaster-recovery runbook',
+            'Role-based admin access — least privilege by default',
+        )),
+        array('title' => 'SEO & integration', 'text' => 'Built to be found and to connect.', 'points' => array(
+            'SEO-ready architecture: URLs, sitemaps, schema, metas',
+            'Analytics, Search Console and conversion tracking wired at launch',
+            'CRM, payment, booking and third-party API integrations',
+            'Lead routing so submissions reach the right human instantly',
+        )),
+    ),
+    'timelineEyebrow' => 'How it works',
+    'timelineTitle'   => 'From kickoff to launch.',
+    'timeline' => array(
+        array('when' => 'Week 1–2', 'title' => 'Discovery',      'text' => 'Goals, audience, journey mapping and content audit. Sitemap and wireframes agreed before pixels exist.'),
+        array('when' => 'Week 2–4', 'title' => 'Design',         'text' => 'Custom UI designed page by page, reviewed on real content — not lorem ipsum — and approved before build.'),
+        array('when' => 'Week 4–7', 'title' => 'Build',          'text' => 'Responsive development, CMS integration, forms and routing. Performance budgets enforced as we go.'),
+        array('when' => 'Week 7–8', 'title' => 'Instrument',     'text' => 'Analytics, Search Console, conversion tracking, schema and security hardening verified end to end.'),
+        array('when' => 'Week 8–9', 'title' => 'Launch',         'text' => 'QA across devices and browsers, redirects from the old site, DNS and SSL handled, launch checklist executed.'),
+        array('when' => 'Ongoing',  'title' => 'Care & improve', 'text' => 'Maintenance plans: updates, backups, monitoring — plus conversion improvements from real behavior data.'),
+    ),
+    'faqTitle' => 'Web development, straight answers.',
+    'faq' => array(
+        array('q' => 'WordPress, custom code, or something else?', 'a' => 'Whatever serves the goals — we recommend after discovery. WordPress fits content-heavy sites and teams that want easy editing; custom builds fit performance-critical or integration-heavy projects; e-commerce gets its own decision. We build in all three and don’t sell you a technology we don’t believe in for your case.'),
+        array('q' => 'Can you work with our existing site?', 'a' => 'Yes. Many projects are rescues and upgrades rather than rebuilds: we audit what exists, keep what works, and rebuild only the parts that cost you conversions or speed. When a rebuild is genuinely cheaper than patching, we’ll show you the numbers.'),
+        array('q' => 'Who owns the website when it’s done?', 'a' => 'You do — code, content, design files, domain, hosting and every credential. We hand over documentation and training. No lock-in, no hostage situations, no proprietary black boxes.'),
+        array('q' => 'What happens after launch?', 'a' => 'Two things: care and improvement. Care means updates, backups, monitoring and security hygiene. Improvement means using the analytics we wired at launch — where visitors leave, what converts — to ship changes that lift the site’s business results month over month.'),
+    ),
+    'deeper' => array(
+        array('label' => 'Blueprint',  'title' => 'The Website Conversion Blueprint', 'note' => 'The conversion checklist we build to, free', 'url' => url('resources/website-conversion-blueprint')),
+        array('label' => 'Checklist',  'title' => 'Website Launch Checklist',         'note' => 'Everything verified before you go live', 'url' => url('resources/website-launch-checklist')),
+        array('label' => 'Case study', 'title' => 'Lead Generation Engine',           'note' => 'Landing pages that close the loop on ads', 'url' => url('portfolio/lead-generation-engine-meta-ads')),
+    ),
+    'deliverables' => array(
+        'Custom responsive website design and development',
+        'CMS integration with team training',
+        'eCommerce setup with product, cart and payment flows',
+        'Core Web Vitals and mobile performance optimization',
+        'Security hardening, backups and monitoring setup',
+        'SEO-ready architecture with schema and sitemaps',
+        'CRM, booking and third-party integrations',
+    ),
+    'gallery'     => true,
+    'testimonial' => true,
+    'related'     => array('graphic-design', 'seo', 'data-analytics'),
 );
 
-require dirname(__DIR__) . '/includes/service-page.php';
+require_once dirname(__DIR__) . '/includes/service-page.php';

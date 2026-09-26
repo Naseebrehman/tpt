@@ -47,6 +47,9 @@ $fbPixel   = getSetting('facebook_pixel_id');
 <meta name="twitter:image" content="<?= esc(canonicalUrl($ogImage)) ?>">
 <link rel="canonical" href="<?= esc(canonicalUrl()) ?>">
 <meta name="theme-color" content="#08080a">
+<?php if (!empty($noIndex)): ?>
+<meta name="robots" content="noindex,nofollow">
+<?php endif; ?>
 <link rel="icon" type="image/svg+xml" href="<?= asset('assets/images/favicon.svg') ?>">
 <link rel="apple-touch-icon" href="<?= asset($ogImage) ?>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -114,15 +117,21 @@ fbq('track', 'PageView');
                         <?php if (!empty($navItem['dropdown'])): ?><svg class="caret" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg><?php endif; ?>
                     </a>
                     <?php if (!empty($navItem['dropdown'])): ?>
-                    <div class="dropdown" role="menu">
-                        <?php foreach ($services as $svc): ?>
-                        <a class="dropdown-item" role="menuitem" href="<?= url('services/' . $svc['key']) ?>">
-                            <span class="dd-icon"><?= icon($svc['icon'], 18) ?></span>
-                            <span class="dd-copy">
-                                <strong><?= esc($svc['name']) ?></strong>
-                                <small><?= esc($svc['tagline']) ?></small>
-                            </span>
-                        </a>
+                    <div class="dropdown dropdown-disciplines" role="menu">
+                        <?php foreach (pieDisciplines() as $disc): ?>
+                        <?php $discSvcs = pieServicesByDiscipline($disc['key']); if (!$discSvcs) { continue; } ?>
+                        <div class="dd-group">
+                            <p class="dd-group-label eyebrow"><?= esc($disc['name']) ?></p>
+                            <?php foreach ($discSvcs as $svc): ?>
+                            <a class="dropdown-item" role="menuitem" href="<?= url('services/' . $svc['key']) ?>">
+                                <span class="dd-icon"><?= icon($svc['icon'], 18) ?></span>
+                                <span class="dd-copy">
+                                    <strong><?= esc($svc['name']) ?><?= !empty($svc['core']) ? '<span class="dd-core">Core</span>' : '' ?></strong>
+                                    <small><?= esc($svc['tagline']) ?></small>
+                                </span>
+                            </a>
+                            <?php endforeach; ?>
+                        </div>
                         <?php endforeach; ?>
                     </div>
                     <?php endif; ?>
@@ -149,12 +158,15 @@ fbq('track', 'PageView');
             <?php endforeach; ?>
         </ul>
         <div class="mobile-services">
-            <p class="eyebrow">Services</p>
+            <?php foreach (pieDisciplines() as $disc): ?>
+            <?php $discSvcs = pieServicesByDiscipline($disc['key']); if (!$discSvcs) { continue; } ?>
+            <p class="eyebrow" style="margin-top:14px"><?= esc($disc['name']) ?></p>
             <div class="mobile-service-links">
-                <?php foreach ($services as $svc): ?>
+                <?php foreach ($discSvcs as $svc): ?>
                 <a href="<?= url('services/' . $svc['key']) ?>"><?= esc($svc['name']) ?></a>
                 <?php endforeach; ?>
             </div>
+            <?php endforeach; ?>
         </div>
         <a href="<?= url('contact') ?>" class="btn btn-primary btn-block">Start a Project</a>
     </nav>

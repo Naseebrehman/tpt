@@ -1,76 +1,119 @@
 <?php
 /**
- * The Pie Technologies — SEO service page
+ * The Pie Technologies — SEO service page (GET FOUND)
  */
 require_once dirname(__DIR__) . '/includes/init.php';
 
 $service = array(
     'key'   => 'seo',
-    'title' => 'Rank Higher. Get Found. Grow Faster.',
-    'lead'  => 'Technical fixes, on-page optimisation, authority building and content that answers real search intent. Compounding traffic you own outright — no ad budget required.',
-    'seoTitle' => 'SEO Agency | Rank Higher on Google and Keep the Traffic',
-    'seoDesc'  => 'On-page, off-page, technical, local, e-commerce and content SEO. Transparent process, real tools (Ahrefs, SEMrush, GSC) and honest timelines from month 1 to month 12.',
-    'intro'   => array(
-        'heading'    => 'Service breakdown',
-        'title'      => 'SEO that compounds, not tricks that expire.',
-        'paragraphs' => array(
-            'Google rewards sites that are fast, clear, trustworthy and genuinely useful. Our job is to make yours all four — then earn the links and mentions that prove it to the algorithm.',
-            'No private-blog-network spam, no keyword stuffing, no "2,000 backlinks for $50". Just the disciplined, unglamorous work that keeps paying for years after the invoices stop.',
-        ),
-        'features' => array(
-            array('icon' => 'edit',    'title' => 'On-Page SEO',        'text' => 'Titles, meta descriptions, headers, internal links and content depth optimised page by page against search intent.'),
-            array('icon' => 'globe',   'title' => 'Off-Page SEO',       'text' => 'Digital PR, guest placements and authority links from real sites with real traffic — never link farms.'),
-            array('icon' => 'cpu',     'title' => 'Technical SEO',      'text' => 'Crawlability, indexation, Core Web Vitals, schema markup and site architecture fixed at the root.'),
-            array('icon' => 'pin',     'title' => 'Local SEO',          'text' => 'Google Business Profile optimisation, citations and review velocity so you own the map pack in your city.'),
-            array('icon' => 'grid',    'title' => 'E-commerce SEO',     'text' => 'Category architecture, product schema, faceted-navigation control and feed hygiene for online stores.'),
-            array('icon' => 'pen',     'title' => 'Content SEO',        'text' => 'Topic clusters and articles built around questions your buyers actually type into Google.'),
-        ),
-    ),
-    'steps' => array(
-        array('title' => 'Audit',        'text' => 'Full technical, content and backlink audit with a prioritised fix list.'),
-        array('title' => 'Keywords',     'text' => 'Intent-mapped keyword strategy: money pages first, supporting clusters second.'),
-        array('title' => 'On-Page',      'text' => 'Page-by-page optimisation, internal linking and content upgrades shipped.'),
-        array('title' => 'Link Building','text' => 'Authority campaigns: digital PR, guest posts and unlinked-mention recovery.'),
-        array('title' => 'Reporting',    'text' => 'Monthly ranking, traffic and conversion reporting against agreed KPIs.'),
-    ),
-    'tools' => array('Ahrefs', 'SEMrush', 'Google Search Console', 'Screaming Frog', 'Moz'),
-    'timeline' => array(
-        array('when' => 'Month 1–3', 'title' => 'Foundations & early movement', 'text' => 'Technical fixes land, indexation cleans up, and low-competition keywords start moving. Long-tail traffic typically rises first while authority builds quietly in the background.'),
-        array('when' => 'Month 3–6', 'title' => 'Momentum on money keywords',   'text' => 'Optimised pages climb through page two and into the top ten. Content clusters begin ranking as a group, and organic leads become visible in your analytics — not just your reports.'),
-        array('when' => 'Month 6–12','title' => 'Compounding & category ownership', 'text' => 'Authority links mature, competitive head terms enter the top three, and organic becomes a predictable acquisition channel you stop paying rent on.'),
-    ),
-    'chartTitle' => 'Typical organic sessions curve (client average, first 12 months)',
-    'chart' => array(
-        'type' => 'line',
-        'data' => array(
-            'labels' => array('M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'M9', 'M10', 'M11', 'M12'),
-            'datasets' => array(
-                array(
-                    'label' => 'Organic sessions',
-                    'data'  => array(420, 455, 510, 610, 760, 940, 1180, 1470, 1820, 2240, 2760, 3380),
-                ),
-            ),
-        ),
-    ),
-    'stats' => array(
-        array('value' => 212, 'suffix' => '%', 'label' => 'Average organic traffic growth in 12 months'),
-        array('value' => 3,   'suffix' => '',  'label' => 'Average position for money keywords (from #31)'),
-        array('value' => 12,  'suffix' => ' mo', 'label' => 'To a compounding channel you own outright'),
-    ),
-    'testimonial' => true,
-    'faq' => array(
-        array('q' => 'How long does SEO take to work?', 'a' => 'Honest answer: meaningful movement in 3–6 months, compounding results in 6–12. Anyone promising page-one rankings in 30 days is selling something Google will eventually punish. We set milestones at months 3, 6 and 12 so you can judge progress against a real curve.'),
-        array('q' => 'What\'s the difference between technical and content SEO?', 'a' => 'Technical SEO makes your site crawlable, fast and understandable to Google. Content SEO gives Google a reason to rank you. You need both — a perfect site with nothing worth reading ranks nothing, and great content on a broken site never gets crawled properly.'),
-        array('q' => 'Do you guarantee #1 rankings?', 'a' => 'No ethical SEO can guarantee a position — Google\'s algorithm is not for sale. We guarantee process: a prioritised roadmap, shipped fixes, quality links and transparent monthly reporting of rankings, traffic and conversions.'),
-        array('q' => 'Local or national — which should I do?', 'a' => 'If your revenue comes from a city or region, local SEO (map pack + localised landing pages) delivers fastest ROI. If you sell everywhere, we build national/international clusters. Many clients run both: local for cash flow, national for scale.'),
-        array('q' => 'We already ran SEO once and it did nothing. Why?', 'a' => 'Usually one of three causes: thin content targeting keywords with no intent, links from spam networks that got discounted, or technical debt that blocked indexation. Our audit will tell you exactly which one happened to you — and whether the old work is salvageable.'),
-        array('q' => 'What do you need from us?', 'a' => 'Access (Search Console, analytics, CMS), a monthly check-in, and subject-matter expertise when we need fact-checks. Everything else — strategy, writing, development fixes, links — is on us.'),
+    'title' => 'Search Engine Optimization',
+    'lead'  => 'Own the searches that make your business — rankings that pay every month.',
+    'seoTitle' => 'SEO Services — Technical, On-Page, Content & Authority | TPT',
+    'seoDesc'  => 'Technical SEO, on-page optimization, content strategy, link building and schema for businesses that want durable organic visibility — with reporting that ties rankings to revenue.',
+    'heroDesc' => 'Paid traffic stops when the budget stops. Organic traffic compounds: every ranking you earn keeps producing for years. We build that asset deliberately — technical foundation, pages that answer real queries, and authority earned, never bought from link farms.',
+    'bullets'  => array(
+        'Technical audit with fixes shipped, not just listed',
+        'Content mapped to queries your buyers actually type',
+        'Links earned through real digital PR and partnerships',
+        'Rankings tied to leads and revenue in reporting',
     ),
     'cta' => array(
-        'title'  => 'Get a Free SEO Audit.',
-        'text'   => 'A 20-point teardown of your site: what\'s blocking you, what\'s working, and the three moves with the fastest payoff.',
-        'button' => 'Get My Free Audit',
+        'title'  => 'Ranking for everything except what sells?',
+        'text'   => 'Get an SEO audit: technical health, content gaps, authority profile and competitor comparison — with a prioritized roadmap showing what will move revenue first.',
+        'button' => 'Get a Free SEO Audit',
     ),
+    'problem' => array(
+        'eyebrow'    => 'The problem',
+        'title'      => 'Traffic is not the goal. Customers are.',
+        'paragraphs' => array(
+            'Most SEO programs chase volume: rankings for terms nobody buys on, reports full of impressions, and a gap between “we’re number one” and “the phone rang.” Meanwhile the technical foundation leaks — slow pages, thin content, no schema — and authority stalls.',
+            'Done properly, SEO is a business channel with a lag: boring foundations first, then pages that answer buying queries, then authority that makes those pages impossible to dislodge. It rewards patience and punishes shortcuts — and it keeps paying after the invoice is settled.',
+        ),
+        'familiarTitle' => 'Sound familiar?',
+        'familiar' => array(
+            'Rankings improved, revenue didn’t',
+            'An audit delivered as a 90-page PDF nobody implemented',
+            'Blog posts published on topics no customer searches',
+            'Backlinks bought cheap that now need disavowing',
+        ),
+    ),
+    'machine' => array(
+        'eyebrow' => 'The machine',
+        'title'   => 'From query to customer.',
+        'lead'    => 'Six governed stages of compounding visibility.',
+        'steps'   => array(
+            array('title' => 'Crawl',    'text' => 'Google finds every page that matters and nothing that wastes its budget. Technical health shipped, not just reported.'),
+            array('title' => 'Understand','text' => 'Schema, structure and content clarity tell the engine exactly what you offer, where and for whom.'),
+            array('title' => 'Rank',     'text' => 'Relevance from on-page work meets authority from earned links — the two levers, pulled in order.'),
+            array('title' => 'Click',    'text' => 'Titles, metas and rich results written to earn the click against the nine blue competitors.'),
+            array('title' => 'Convert',  'text' => 'The landing experience answers the query and asks for one thing — tracked back to the keyword.'),
+            array('title' => 'Compound', 'text' => 'Performance data funds the next content and link decisions. The asset grows monthly.'),
+        ),
+        'note' => 'We report on rankings tied to pipeline: which queries produced leads, calls and revenue — not screenshots of position graphs.',
+    ),
+    'pillarsEyebrow' => 'What we actually do',
+    'pillarsTitle'   => 'The SEO operating stack.',
+    'pillarsLead'    => 'Four workstreams, run continuously:',
+    'pillars' => array(
+        array('title' => 'Technical foundation', 'text' => 'Boring, decisive, shipped.', 'points' => array(
+            'Crawl, indexation and site-architecture fixes implemented',
+            'Core Web Vitals improvements with developers, not wish lists',
+            'Schema markup: organization, service, FAQ, article, local',
+            'Redirect hygiene, canonicals and duplicate resolution',
+        )),
+        array('title' => 'On-page & content', 'text' => 'Pages built for queries buyers type.', 'points' => array(
+            'Keyword and topic research mapped to commercial intent',
+            'Page-level optimization: titles, structure, internal links',
+            'Content strategy that answers questions across the buying cycle',
+            'Existing pages refreshed instead of abandoned',
+        )),
+        array('title' => 'Authority & links', 'text' => 'Earned, not manufactured.', 'points' => array(
+            'Digital PR: data, guides and stories worth linking to',
+            'Partnership and supplier links from real relationships',
+            'Toxic link cleanup and disavow where needed',
+            'Authority tracked at topic level, not just domain score',
+        )),
+        array('title' => 'Measurement & reporting', 'text' => 'Visibility tied to business outcomes.', 'points' => array(
+            'Rank tracking per money query and per location',
+            'GA4 + Search Console integrated with CRM where possible',
+            'Monthly report: rankings, leads, revenue and next actions',
+            'Competitor movement monitored and answered',
+        )),
+    ),
+    'timelineEyebrow' => 'How it works',
+    'timelineTitle'   => 'The first six months.',
+    'timeline' => array(
+        array('when' => 'Month 1',   'title' => 'Audit & foundation', 'text' => 'Full technical, content and authority audit; prioritized roadmap agreed; critical fixes shipped immediately.'),
+        array('when' => 'Month 1–2', 'title' => 'Architecture',       'text' => 'Site structure, internal linking and schema deployed; Core Web Vitals work begins with your developers or ours.'),
+        array('when' => 'Month 2–3', 'title' => 'Money pages',        'text' => 'Highest-intent pages optimized or built first — the queries closest to revenue.'),
+        array('when' => 'Month 3–4', 'title' => 'Content engine',     'text' => 'Editorial calendar executing: buying-cycle content published and internally linked to money pages.'),
+        array('when' => 'Month 4–6', 'title' => 'Authority',          'text' => 'Digital PR and link campaigns running; toxic links cleaned; topic-level authority building.'),
+        array('when' => 'Ongoing',   'title' => 'Compound',           'text' => 'Monthly reporting against pipeline; quarterly roadmaps refreshed as rankings, competitors and Google itself move.'),
+    ),
+    'faqTitle' => 'SEO, straight answers.',
+    'faq' => array(
+        array('q' => 'How long until we see results?', 'a' => 'Technical fixes and money-page optimizations often move rankings within 6–12 weeks; meaningful organic pipeline is typically a 4–6 month arc, and authority-driven dominance takes longer. Anyone promising page-one in 30 days is selling you a penalty risk. We show leading indicators — crawl health, ranking movement, content coverage — from month one.'),
+        array('q' => 'SEO or Google Ads?', 'a' => 'Ads rent visibility today; SEO buys the asset that pays for years. If you need leads this month and have budget, run both: ads capture demand while SEO compounds. If budget is tight and your timeline allows, SEO first builds the cheaper long-run channel. We model both honestly for your market.'),
+        array('q' => 'Do you guarantee rankings?', 'a' => 'No — and neither should anyone. Google’s algorithms and your competitors aren’t ours to promise. We guarantee the work: audits shipped, content published, links earned, and reporting that ties visibility to revenue. If the numbers don’t move, we keep working until they do or tell you plainly why they won’t.'),
+        array('q' => 'What about AI search — does SEO still matter?', 'a' => 'It matters more, differently. AI engines cite sources they trust: structured, schema-marked, authoritative pages. Our approach — clean technicals, entity clarity, content that answers questions completely — is built to be cited by Google and AI assistants alike. See our AI Business Optimization service for the dedicated play.'),
+    ),
+    'deeper' => array(
+        array('label' => 'Blueprint', 'title' => 'The SEO Blueprint',                  'note' => 'The full organic playbook, free', 'url' => url('resources/seo-blueprint')),
+        array('label' => 'Blueprint', 'title' => 'AI Search Visibility Blueprint',     'note' => 'How to get cited by AI engines', 'url' => url('resources/ai-search-visibility-blueprint')),
+        array('label' => 'Service',   'title' => 'Local SEO',                          'note' => 'The map-pack play for local businesses', 'url' => url('services/local-seo')),
+    ),
+    'deliverables' => array(
+        'Technical SEO audit with implemented fixes',
+        'Keyword and topic research mapped to buying intent',
+        'On-page optimization of money pages and content refreshes',
+        'Content strategy and editorial calendar execution',
+        'Schema markup across organization, service, FAQ and local types',
+        'Digital PR and ethical link building',
+        'Rank tracking tied to leads and revenue, reported monthly',
+    ),
+    'gallery'     => true,
+    'testimonial' => true,
+    'related'     => array('local-seo', 'ai-business-optimization', 'web-development'),
 );
 
-require dirname(__DIR__) . '/includes/service-page.php';
+require_once dirname(__DIR__) . '/includes/service-page.php';

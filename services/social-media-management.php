@@ -1,88 +1,119 @@
 <?php
 /**
- * The Pie Technologies — Social Media Management service page
+ * The Pie Technologies — Social Media Management service page (GROW)
  */
 require_once dirname(__DIR__) . '/includes/init.php';
 
 $service = array(
     'key'   => 'social-media-management',
-    'title' => 'Your Brand. Every Feed. Every Day.',
-    'lead'  => 'Done-for-you social media: strategy, design, captions, scheduling and community management — so your brand shows up consistently everywhere, without you touching a thing.',
-    'seoTitle' => 'Social Media Management Agency | Content That Builds Brands',
-    'seoDesc'  => 'Full-service social media management: content calendars, graphic design, caption writing, hashtag research, scheduling, community management and monthly reports.',
-    'intro'   => array(
-        'heading'    => 'What\'s included',
-        'title'      => 'A full social department, without the payroll.',
-        'paragraphs' => array(
-            'Posting randomly is why most brands see nothing from social. We run your channels like a media company: a planned calendar, on-brand design, captions written to stop the scroll, and a publishing rhythm your audience can set a watch by.',
-            'Behind the scenes, a strategist, a designer, a copywriter and a community manager work your account every week — and at the end of every month you get a report that explains what grew, what flopped and what we\'re doing next.',
-        ),
-        'features' => array(
-            array('icon' => 'calendar', 'title' => 'Content Calendar',      'text' => 'A month-ahead plan mapped to your goals, seasons and launches — approved by you before anything goes live.'),
-            array('icon' => 'pen',      'title' => 'Graphic Design',        'text' => 'On-brand statics, carousels and Reels covers designed in-house. No recycled Canva templates with your logo slapped on.'),
-            array('icon' => 'edit',     'title' => 'Caption Writing',       'text' => 'Hooks, stories and CTAs written in your brand voice — captions people actually read to the last line.'),
-            array('icon' => 'search',   'title' => 'Hashtag Research',      'text' => 'Sized and rotated hashtag sets that put you in front of buyers, not bots.'),
-            array('icon' => 'clock',    'title' => 'Scheduling',            'text' => 'Every post queued at the exact time your audience is online, across every platform, every time zone.'),
-            array('icon' => 'users',    'title' => 'Community Management',  'text' => 'Comments answered, DMs triaged, reviews flagged. Your audience gets a reply, not silence.'),
-            array('icon' => 'chart',    'title' => 'Monthly Reports',       'text' => 'Growth, reach, engagement and best-performer analysis in plain language — with next month\'s plan attached.'),
-        ),
-    ),
-    'platformsTitle' => 'Every platform your audience lives on.',
-    'platforms' => array(
-        array('icon' => 'instagram', 'label' => 'Instagram'),
-        array('icon' => 'facebook',  'label' => 'Facebook'),
-        array('icon' => 'tiktok',    'label' => 'TikTok'),
-        array('icon' => 'linkedin',  'label' => 'LinkedIn'),
-        array('icon' => 'twitter',   'label' => 'Twitter / X'),
-        array('icon' => 'youtube',   'label' => 'YouTube'),
-        array('icon' => 'pin',       'label' => 'Pinterest'),
-    ),
-    'pillarsTitle' => 'The content strategy, in three pillars.',
-    'pillars' => array(
-        array(
-            'title'  => 'Attract',
-            'text'   => 'Reach content engineered for the algorithm: Reels, trends and shareable formats that put your brand in front of people who have never heard of you.',
-            'points' => array('Reels & short-form video', 'Trend-jacking with brand fit', 'Shareable carousel hooks'),
-        ),
-        array(
-            'title'  => 'Engage',
-            'text'   => 'Community content that turns followers into fans: stories, polls, behind-the-scenes and conversations that make your brand feel human.',
-            'points' => array('Daily story sequences', 'Comment & DM management', 'UGC amplification'),
-        ),
-        array(
-            'title'  => 'Convert',
-            'text'   => 'Revenue content that moves people off the feed: offers, proof, product education and CTAs timed to buying moments.',
-            'points' => array('Offer & launch posts', 'Social proof & reviews', 'Click-through landing content'),
-        ),
-    ),
-    'mock'  => true,
-    'steps' => array(
-        array('title' => 'Audit',      'text' => 'We dissect your current channels, competitors and audience to find the whitespace.'),
-        array('title' => 'Strategy',   'text' => 'Pillars, voice, visual direction and a KPI per platform. Approved by you.'),
-        array('title' => 'Production', 'text' => 'Design, copy and video produced in monthly batches — always two weeks ahead.'),
-        array('title' => 'Publish',    'text' => 'Scheduled at optimal times across all platforms, formatted natively per channel.'),
-        array('title' => 'Engage',     'text' => 'Community management every business day: replies, DMs, reviews, flags.'),
-        array('title' => 'Report',     'text' => 'Monthly growth report plus a strategy call to steer next month\'s calendar.'),
-    ),
-    'stats' => array(
-        array('value' => 3.8, 'decimals' => 1, 'suffix' => '×', 'label' => 'Average follower growth in 6 months'),
-        array('value' => 6,   'suffix' => '',  'label' => 'Platforms managed under one roof'),
-        array('value' => 7,   'suffix' => '×', 'label' => 'Publishing days per week — always on'),
-    ),
-    'testimonial' => true,
-    'faq' => array(
-        array('q' => 'How many posts per week do you publish?', 'a' => 'It depends on the platform and your goals, but a typical managed account runs 4–5 feed posts and daily stories per platform, plus 2–3 Reels. The calendar is agreed with you monthly, so cadence always matches your capacity to fulfil demand.'),
-        array('q' => 'Do you create the visuals or do we send them?', 'a' => 'We create them. Our in-house designers produce statics, carousels and short-form video edits from your brand assets and any raw photos or clips you share. If you have a photographer, even better — we\'ll give them a shot list.'),
-        array('q' => 'Will we approve content before it goes live?', 'a' => 'Yes. You get the full monthly calendar in one approval round — captions, designs and schedule. Anything you flag gets revised before publishing. Emergency posts can be fast-tracked same-day.'),
-        array('q' => 'Can you manage comments and DMs too?', 'a' => 'That\'s the community management layer, included. We reply in your brand voice, escalate sales enquiries to your team instantly, and flag anything sensitive before it becomes a public problem.'),
-        array('q' => 'What if our industry is "boring"?', 'a' => 'Boring industries produce some of our best-performing content — because almost nobody in them is trying. Education, process transparency and founder-led storytelling make "boring" genuinely watchable.'),
-        array('q' => 'How do you measure success?', 'a' => 'Against the KPIs we set in strategy: reach and follower growth for Attract content, engagement rate for Engage, and clicks, leads or sales attributed to social for Convert. All of it lands in your monthly report.'),
+    'title' => 'Social Media Management',
+    'lead'  => 'An always-on social presence that sells trust before sales ever has to.',
+    'seoTitle' => 'Social Media Management — Strategy, Content & Community | TPT',
+    'seoDesc'  => 'Content strategy, calendars, design and video, community management and profile optimization across Instagram, Facebook, LinkedIn, TikTok and X — measured on business outcomes, not vanity metrics.',
+    'heroDesc' => 'Social is the layer that makes every other channel cheaper: paid ads convert better against an active profile, and organic reach compounds into owned audiences. We run your presence like a department, not a side task.',
+    'bullets'  => array(
+        'Content pillars built from your actual business',
+        'Calendars planned a month ahead, posted on schedule',
+        'Design and video that fit each platform’s native language',
+        'Community managed daily — comments, DMs, mentions',
     ),
     'cta' => array(
-        'title'  => 'Get a Free Social Media Audit.',
-        'text'   => 'We\'ll review your last 90 days of content and show you the three fixes that would move your numbers fastest.',
-        'button' => 'Get My Free Audit',
+        'title'  => 'Posting more but growing slower?',
+        'text'   => 'Get a social audit: profile, content mix, engagement patterns and what your competitors do better — with a plan for the next 90 days. Frequency is not strategy; we’ll show you the difference.',
+        'button' => 'Get a Social Media Audit',
     ),
+    'problem' => array(
+        'eyebrow'    => 'The problem',
+        'title'      => 'An unmaintained profile is a live objection.',
+        'paragraphs' => array(
+            'Before anyone fills your form or answers your call, they check your socials. A profile last posted three months ago, with unanswered comments and stock-photo content, quietly taxes every campaign you run — people see it, doubt you, and leave.',
+            'The fix isn’t posting more. It’s posting with intent: content pillars that map to how your business actually grows, formats native to each platform, and community management that turns attention into conversations.',
+        ),
+        'familiarTitle' => 'Sound familiar?',
+        'familiar' => array(
+            'Content posted randomly — whenever someone remembered',
+            'Same post recycled across every platform, fitting none',
+            'Comments and DMs sitting unanswered for days',
+            'No idea which posts ever produced a customer',
+        ),
+    ),
+    'machine' => array(
+        'eyebrow' => 'The machine',
+        'title'   => 'From attention to conversation.',
+        'lead'    => 'A weekly production loop with a business outcome attached.',
+        'steps'   => array(
+            array('title' => 'Listen',  'text' => 'Audience questions, competitor angles and platform trends reviewed weekly — content answers what people are actually asking.'),
+            array('title' => 'Plan',    'text' => 'Monthly calendar mapped to content pillars: educate, prove, humanize, convert — with each post assigned a job.'),
+            array('title' => 'Produce', 'text' => 'Designs, reels, carousels and copy produced in batches, on-brand and platform-native.'),
+            array('title' => 'Publish', 'text' => 'Scheduled at researched times, with captions, hashtags and links QA’d per platform.'),
+            array('title' => 'Engage',  'text' => 'Comments, DMs and mentions handled daily in your voice — every reply is a conversion opportunity.'),
+            array('title' => 'Learn',   'text' => 'Monthly report: what earned reach, what sparked conversations, what drove clicks and leads — and what we change next month.'),
+        ),
+        'note' => 'We measure social on business outcomes — profile visits, link clicks, DM conversations, leads — not on follower-count theater.',
+    ),
+    'pillarsEyebrow' => 'What we actually do',
+    'pillarsTitle'   => 'The social operating stack.',
+    'pillarsLead'    => 'Four workstreams, run continuously:',
+    'pillars' => array(
+        array('title' => 'Strategy & calendar', 'text' => 'Content pillars and a planned month — never a scramble.', 'points' => array(
+            'Pillars mapped to your sales cycle: educate, prove, humanize, convert',
+            'Monthly calendar with platform-specific formats and posting times',
+            'Campaign moments — launches, offers, events — planned in advance',
+            'Competitor and trend watch folded into every planning cycle',
+        )),
+        array('title' => 'Design & video', 'text' => 'Native formats, on-brand, produced at volume.', 'points' => array(
+            'Statics, carousels, reels and story sets in your visual system',
+            'Hook-first short-form video scripts and edits',
+            'Templates that keep output consistent as the team scales',
+            'Accessible design: captions, contrast, readable on mobile',
+        )),
+        array('title' => 'Copy & community', 'text' => 'Words in your voice; conversations handled daily.', 'points' => array(
+            'Captions and CTAs written per platform, not pasted across all',
+            'Hashtag and SEO strategy tuned to each network’s discovery',
+            'Comments, DMs and mentions managed daily with escalation rules',
+            'Review and testimonial moments converted into content',
+        )),
+        array('title' => 'Profiles & reporting', 'text' => 'Optimized storefronts and honest numbers.', 'points' => array(
+            'Bio, link-in-bio, highlights and pinned content rebuilt to convert',
+            'Platform settings, integrations and tracking connected',
+            'Monthly outcome report: reach that mattered, clicks, conversations, leads',
+            'Quarterly strategy review against business goals',
+        )),
+    ),
+    'timelineEyebrow' => 'How it works',
+    'timelineTitle'   => 'The first ninety days.',
+    'timeline' => array(
+        array('when' => 'Week 1–2', 'title' => 'Discovery & audit',    'text' => 'Brand, audience and competitor teardown; profiles audited; content history analyzed for what ever worked.'),
+        array('when' => 'Week 2–3', 'title' => 'Strategy & pillars',   'text' => 'Content pillars, platform priorities, tone guide and visual direction agreed. Profile optimization shipped.'),
+        array('when' => 'Week 3–4', 'title' => 'First calendar',       'text' => 'Month-one calendar produced and approved; template library built; scheduling and engagement workflows wired.'),
+        array('when' => 'Month 2',  'title' => 'Operate',              'text' => 'Publishing and community management running on cadence; first video batch produced; A/B testing on hooks and formats begins.'),
+        array('when' => 'Month 3',  'title' => 'Compound',             'text' => 'Winning formats doubled down; underperformers retired; first outcome report reviewed against business goals.'),
+        array('when' => 'Ongoing',  'title' => 'Review & evolve',      'text' => 'Monthly reports and quarterly strategy reviews keep the presence tied to revenue, not trends.'),
+    ),
+    'faqTitle' => 'Social media, straight answers.',
+    'faq' => array(
+        array('q' => 'How often should we post?', 'a' => 'Often enough to stay visible, deliberately enough to stay good. Posting more while ignoring what performs is actively wasteful — we set a sustainable cadence per platform, then let performance data decide where frequency pays and where it doesn’t.'),
+        array('q' => 'Will this actually produce leads?', 'a' => 'Organic social is a trust and discovery channel: it makes paid campaigns convert better and gives sales warm context. Direct leads come through the paths we build into content — link-in-bio offers, DM automations, lead magnets — and we track each one rather than guessing.'),
+        array('q' => 'Which platforms should we be on?', 'a' => 'The ones where your buyers spend attention — not every logo on the internet. We recommend a focused set (usually two or three) and go deep there, rather than thin everywhere.'),
+        array('q' => 'Do you handle video and design, or do we supply assets?', 'a' => 'We produce design and short-form video in-house as part of the service, using your brand assets plus our own production. If you have existing footage or product shots, we fold them in; if not, we build the visual system from scratch.'),
+    ),
+    'deeper' => array(
+        array('label' => 'Blueprint', 'title' => 'The Social Media Growth Blueprint', 'note' => 'Pillars, cadence and formats, free', 'url' => url('resources/social-media-growth-blueprint')),
+        array('label' => 'Playbook',  'title' => 'The Lead Follow-Up Swipe File',     'note' => 'Turn social conversations into leads', 'url' => url('resources/lead-follow-up-swipe-file')),
+        array('label' => 'Service',   'title' => 'Graphic Design',                    'note' => 'Brand system behind the feed', 'url' => url('services/graphic-design')),
+    ),
+    'deliverables' => array(
+        'Content strategy and monthly editorial calendar',
+        'Platform-native design and short-form video production',
+        'Copywriting in your brand voice for every post',
+        'Posting and scheduling across your chosen platforms',
+        'Daily community management — comments, DMs, mentions',
+        'Profile optimization: bio, links, highlights, pinned posts',
+        'Monthly outcome reporting and quarterly strategy reviews',
+    ),
+    'gallery'     => true,
+    'testimonial' => true,
+    'related'     => array('graphic-design', 'meta-ads', 'seo'),
 );
 
-require dirname(__DIR__) . '/includes/service-page.php';
+require_once dirname(__DIR__) . '/includes/service-page.php';

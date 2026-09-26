@@ -1,8 +1,8 @@
 <?php
 require_once __DIR__ . '/includes/init.php';
 
-$pageTitle = 'Blog — Growth Playbooks & Marketing Insights';
-$metaDesc  = 'Practical playbooks, teardowns and insights from the team at The Pie Technologies: Meta Ads, SEO, social media, web development and email marketing.';
+$pageTitle = 'Journal — Sharp Thinking on Growth, Ads & AI';
+$metaDesc  = 'No recycled listicles. What the TPT Strategy Team is learning running real growth systems — with the receipts.';
 $activeNav = 'blog';
 
 $category = isset($_GET['category']) ? sanitize($_GET['category']) : '';
@@ -28,9 +28,9 @@ require_once __DIR__ . '/includes/header.php';
 
 <section class="page-hero">
     <div class="container">
-        <p class="eyebrow crumbs"><a href="<?= url('') ?>">Home</a> &nbsp;/&nbsp; Blog</p>
-        <h1>Playbooks, not predictions.</h1>
-        <p class="lead">Everything we learn running real budget on real accounts — written down so you can use it, whether you hire us or not.</p>
+        <p class="eyebrow crumbs"><a href="<?= url('') ?>">Home</a> &nbsp;/&nbsp; Journal</p>
+        <h1>Sharp thinking on growth, ads &amp; AI.</h1>
+        <p class="lead">No recycled listicles. What we&rsquo;re learning running real growth systems — with the receipts. Written by the TPT Strategy Team.</p>
     </div>
 </section>
 

@@ -35,7 +35,7 @@ $offset   = ($page - 1) * $perPage;
 
 $rows = dbAll("SELECT * FROM contact_submissions WHERE $whereSql ORDER BY created_at DESC LIMIT $perPage OFFSET $offset", $params);
 
-$serviceOptions = array('Meta Ads', 'Social Media', 'SEO', 'Web Development', 'Email Marketing', 'Google Ads', 'Branding', 'Not Sure');
+$serviceOptions = array('Meta Ads', 'Social Media Management', 'Google Ads', 'Digital Marketing', 'SEO', 'Local SEO', 'AI Business Optimization', 'Website Development', 'App Development', 'Graphic Design', 'Data Analytics & Reporting', 'Not Sure');
 $statusOptions  = array('new' => 'New', 'in_progress' => 'In Progress', 'replied' => 'Replied', 'closed' => 'Closed');
 $viewId         = isset($_GET['view']) ? (int) $_GET['view'] : 0;
 
@@ -186,5 +186,32 @@ document.addEventListener('DOMContentLoaded', function () {
     <?php endif; ?>
 });
 </script>
+
+<?php
+/* ---------------- Alia leads captured from the site widget ---------------- */
+$aliaLeads = dbAll('SELECT * FROM chatbot_leads ORDER BY created_at DESC LIMIT 50');
+?>
+<div class="a-card" style="margin-top:26px">
+    <h3>Alia leads <span class="hint" style="font-weight:400">(captured by the growth assistant widget — latest 50)</span></h3>
+    <?php if ($aliaLeads): ?>
+    <div class="a-table-wrap">
+        <table class="a-table">
+            <thead><tr><th>Name</th><th>Email</th><th>Session</th><th>Captured</th></tr></thead>
+            <tbody>
+                <?php foreach ($aliaLeads as $aliaLead): ?>
+                <tr>
+                    <td><?= esc($aliaLead['name'] !== '' ? $aliaLead['name'] : '—') ?></td>
+                    <td><?php if ($aliaLead['email'] !== ''): ?><a href="mailto:<?= esc($aliaLead['email']) ?>" style="color:var(--violet-soft)"><?= esc($aliaLead['email']) ?></a><?php else: ?>—<?php endif; ?></td>
+                    <td class="mono" style="font-size:.72rem;color:var(--muted)"><?= esc($aliaLead['session_id']) ?></td>
+                    <td><?= esc($aliaLead['created_at']) ?></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+    <?php else: ?>
+    <p class="hint">No leads captured by Alia yet. When a visitor shares their name or email with her, it lands here.</p>
+    <?php endif; ?>
+</div>
 
 <?php require_once dirname(__DIR__) . '/includes/admin-footer.php'; ?>
