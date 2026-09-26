@@ -19,6 +19,7 @@ if (!$item) {
 
 $pageTitle = $item['client_name'] . ' — ' . $item['service_category'] . ' Case Study';
 $metaDesc  = mb_substr(trim(preg_replace('/\s+/', ' ', strip_tags((string) $item['challenge']))), 0, 155);
+$noIndex = strpos($item['slug'], 'sample-') === 0;
 $activeNav = 'portfolio';
 $pageLibs  = array('chart' => !empty($item['chart_data_json']));
 

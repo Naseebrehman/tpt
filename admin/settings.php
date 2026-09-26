@@ -1,11 +1,14 @@
 <?php
 require_once dirname(__DIR__) . '/includes/init.php';
 requireAdmin();
+require_once BASE_PATH . '/core/Settings.php';
 
 $adminPage  = 'settings';
 $adminTitle = 'Settings';
 
 $textKeys = array(
+    'smtp_reply_to', 'gemini_model', 'gemini_temperature', 'gemini_max_tokens', 'alia_welcome', 'alia_fallback',
+    'brand_primary', 'brand_secondary', 'brand_accent', 'brand_font', 'stripe_webhook_secret',
     'smtp_host', 'smtp_port', 'smtp_encryption', 'smtp_user', 'smtp_pass', 'smtp_from_name', 'smtp_from_email',
     'gemini_api_key', 'chatbot_system_prompt',
     'site_name', 'site_tagline', 'site_phone', 'site_email', 'site_address', 'whatsapp_number',
@@ -15,30 +18,39 @@ $textKeys = array(
     'paypal_mode', 'paypal_client_id', 'paypal_secret',
 );
 
-$toggleKeys = array('maintenance_mode', 'alia_enabled', 'stripe_enabled', 'paypal_enabled', 'pay_online_enabled');
+$toggleKeys = array('sample_content_enabled', 'alia_lead_collection', 'maintenance_mode', 'alia_enabled', 'stripe_enabled', 'paypal_enabled', 'pay_online_enabled');
 
 function saveSetting($key, $value)
 {
-    dbExec(
+    if (dbExec(
         'INSERT INTO settings (setting_key, setting_value) VALUES (?, ?)
          ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)',
         array($key, $value)
-    );
+    ) < 0) { $GLOBALS['settingsSaveFailed'] = true; }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!validateCSRF()) {
         setFlash('err', 'Security token expired.');
+    } elseif (($validationError = Settings::validate($_POST)) !== '') {
+        setFlash('err', $validationError);
     } else {
         foreach ($textKeys as $key) {
             if (isset($_POST[$key])) {
-                saveSetting($key, sanitizeMultiline($_POST[$key]));
+                $secretKeys = array('smtp_pass', 'gemini_api_key', 'stripe_secret_key', 'stripe_webhook_secret', 'paypal_secret');
+                if (in_array($key, $secretKeys, true) && $_POST[$key] === '') { continue; }
+                saveSetting($key, in_array($key, $secretKeys, true) ? trim($_POST[$key]) : sanitizeMultiline($_POST[$key]));
             }
         }
         foreach ($toggleKeys as $toggleKey) {
             saveSetting($toggleKey, isset($_POST[$toggleKey]) ? '1' : '0');
         }
 
+        foreach (array('brand_logo', 'brand_favicon') as $imageKey) {
+            $image = uploadFile($imageKey, 'settings', array('jpg', 'jpeg', 'png', 'webp'));
+            if (!$image['ok']) { setFlash('err', $image['error']); }
+            elseif ($image['path'] !== '') { saveSetting($imageKey, $image['path']); }
+        }
         $ogUp = uploadFile('og_image', 'settings', array('jpg', 'jpeg', 'png', 'webp'));
         if ($ogUp['ok'] && $ogUp['path'] !== '') {
             $old = getSetting('og_image');
@@ -47,7 +59,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif (!$ogUp['ok']) {
             setFlash('err', $ogUp['error']);
         }
-        if (getFlash() === null) {
+        if (!empty($GLOBALS['settingsSaveFailed'])) { setFlash('err', 'Settings could not be saved. Check the database connection.'); }
+        if (empty($_SESSION['flash'])) {
             setFlash('ok', 'Settings saved.');
         }
         header('Location: settings.php');
@@ -62,11 +75,13 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
 
 <form method="post" enctype="multipart/form-data">
     <?= csrfField() ?>
+    <p class="hint">Saved passwords and secret keys are never rendered. Leave blank to keep an existing secret; replace to rotate. Save before testing SMTP or Gemini.</p>
 
     <div class="a-tabs">
         <button class="a-tab active" type="button" data-tab="smtp">SMTP</button>
         <button class="a-tab" type="button" data-tab="gemini">Alia (Gemini)</button>
         <button class="a-tab" type="button" data-tab="payments">Payments</button>
+        <button class="a-tab" type="button" data-tab="branding">Branding</button>
         <button class="a-tab" type="button" data-tab="site">Site Settings</button>
         <button class="a-tab" type="button" data-tab="social">Social Media</button>
         <button class="a-tab" type="button" data-tab="maintenance">Maintenance</button>
@@ -93,7 +108,7 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
             <div class="a-field-row">
                 <div class="a-field">
                     <label for="smtp_pass">Password</label>
-                    <span class="pw-wrap"><input id="smtp_pass" name="smtp_pass" type="password" value="<?= esc(getSetting('smtp_pass')) ?>" autocomplete="new-password"><button class="pw-toggle" type="button" data-target="smtp_pass">Show</button></span>
+                    <span class="pw-wrap"><input id="smtp_pass" name="smtp_pass" type="password" value="" autocomplete="new-password"><button class="pw-toggle" type="button" data-target="smtp_pass">Show</button></span>
                 </div>
                 <div class="a-field"><label for="smtp_from_name">From name</label><input id="smtp_from_name" name="smtp_from_name" type="text" value="<?= esc(getSetting('smtp_from_name', getSetting('site_name', SITE_NAME))) ?>"></div>
             </div>
@@ -101,6 +116,7 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
                 <label for="smtp_from_email">From email</label>
                 <input id="smtp_from_email" name="smtp_from_email" type="email" value="<?= esc(getSetting('smtp_from_email', getSetting('site_email', ADMIN_EMAIL))) ?>">
             </div>
+            <div class="a-field"><label for="smtp_reply_to">Reply-To</label><input type="email" name="smtp_reply_to" id="smtp_reply_to" value="<?= esc(getSetting('smtp_reply_to')) ?>"></div>
             <div class="a-toolbar">
                 <input type="email" id="test_email_to" value="<?= esc($adminUser ? $adminUser['email'] : ADMIN_EMAIL) ?>" placeholder="Send test to…" style="background:#0c0c12;border:1px solid var(--line);border-radius:10px;padding:9px 12px;color:var(--text)">
                 <button class="a-btn" type="button" data-ajax-action="test_email" data-fields="test_email_to" data-result="smtpTest">Send Test Email</button>
@@ -112,13 +128,18 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
     <div class="a-tabpanel" data-panel="gemini">
         <div class="a-card">
             <h3>Alia — the TPT growth assistant</h3>
+            <?php foreach (array('gemini_model' => array('Model', 'gemini-2.5-flash'), 'gemini_temperature' => array('Temperature (0–2)', '0.7'), 'gemini_max_tokens' => array('Maximum tokens (64–8192)', '300'), 'alia_welcome' => array('Welcome message', "Hi, I'm Alia. How can I help you today?"), 'alia_fallback' => array('Fallback message', 'Please contact our team for help.')) as $key => $field): ?>
+            <div class="a-field"><label for="<?= esc($key) ?>"><?= esc($field[0]) ?></label><input id="<?= esc($key) ?>" name="<?= esc($key) ?>" value="<?= esc(getSetting($key, $field[1])) ?>"></div>
+            <?php endforeach; ?>
+            <label class="a-check"><input type="checkbox" name="alia_lead_collection" value="1"<?= getSetting('alia_lead_collection', '1') === '1' ? ' checked' : '' ?>> Offer optional name/email lead collection</label>
+
             <div class="a-field">
                 <label class="a-check"><input type="checkbox" name="alia_enabled" value="1"<?= getSetting('alia_enabled', '1') === '1' ? ' checked' : '' ?>> Alia is ON — widget visible site-wide and the API answers requests</label>
                 <div class="hint">Turning this off removes the widget from every page and disables the chat endpoint.</div>
             </div>
             <div class="a-field">
                 <label for="gemini_api_key">Gemini API key</label>
-                <span class="pw-wrap"><input id="gemini_api_key" name="gemini_api_key" type="password" value="<?= esc(getSetting('gemini_api_key')) ?>" autocomplete="new-password" placeholder="AIza…"><button class="pw-toggle" type="button" data-target="gemini_api_key">Show</button></span>
+                <span class="pw-wrap"><input id="gemini_api_key" name="gemini_api_key" type="password" value="" autocomplete="new-password" placeholder="AIza…"><button class="pw-toggle" type="button" data-target="gemini_api_key">Show</button></span>
                 <div class="hint">Create a free key at Google AI Studio → &ldquo;Get API key&rdquo;. Stored only in your database — never exposed to the frontend.</div>
             </div>
             <div class="a-field">
@@ -143,6 +164,7 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
         </div>
         <div class="a-card">
             <h3>Stripe</h3>
+            <div class="a-field"><label for="stripe_webhook_secret">Webhook signing secret</label><input type="password" id="stripe_webhook_secret" name="stripe_webhook_secret" value="" autocomplete="new-password"><div class="hint">Endpoint: /api/webhooks/stripe — checkout.session.completed and checkout.session.async_payment_succeeded. Blank keeps saved secret.</div></div>
             <div class="a-field">
                 <label class="a-check"><input type="checkbox" name="stripe_enabled" value="1"<?= getSetting('stripe_enabled', '0') === '1' ? ' checked' : '' ?>> Stripe enabled — shown as a payment option</label>
             </div>
@@ -160,7 +182,7 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
             </div>
             <div class="a-field">
                 <label for="stripe_secret_key">Secret key</label>
-                <span class="pw-wrap"><input id="stripe_secret_key" name="stripe_secret_key" type="password" value="<?= esc(getSetting('stripe_secret_key')) ?>" autocomplete="new-password" placeholder="sk_test…"><button class="pw-toggle" type="button" data-target="stripe_secret_key">Show</button></span>
+                <span class="pw-wrap"><input id="stripe_secret_key" name="stripe_secret_key" type="password" value="" autocomplete="new-password" placeholder="sk_test…"><button class="pw-toggle" type="button" data-target="stripe_secret_key">Show</button></span>
                 <div class="hint">Server-side only. Never printed into page source or JavaScript.</div>
             </div>
         </div>
@@ -182,14 +204,28 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
             </div>
             <div class="a-field">
                 <label for="paypal_secret">Secret</label>
-                <span class="pw-wrap"><input id="paypal_secret" name="paypal_secret" type="password" value="<?= esc(getSetting('paypal_secret')) ?>" autocomplete="new-password"><button class="pw-toggle" type="button" data-target="paypal_secret">Show</button></span>
+                <span class="pw-wrap"><input id="paypal_secret" name="paypal_secret" type="password" value="" autocomplete="new-password"><button class="pw-toggle" type="button" data-target="paypal_secret">Show</button></span>
                 <div class="hint">Server-side only, like the Stripe secret.</div>
             </div>
         </div>
     </div>
 
+    <div class="a-tabpanel" data-panel="branding"><div class="a-card"><h3>Branding Settings</h3>
+        <p>Defaults preserve the current design. Site name, contact/footer copy, social links and OG image remain in their existing tabs.</p>
+        <?php foreach (array('brand_logo' => 'Logo', 'brand_favicon' => 'Favicon') as $key => $label): ?>
+        <div class="a-field"><label for="<?= $key ?>"><?= $label ?></label><input type="file" id="<?= $key ?>" name="<?= $key ?>" accept="image/png,image/jpeg,image/webp"><small><?= esc(getSetting($key, 'Existing brand asset')) ?></small></div>
+        <?php endforeach; ?>
+        <?php foreach (array('brand_primary' => '#7c3aed', 'brand_secondary' => '#22d3ee', 'brand_accent' => '#f59e0b') as $key => $default): ?>
+        <div class="a-field"><label for="<?= $key ?>"><?= esc(ucwords(str_replace('_', ' ', $key))) ?></label><input type="color" id="<?= $key ?>" name="<?= $key ?>" value="<?= esc(getSetting($key, $default)) ?>"></div>
+        <?php endforeach; ?>
+        <div class="a-field"><label for="brand_font">Typography</label><select id="brand_font" name="brand_font"><option value="default">Existing brand fonts</option><option value="system"<?= getSetting('brand_font') === 'system' ? ' selected' : '' ?>>System fonts</option></select></div>
+    </div></div>
     <div class="a-tabpanel" data-panel="site">
         <div class="a-card">
+            <h3>Sample content</h3>
+            <label class="a-check"><input type="checkbox" name="sample_content_enabled" value="1"<?= getSetting('sample_content_enabled','1') === '1' ? ' checked' : '' ?>> Show clearly labeled samples when a content table is empty or the database is offline</label>
+            <p class="hint">Existing records are never replaced. To edit the samples in your dashboard, use the button below. It adds three articles, three resources and three fictional portfolio projects, skipping sample slugs already present.</p>
+            <button class="a-btn" type="button" data-ajax-action="seed_samples" data-result="samplesResult">Add editable sample content</button><div class="inline-test" id="samplesResult"></div>
             <h3>Agency information</h3>
             <div class="a-field-row">
                 <div class="a-field"><label for="site_name">Agency name</label><input id="site_name" name="site_name" type="text" value="<?= esc(getSetting('site_name', SITE_NAME)) ?>"></div>

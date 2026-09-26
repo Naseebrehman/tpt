@@ -255,6 +255,28 @@ function pieHomeFaq()
     );
 }
 
+/** Shared social profiles for contact and footer; settings override project defaults. */
+function pieSocialLinks()
+{
+    $definitions = array(
+        array('instagram_url', 'instagram', 'Instagram', 'https://instagram.com/thepietechnologies'),
+        array('facebook_url', 'facebook', 'Facebook', 'https://facebook.com/thepietechnologies'),
+        array('linkedin_url', 'linkedin', 'LinkedIn', 'https://linkedin.com/company/thepietechnologies'),
+        array('tiktok_url', 'tiktok', 'TikTok', ''),
+        array('twitter_url', 'twitter', 'X / Twitter', ''),
+        array('youtube_url', 'youtube', 'YouTube', ''),
+    );
+    $settings = settingsCache();
+    $links = array();
+    foreach ($definitions as $definition) {
+        $href = trim((string) (array_key_exists($definition[0], $settings) ? $settings[$definition[0]] : $definition[3]));
+        if ($href !== '' && filter_var($href, FILTER_VALIDATE_URL) && in_array(parse_url($href, PHP_URL_SCHEME), array('http', 'https'), true)) {
+            $links[] = array('icon'=>$definition[1], 'label'=>$definition[2], 'url'=>$href);
+        }
+    }
+    return $links;
+}
+
 /** Inline SVG icon library (stroke style, inherits currentColor). */
 function icon($name, $size = 20)
 {
@@ -294,7 +316,7 @@ function icon($name, $size = 20)
         'globe'     => '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18z"/>',
         'whatsapp'  => '<path d="M12 3a9 9 0 0 0-7.8 13.5L3 21l4.7-1.2A9 9 0 1 0 12 3z"/><path d="M9 8.5c-.5 2.5 3.5 6.7 6.2 6.6l.8-1.6-2-1.2-1 .8c-1-.4-2-1.4-2.4-2.4l.8-1-1.2-2-1.2.8z"/>',
         'instagram' => '<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.2 6.8h.01"/>',
-        'facebook'  => '<path d="M14 8h3V4h-3a5 5 0 0 0-5 5v3H6v4h3v8h4v-8h3l1-4h-4V9a1 1 0 0 1 1-1z"/>',
+        'facebook'  => '<path d="M14 8h3V4h-3a5 5 0 0 0-5 5v3H6v4h3v6h4v-6h3l1-4h-4V9a1 1 0 0 1 1-1z"/>',
         'linkedin'  => '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 10v7"/><path d="M8 7v.01"/><path d="M12 17v-4a3 3 0 0 1 6 0v4"/>',
         'tiktok'    => '<path d="M14 4v10.5a3.5 3.5 0 1 1-3.5-3.5"/><path d="M14 4c.5 2.5 2.3 4.2 5 4.5"/>',
         'twitter'   => '<path d="m4 4 7.5 9.5L4.5 20h2l6-5.3L16.8 20H20l-7.8-9.9L19.3 4h-2l-5.4 4.8L8 4H4z"/>',

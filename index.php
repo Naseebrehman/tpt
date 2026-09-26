@@ -180,7 +180,7 @@ require_once __DIR__ . '/includes/header.php';
 <?php endif; ?>
 
 <!-- ======================= SERVICES ACCORDION =========================== -->
-<section class="section" style="padding-top:0">
+<section class="section">
     <div class="container">
         <div class="section-head" data-aos="fade-up">
             <p class="eyebrow">Services</p>
@@ -189,14 +189,14 @@ require_once __DIR__ . '/includes/header.php';
 
         <div class="services-acc" data-accordion="single">
             <?php foreach ($services as $i => $svc): ?>
-            <div class="acc-item<?= $i === 0 ? ' open' : '' ?>">
-                <button class="acc-head" type="button">
+            <div class="acc-item">
+                <button class="acc-head" type="button" aria-expanded="false">
                     <span class="acc-num mono"><?= esc($svc['num']) ?></span>
                     <span class="acc-title"><?= esc($svc['name']) ?><?= !empty($svc['core']) ? '<span class="dd-core">Core</span>' : '' ?></span>
                     <span class="acc-tag"><?= esc($svc['tagline']) ?></span>
                     <span class="acc-icon"><?= icon('plus', 16) ?></span>
                 </button>
-                <div class="acc-body">
+                <div class="acc-body" inert>
                     <div class="acc-inner">
                         <div class="acc-copy">
                             <p><?= esc($svc['desc']) ?></p>
@@ -266,46 +266,55 @@ require_once __DIR__ . '/includes/header.php';
 </section>
 
 <!-- ============================== INDUSTRIES ============================ -->
-<section class="section" aria-label="Industries we know">
+<section class="section industries-section" aria-labelledby="industriesHeading">
     <div class="container">
         <div class="section-head" data-aos="fade-up">
-            <p class="eyebrow">Industries</p>
-            <h2 class="section-title">We learn your trade before we touch your funnel.</h2>
-            <p class="section-lead">Generic marketing wastes budget on the wrong message. These are the industries where we know the sales cycle, the season and the objections.</p>
+            <p class="eyebrow">Who we grow</p>
+            <h2 class="section-title" id="industriesHeading">Built for businesses<br>that live on leads.</h2>
+            <p class="section-lead">We learn your trade before we touch your funnel. Explore how we approach your industry.</p>
         </div>
-        <div class="industry-grid">
-            <?php foreach ($industries as $ii => $ind): ?>
-            <article class="industry-card" data-aos="fade-up" data-aos-delay="<?= ($ii % 4) * 80 ?>">
-                <span class="industry-abbr mono"><?= esc($ind['abbr']) ?></span>
-                <h3><?= esc($ind['name']) ?></h3>
-                <p><?= esc($ind['copy']) ?></p>
-                <div class="industry-services">
-                    <?php foreach ($ind['services'] as $indSvcKey): $indSvc = pieServiceByKey($indSvcKey); if ($indSvc): ?>
-                    <a href="<?= url('services/' . $indSvc['key']) ?>"><?= esc($indSvc['name']) ?></a>
-                    <?php endif; endforeach; ?>
-                </div>
-            </article>
-            <?php endforeach; ?>
+        <div class="industry-explorer" data-industry-explorer>
+            <div class="industry-tabs" role="tablist" aria-label="Choose your industry" hidden>
+                <?php foreach ($industries as $ii => $ind): ?>
+                <button class="industry-tab" type="button" id="industry-tab-<?= $ii ?>" role="tab" aria-selected="<?= $ii === 0 ? 'true' : 'false' ?>" aria-controls="industry-panel-<?= $ii ?>" tabindex="<?= $ii === 0 ? '0' : '-1' ?>">
+                    <span class="industry-tab-code" aria-hidden="true"><?= esc($ind['abbr']) ?></span><span><?= esc($ind['name']) ?></span>
+                </button>
+                <?php endforeach; ?>
+            </div>
+            <div class="industry-panels">
+                <?php foreach ($industries as $ii => $ind): ?>
+                <article class="industry-detail" id="industry-panel-<?= $ii ?>" aria-labelledby="industry-title-<?= $ii ?>">
+                    <span class="industry-detail-code" aria-hidden="true"><?= esc($ind['abbr']) ?></span>
+                    <div class="industry-detail-copy">
+                        <p class="eyebrow">Your industry. A connected approach.</p>
+                        <h3 id="industry-title-<?= $ii ?>"><?= esc($ind['name']) ?></h3>
+                        <p><?= esc($ind['copy']) ?></p>
+                        <div class="industry-services">
+                            <?php foreach ($ind['services'] as $indSvcKey): $indSvc = pieServiceByKey($indSvcKey); if ($indSvc): ?>
+                            <a href="<?= url('services/' . $indSvc['key']) ?>"><?= esc($indSvc['name']) ?></a>
+                            <?php endif; endforeach; ?>
+                        </div>
+                        <a class="link-arrow industry-discuss" href="<?= url('contact') ?>?industry=<?= rawurlencode($ind['name']) ?>">Discuss your industry <?= icon('arrow-r', 18) ?></a>
+                    </div>
+                </article>
+                <?php endforeach; ?>
+            </div>
         </div>
     </div>
 </section>
 
 <!-- ============================ FOUNDER CTA ============================= -->
-<section class="section">
+<section class="section founder-section" aria-label="A note from our founder">
     <div class="container">
-        <div class="founder-card" data-aos="fade-up">
-            <div class="founder-media">
-                <img src="<?= asset('assets/images/founder.jpg') ?>" alt="<?= esc(getSetting('founder_name', 'The founder')) ?>, founder of The Pie Technologies" loading="lazy">
+        <div class="founder-card founder-compact" data-aos="fade-up">
+            <img class="founder-avatar" src="<?= asset('assets/images/founder-avatar.jpg') ?>" width="80" height="80" alt="<?= esc(getSetting('founder_name', 'Ali Raza')) ?>, founder" loading="lazy">
+            <div class="founder-note">
+                <p class="eyebrow">A note from our founder</p>
+                <h2>Hey, I’m <?= esc(getSetting('founder_name', 'Ali Raza')) ?>.</h2>
+                <p>We built TPT to connect strategy, creative and technology under one accountable team. Let’s talk about your growth.</p>
+                <span class="founder-sig">Founder · The Pie Technologies</span>
             </div>
-            <div class="founder-copy">
-                <span class="wave" aria-hidden="true">👋</span>
-                <h2>Hey, I&rsquo;m <?= esc(getSetting('founder_name', 'the founder')) ?> — Founder of The Pie Technologies.</h2>
-                <p>I started this agency after watching too many good businesses burn budget on vendors who reported impressions instead of outcomes. We built the opposite: five disciplines under one roof, connected by design, accountable to one number — yours. Let&rsquo;s talk about your growth.</p>
-                <p class="founder-sig">— <?= esc(getSetting('founder_name', 'The Founder')) ?></p>
-                <div>
-                    <a href="<?= url('contact') ?>" class="btn btn-primary btn-magnetic">Book a Free Call <?= icon('arrow-r', 18) ?></a>
-                </div>
-            </div>
+            <a href="<?= url('contact') ?>" class="btn btn-primary founder-book">Book a Free Call <?= icon('arrow-r', 18) ?></a>
         </div>
     </div>
 </section>
@@ -454,7 +463,7 @@ require_once __DIR__ . '/includes/header.php';
 <?php endif; ?>
 
 <!-- ============================ HOME FAQ ================================ -->
-<section class="section" style="padding-top:0">
+<section class="section">
     <div class="container">
         <div class="section-head center" data-aos="fade-up">
             <p class="eyebrow">FAQ</p>
@@ -462,12 +471,12 @@ require_once __DIR__ . '/includes/header.php';
         </div>
         <div class="faq" data-accordion="single">
             <?php foreach ($homeFaq as $fi => $faqItem): ?>
-            <div class="acc-item<?= $fi === 0 ? ' open' : '' ?>">
-                <button class="acc-head" type="button" aria-expanded="<?= $fi === 0 ? 'true' : 'false' ?>">
+            <div class="acc-item">
+                <button class="acc-head" type="button" aria-expanded="false">
                     <span class="acc-title"><?= esc($faqItem['q']) ?></span>
                     <span class="acc-icon"><?= icon('plus', 16) ?></span>
                 </button>
-                <div class="acc-body">
+                <div class="acc-body" inert>
                     <p class="acc-copy"><?= esc($faqItem['a']) ?></p>
                 </div>
             </div>

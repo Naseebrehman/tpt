@@ -36,6 +36,7 @@ require_once __DIR__ . '/includes/header.php';
 <!-- ============================== LIBRARY =============================== -->
 <section class="section">
     <div class="container">
+        <?php if (SampleContent::usesFallback('resources')): ?><p class="sample-notice"><strong>Sample content.</strong> These examples are for previewing the website, not claims about real clients or results. Add your own content in the dashboard to replace them.</p><?php endif; ?>
         <?php if ($resources): ?>
         <div class="lib-filters" data-aos="fade-up">
             <div class="filter-tabs" role="group" aria-label="Filter by type">

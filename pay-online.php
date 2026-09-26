@@ -20,6 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['pay_submit']) && $pay
         || (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false);
 
     if (!validateCSRF()) {
+        if ($isAjax) { http_response_code(403); header('Content-Type: application/json'); echo json_encode(array('success'=>false,'message'=>'Your session expired. Refresh and try again.')); exit; }
         setFlash('err', 'Your session expired. Please refresh and try again.');
         header('Location: ' . url('pay-online'));
         exit;
@@ -42,12 +43,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['pay_submit']) && $pay
     $errors = array();
     if (mb_strlen($name) < 2 || mb_strlen($name) > 150)            { $errors['name'] = 'Please enter the name on the account.'; }
     if (!filter_var($email, FILTER_VALIDATE_EMAIL))                { $errors['email'] = 'Please enter a valid email for the receipt.'; }
-    $amount = (float) preg_replace('/[^0-9.]/', '', $amountRaw);
+    $amount = preg_match('/^[0-9]+(?:\.[0-9]{1,2})?$/D', $amountRaw) ? (float) $amountRaw : 0;
     if (!is_numeric($amount) || $amount <= 0 || $amount > 1000000) { $errors['amount'] = 'Enter the amount in USD (e.g. 1500.00).'; }
     if (!in_array($method, array('invoice', 'stripe', 'paypal'), true)) { $method = 'invoice'; }
     if ($method !== 'invoice' && !isset($providers[$method]))      { $method = 'invoice'; }
 
     if ($errors) {
+        if ($isAjax) { http_response_code(422); header('Content-Type: application/json'); echo json_encode(array('success'=>false,'message'=>reset($errors),'errors'=>$errors)); exit; }
         setFlash('err', reset($errors));
         header('Location: ' . url('pay-online'));
         exit;
@@ -62,6 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['pay_submit']) && $pay
     );
 
     if ($newId < 0) {
+        if ($isAjax) { http_response_code(503); header('Content-Type: application/json'); echo json_encode(array('success'=>false,'message'=>'Payment request could not be saved.')); exit; }
         setFlash('err', 'We couldn’t save your request. Please email ' . getSetting('site_email', 'info@thepietechnologies.com') . ' and we’ll sort it manually.');
         header('Location: ' . url('pay-online'));
         exit;
@@ -95,6 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['pay_submit']) && $pay
 
     piePaymentNotify($payment);
 
+    if ($isAjax) { header('Content-Type: application/json'); echo json_encode(array('success'=>true,'redirect'=>$redirect ?: url('pay/secure/' . $token) . '?requested=1')); exit; }
     if ($redirect !== null) {
         header('Location: ' . $redirect);
         exit;

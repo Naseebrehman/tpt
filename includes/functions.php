@@ -158,24 +158,8 @@ function validateCSRF($token = null)
 
 function pieClientIp()
 {
-    $candidates = array();
-    if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
-        $candidates[] = $_SERVER['HTTP_CF_CONNECTING_IP'];
-    }
-    if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-        $parts = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
-        $candidates[] = trim($parts[0]);
-    }
-    if (!empty($_SERVER['REMOTE_ADDR'])) {
-        $candidates[] = $_SERVER['REMOTE_ADDR'];
-    }
-    foreach ($candidates as $ip) {
-        $clean = filter_var($ip, FILTER_VALIDATE_IP);
-        if ($clean) {
-            return $clean;
-        }
-    }
-    return '0.0.0.0';
+    // Forwarded headers are untrusted unless a deployment explicitly validates its proxy.
+    return filter_var($_SERVER['REMOTE_ADDR'] ?? '', FILTER_VALIDATE_IP) ?: '0.0.0.0';
 }
 
 function slugify($text)
@@ -221,8 +205,11 @@ function jsonCol($value, $default = array())
    Content getters (all prepared statements, all cached-free & live)
    =========================================================================== */
 
+require_once dirname(__DIR__) . '/core/SampleContent.php';
+
 function getRecentPosts($limit = 3, $excludeId = null)
 {
+    if (SampleContent::usesFallback('blog_posts')) { return array_slice(array_values(array_filter(SampleContent::all('blog_posts'), function ($row) use ($excludeId) { return $row['id'] !== $excludeId; })), 0, max(1,(int)$limit)); }
     $sql    = "SELECT p.*, c.name AS category_name, c.slug AS category_slug
                FROM blog_posts p LEFT JOIN blog_categories c ON c.id = p.category_id
                WHERE p.status = 'published'";
@@ -242,6 +229,7 @@ function getRecentPosts($limit = 3, $excludeId = null)
  */
 function getPosts($opts = array())
 {
+    if (SampleContent::usesFallback('blog_posts')) { return SampleContent::posts($opts); }
     $where    = array("p.status = 'published'");
     $params   = array();
     $category = isset($opts['category']) ? $opts['category'] : '';
@@ -285,6 +273,7 @@ function getPosts($opts = array())
 
 function getPostBySlug($slug)
 {
+    if (SampleContent::usesFallback('blog_posts')) { return SampleContent::find('blog_posts', 'slug', $slug); }
     return dbOne(
         "SELECT p.*, c.name AS category_name, c.slug AS category_slug
          FROM blog_posts p LEFT JOIN blog_categories c ON c.id = p.category_id
@@ -305,6 +294,7 @@ function getPostById($id)
 
 function getBlogCategories()
 {
+    if (SampleContent::usesFallback('blog_posts')) { return array_map(function ($row) { return array('id'=>$row['id'],'name'=>$row['category_name'],'slug'=>$row['category_slug']); }, SampleContent::all('blog_posts')); }
     return dbAll('SELECT * FROM blog_categories ORDER BY name ASC');
 }
 
@@ -326,6 +316,7 @@ function getActiveTestimonials()
  */
 function getPortfolioItems($filter = '')
 {
+    if (SampleContent::usesFallback('portfolio')) { return array_values(array_filter(SampleContent::all('portfolio'), function ($row) use ($filter) { return !$filter || $row['service_category'] === $filter; })); }
     $sql = 'SELECT * FROM portfolio WHERE is_active = 1';
     $params = array();
     if ($filter !== '' && $filter !== null) {
@@ -338,6 +329,7 @@ function getPortfolioItems($filter = '')
 
 function getPortfolioBySlug($slug)
 {
+    if (SampleContent::usesFallback('portfolio')) { return SampleContent::find('portfolio', 'slug', $slug); }
     return dbOne('SELECT * FROM portfolio WHERE slug = ? AND is_active = 1', array($slug));
 }
 
@@ -348,6 +340,7 @@ function getPortfolioById($id)
 
 function getResources($type = null, $activeOnly = true)
 {
+    if ($activeOnly && SampleContent::usesFallback('resources')) { return array_values(array_filter(SampleContent::all('resources'), function ($row) use ($type) { return !$type || $row['resource_type'] === $type; })); }
     $sql    = 'SELECT * FROM resources';
     $params = array();
     $where  = array();
@@ -367,12 +360,25 @@ function getResources($type = null, $activeOnly = true)
 
 function getResourceBySlug($slug)
 {
+    if (SampleContent::usesFallback('resources')) { return SampleContent::find('resources', 'slug', $slug); }
     return dbOne('SELECT * FROM resources WHERE slug = ? AND is_active = 1', array($slug));
 }
 
 function getTeamMembers()
 {
-    return dbAll('SELECT * FROM team_members WHERE is_active = 1 ORDER BY display_order ASC, id ASC');
+    $members = dbAll('SELECT * FROM team_members WHERE is_active = 1 ORDER BY display_order ASC, id ASC');
+    if ($members) { return $members; }
+    $count = DB_OK ? dbOne('SELECT COUNT(*) AS total FROM team_members') : null;
+    // Keep intentionally hidden profiles hidden. Only an empty/offline roster gets a preview.
+    if (DB_OK && (!$count || (int) $count['total'] > 0)) { return array(); }
+    return array(
+        array('id'=>-401, 'name'=>getSetting('founder_name', 'Ali Raza'), 'role'=>'Founder & Growth Strategist',
+            'photo'=>'assets/images/founder-avatar.jpg', 'bio'=>'Connects strategy, creative and delivery around a clear business goal.', 'linkedin'=>'', 'twitter'=>'', 'is_preview'=>true),
+        array('id'=>-402, 'name'=>'Hina Shahid', 'role'=>'Head of Paid Media',
+            'photo'=>'', 'bio'=>'Brings audience research, campaign planning and creative testing together.', 'linkedin'=>'', 'twitter'=>'', 'is_preview'=>true),
+        array('id'=>-403, 'name'=>'Daniyal Khan', 'role'=>'Lead Developer',
+            'photo'=>'', 'bio'=>'Builds accessible, responsive websites with reliable measurement.', 'linkedin'=>'', 'twitter'=>'', 'is_preview'=>true),
+    );
 }
 
 /* ===========================================================================
@@ -406,7 +412,8 @@ function isAdminLoggedIn()
 
 function requireAdmin()
 {
-    if (!isAdminLoggedIn()) {
+    if (!isAdminLoggedIn() || !currentAdmin()) {
+        unset($_SESSION['admin_id'], $_SESSION['admin_email']);
         header('Location: ' . url('admin/login.php', false));
         exit;
     }
@@ -433,74 +440,7 @@ function currentAdmin()
  * @param int    $maxBytes   max size (default 5 MB)
  * @return array array('ok'=>bool,'path'=>string,'error'=>string)
  */
-function uploadFile($field, $subdir, $allowedExt = array('jpg', 'jpeg', 'png', 'webp', 'svg'), $maxBytes = 5242880)
-{
-    $fail = array('ok' => false, 'path' => '', 'error' => '');
-    if (!isset($_FILES[$field]) || !is_array($_FILES[$field])) {
-        return array('ok' => true, 'path' => '', 'error' => ''); /* nothing uploaded */
-    }
-    $file = $_FILES[$field];
-    if ((int) $file['error'] === UPLOAD_ERR_NO_FILE) {
-        return array('ok' => true, 'path' => '', 'error' => '');
-    }
-    if ((int) $file['error'] !== UPLOAD_ERR_OK) {
-        return array('ok' => false, 'path' => '', 'error' => 'Upload failed (server error code ' . (int) $file['error'] . ').');
-    }
-    if ((int) $file['size'] > $maxBytes) {
-        return array('ok' => false, 'path' => '', 'error' => 'File is larger than the 5 MB limit.');
-    }
-
-    $ext = strtolower(pathinfo((string) $file['name'], PATHINFO_EXTENSION));
-    if (!in_array($ext, $allowedExt, true)) {
-        return array('ok' => false, 'path' => '', 'error' => 'File type .' . $ext . ' is not allowed.');
-    }
-
-    /* Real MIME check via finfo */
-    $mimeMap = array(
-        'jpg'  => array('image/jpeg'),
-        'jpeg' => array('image/jpeg'),
-        'png'  => array('image/png'),
-        'webp' => array('image/webp'),
-        'gif'  => array('image/gif'),
-        'svg'  => array('image/svg+xml', 'text/plain', 'application/xml', 'text/xml'),
-        'pdf'  => array('application/pdf'),
-    );
-    if (function_exists('finfo_open')) {
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mime  = finfo_file($finfo, $file['tmp_name']);
-        finfo_close($finfo);
-        if (isset($mimeMap[$ext]) && !in_array($mime, $mimeMap[$ext], true)) {
-            return array('ok' => false, 'path' => '', 'error' => 'File content does not match its extension.');
-        }
-    }
-
-    $dir = UPLOAD_PATH . trim($subdir, '/');
-    if (!is_dir($dir) && !@mkdir($dir, 0755, true)) {
-        return array('ok' => false, 'path' => '', 'error' => 'Upload folder is not writable.');
-    }
-
-    $newName = uniqid('up_', true) . '.' . $ext;
-    if (!move_uploaded_file($file['tmp_name'], $dir . '/' . $newName)) {
-        return array('ok' => false, 'path' => '', 'error' => 'Could not save the uploaded file.');
-    }
-    @chmod($dir . '/' . $newName, 0644);
-
-    return array('ok' => true, 'path' => 'uploads/' . trim($subdir, '/') . '/' . $newName, 'error' => '');
-}
-
-/** Delete an uploaded file (only inside /uploads). */
-function deleteUpload($relativePath)
-{
-    $relativePath = (string) $relativePath;
-    if ($relativePath === '' || strpos($relativePath, 'uploads/') !== 0) {
-        return false;
-    }
-    $full = BASE_PATH . '/' . $relativePath;
-    if (is_file($full)) {
-        return @unlink($full);
-    }
-    return false;
-}
+require_once dirname(__DIR__) . '/core/Upload.php';
 
 /* ===========================================================================
    Mail
@@ -509,13 +449,15 @@ function deleteUpload($relativePath)
 /**
  * Send an HTML email.
  * Priority: 1) PHPMailer from /vendor (composer), 2) built-in SMTP client,
- * 3) PHP mail(). Returns true on success.
+ * Returns true only on accepted delivery; SMTP failures are not hidden.
  */
 function sendEmail($to, $subject, $bodyHtml, $attachments = array())
 {
     require_once __DIR__ . '/Mailer.php';
+    $GLOBALS['pieMailError'] = '';
 
     $smtp = array(
+        'reply_to'   => getSetting('smtp_reply_to'),
         'host'       => getSetting('smtp_host'),
         'port'       => (int) getSetting('smtp_port', 587),
         'encryption' => getSetting('smtp_encryption', 'tls'),
@@ -524,6 +466,10 @@ function sendEmail($to, $subject, $bodyHtml, $attachments = array())
         'from_name'  => getSetting('smtp_from_name', getSetting('site_name', SITE_NAME)),
         'from_email' => getSetting('smtp_from_email', getSetting('site_email', ADMIN_EMAIL)),
     );
+
+    if (!filter_var($to, FILTER_VALIDATE_EMAIL) || preg_match('/[\r\n]/', $subject . $smtp['from_name']) || !filter_var($smtp['from_email'], FILTER_VALIDATE_EMAIL)) { $GLOBALS['pieMailError'] = 'Invalid mail address or header.'; return false; }
+
+    if ($smtp['host'] === '') { $GLOBALS['pieMailError'] = 'SMTP host is not configured. Save SMTP settings first.'; return false; }
 
     /* 1 — PHPMailer when installed through composer */
     if (is_file(VENDOR_PATH . 'autoload.php')) {
@@ -551,6 +497,7 @@ function sendEmail($to, $subject, $bodyHtml, $attachments = array())
                 }
                 $mail->setFrom($smtp['from_email'], $smtp['from_name']);
                 $mail->addAddress($to);
+                if (filter_var($smtp['reply_to'], FILTER_VALIDATE_EMAIL)) { $mail->addReplyTo($smtp['reply_to']); }
                 $mail->isHTML(true);
                 $mail->Subject = $subject;
                 $mail->Body    = $bodyHtml;
@@ -573,15 +520,13 @@ function sendEmail($to, $subject, $bodyHtml, $attachments = array())
         if ($result['success']) {
             return true;
         }
-        error_log('[TPT] SMTP error: ' . $result['error']);
+        $GLOBALS['pieMailError'] = $result['error'];
+        error_log('[TPT] SMTP delivery failed.');
+        return false; // Never disguise broken SMTP as successful PHP mail delivery.
     }
 
-    /* 3 — last resort: PHP mail() */
-    $headers = 'MIME-Version: 1.0' . "\r\n"
-        . 'Content-type: text/html; charset=UTF-8' . "\r\n"
-        . 'From: ' . $smtp['from_name'] . ' <' . $smtp['from_email'] . '>' . "\r\n";
-    $plain = trim(strip_tags(preg_replace('/<(br|\/p|\/div|\/tr)>/i', "\n", $bodyHtml)));
-    return @mail($to, $subject, $bodyHtml, $headers) || @mail($to, $subject, $plain);
+    $GLOBALS['pieMailError'] = 'SMTP host is not configured. Save SMTP settings first.';
+    return false;
 }
 
 /* ===========================================================================
@@ -599,6 +544,7 @@ function csvDownload($filename, $headers, $rows)
     $out = fopen('php://output', 'w');
     fputcsv($out, $headers, ',', '"', '');
     foreach ($rows as $row) {
+        $row = array_map(function ($value) { return preg_match('/^[\s]*[=+@-]/', (string) $value) ? "'" . $value : $value; }, $row);
         fputcsv($out, $row, ',', '"', '');
     }
     fclose($out);

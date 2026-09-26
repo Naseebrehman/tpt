@@ -109,7 +109,7 @@ require_once __DIR__ . '/includes/header.php';
 <!-- =============================== MISSION ============================== -->
 <section class="section" style="padding-top:0">
     <div class="container">
-        <div class="founder-card" data-aos="fade-up">
+        <div class="founder-card mission-card" data-aos="fade-up">
             <div class="founder-copy" style="max-width:none">
                 <p class="eyebrow">Mission</p>
                 <h2 style="font-size:clamp(1.5rem,3vw,2.2rem);margin-top:10px">&ldquo;Give serious businesses a single accountable team for digital growth — so nobody ever again has to project-manage five vendors who &lsquo;did their part&rsquo;.&rdquo;</h2>
@@ -130,12 +130,22 @@ require_once __DIR__ . '/includes/header.php';
             <p class="eyebrow">The Team</p>
             <h2 class="section-title" style="font-size:clamp(1.8rem,3.6vw,2.8rem)">Senior people on every account.</h2>
         </div>
+        <?php if (!empty($team[0]['is_preview'])): ?><p class="team-preview-note">Team preview using the project’s starter profiles. Update names, bios and photos in Admin → Team before publishing.</p><?php endif; ?>
         <div class="team-grid">
             <?php foreach ($team as $i => $member): ?>
             <article class="team-card" data-aos="fade-up" data-aos-delay="<?= ($i % 3) * 90 ?>">
                 <div class="team-photo">
-                    <?php $memberPhoto = ($member['photo'] !== '' && is_file(BASE_PATH . '/' . $member['photo'])) ? $member['photo'] : 'assets/images/placeholder.svg'; ?>
-                    <img src="<?= asset($memberPhoto) ?>" alt="<?= esc($member['name']) ?>, <?= esc($member['role']) ?>" loading="lazy">
+                    <?php
+                    $memberPhoto = !empty($member['photo']) && is_file(BASE_PATH . '/' . $member['photo']) ? $member['photo'] : '';
+                    if ($memberPhoto === '' && stripos($member['role'], 'founder') !== false) { $memberPhoto = 'assets/images/founder-avatar.jpg'; }
+                    $initials = '';
+                    foreach (array_slice(preg_split('/\s+/', trim($member['name'])), 0, 2) as $part) { $initials .= mb_substr($part, 0, 1); }
+                    ?>
+                    <?php if ($memberPhoto !== ''): ?>
+                    <img src="<?= asset($memberPhoto) ?>" alt="<?= esc($member['name']) ?>, <?= esc($member['role']) ?>" width="88" height="88" loading="lazy">
+                    <?php else: ?>
+                    <span class="team-initials" aria-hidden="true"><?= esc(mb_strtoupper($initials)) ?></span>
+                    <?php endif; ?>
                 </div>
                 <div class="team-body">
                     <div>

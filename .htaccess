@@ -14,34 +14,20 @@ RewriteCond %{HTTPS} off
 RewriteCond %{HTTP:X-Forwarded-Proto} !=https
 RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
-# ------------------- Services index (services/ is a directory) -------------
-RewriteRule ^services/?$ services-index.php [L,QSA]
+# Protect implementation, configuration and runtime before any routing.
+RewriteRule ^(?:includes|app|core|config|database|bin|tests|storage|views|docs|vendor)(?:/|$) - [F,L,NC]
+RewriteRule ^uploads/.*\.(?:php[0-9]*|phtml|phar|pl|py|cgi|shtml|html|svg)(?:[./]|$) - [F,L,NC]
 
-# --------------------- Resource single clean URL ---------------------------
-RewriteRule ^resources/([a-z0-9-]+)/?$ resource-single.php?slug=$1 [L,QSA]
+# The root is deliberately the document root: no public/ prefix is needed.
+# Redirect accidental public URLs once, without an internal public rewrite.
+RewriteRule ^public(?:/(.*))?$ /$1 [R=308,L]
 
-# --------------------- Secure payment link clean URL -----------------------
-RewriteRule ^pay/secure/([a-f0-9]{16,64})/?$ pay-secure.php?token=$1 [L,QSA]
-
-# ---------------------- Work alias for /portfolio --------------------------
-RewriteRule ^work/?$ portfolio.php [L,QSA]
-RewriteRule ^work/([a-z0-9-]+)/?$ portfolio/case-study.php?slug=$1 [L,QSA]
-
-# --------------------- Remove .php extension (pretty URLs) -----------------
-RewriteCond %{REQUEST_FILENAME} !-d
+# Route clean URLs centrally, retaining all existing direct PHP/asset URLs.
+RewriteRule ^admin$ admin/ [R=308,L]
+RewriteRule ^(?:services|admin|portfolio)/?$ front.php [L,QSA]
 RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME}.php -f
-RewriteRule ^(.+)$ $1.php [L,QSA]
-
-# ---------------------- Blog single post clean URL -------------------------
-RewriteRule ^blog/([a-z0-9-]+)/?$ blog-single.php?slug=$1 [L,QSA]
-
-# ------------------- Portfolio case study clean URL ------------------------
-RewriteRule ^portfolio/([a-z0-9-]+)/?$ portfolio/case-study.php?slug=$1 [L,QSA]
-
-# ---------------- Protect includes and uploads PHP execution ---------------
-RewriteRule ^includes/.*\.php$ - [F,L]
-RewriteRule ^uploads/.*\.(php|php[0-9]|phtml|pl|py|cgi)$ - [F,L]
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ front.php [L,QSA]
 
 # --------------------------- Block sensitive files -------------------------
 <FilesMatch "\.(sql|log|md|ini|sh)$">

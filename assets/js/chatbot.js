@@ -21,7 +21,7 @@
     open: false,
     busy: false,
     sessionId: SS.getItem('pie_session') || ('s_' + Math.random().toString(36).slice(2) + Date.now().toString(36)),
-    leadStage: SS.getItem('pie_lead_stage') || 'name',   /* name -> email -> done */
+    leadStage: PIE.leadCollection === false ? 'done' : (SS.getItem('pie_lead_stage') || 'name'),   /* name -> email -> done */
     lead: {
       name: SS.getItem('pie_lead_name') || '',
       email: SS.getItem('pie_lead_email') || ''
@@ -90,7 +90,7 @@
     }
   }
   function startConversation() {
-    push('bot', 'Hey — I\'m Alia, the TPT growth assistant. Ask me anything about our services, how we work, or where to start. I can also point you to the right free blueprint.');
+    push('bot', PIE.welcome || "Hi, I'm Alia. How can I help you today?");
     pushHtml('<div class="chat-suggests">'
       + '<button type="button" data-ask="What services do you offer?">What services do you offer?</button>'
       + '<button type="button" data-ask="I need more leads">I need more leads</button>'
@@ -129,10 +129,10 @@
   });
 
   /* Alia never guesses — when she can't answer, she hands off to a human. */
-  function aliaFallback() {
+  function aliaFallback(message) {
     var base = (window.PIE && window.PIE.base) ? window.PIE.base : '';
-    pushHtml('I don&#39;t want to guess. You can speak with the TPT team here.'
-      + '<div class="chat-lead-actions"><a href="' + esc(base) + 'contact">Talk to a Human →</a></div>');
+    pushHtml(esc(message || PIE.fallback || "I don't want to guess. You can speak with the TPT team here.")
+      + '<div class="chat-lead-actions"><a href="' + esc(base) + '/contact">Talk to a Human →</a></div>');
   }
 
   /* ------------------------------- sending ----------------------------- */
@@ -173,6 +173,7 @@
     typing(true);
 
     var payload = {
+      csrf_token: PIE.csrf,
       message: text,
       history: state.history.slice(-12),
       session_id: state.sessionId,
@@ -193,7 +194,7 @@
           state.history.push({ role: 'model', parts: [{ text: json.reply }] });
           saveHistory();
         } else {
-          aliaFallback();
+          aliaFallback(json && json.reply);
         }
       })
       .catch(function () {

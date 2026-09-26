@@ -27,6 +27,7 @@ require_once __DIR__ . '/includes/header.php';
 
 <section class="section">
     <div class="container">
+        <?php if (SampleContent::usesFallback('portfolio')): ?><p class="sample-notice"><strong>Sample content.</strong> These examples are for previewing the website, not claims about real clients or results. Add your own content in the dashboard to replace them.</p><?php endif; ?>
         <div class="filter-tabs" role="group" aria-label="Filter case studies by industry">
             <button class="filter-tab active" type="button" data-filter="all" aria-pressed="true">All</button>
             <?php foreach ($industries as $ind): ?>

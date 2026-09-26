@@ -31,107 +31,9 @@ $goalOptions = array(
 $prefillService = isset($_GET['service']) ? trim((string) $_GET['service']) : '';
 if (!in_array($prefillService, $serviceOptions, true)) { $prefillService = ''; }
 
-function contactJson($ok, $message, $errors = array())
-{
-    while (ob_get_level() > 0) {
-        ob_end_clean();
-    }
-    if (!headers_sent()) {
-        header('Content-Type: application/json; charset=utf-8');
-    }
-    echo json_encode(array('success' => $ok, 'message' => $message, 'errors' => $errors));
-    exit;
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['contact_submit'])) {
-    $isAjax = (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
-        || (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false);
-
-    if (!validateCSRF()) {
-        if ($isAjax) { contactJson(false, 'Your session expired. Please refresh the page and try again.'); }
-        setFlash('err', 'Your session expired. Please try again.');
-        header('Location: ' . url('contact'));
-        exit;
-    }
-
-    $name    = sanitize(isset($_POST['name']) ? $_POST['name'] : '');
-    $email   = sanitize(isset($_POST['email']) ? $_POST['email'] : '');
-    $phone   = sanitize(isset($_POST['phone']) ? $_POST['phone'] : '');
-    $company = sanitize(isset($_POST['company']) ? $_POST['company'] : '');
-    $service = sanitize(isset($_POST['service']) ? $_POST['service'] : '');
-    $budget  = sanitize(isset($_POST['budget']) ? $_POST['budget'] : '');
-    $message = sanitizeMultiline(isset($_POST['message']) ? $_POST['message'] : '');
-    $source  = sanitize(isset($_POST['source']) ? $_POST['source'] : '');
-
-    $errors = array();
-    if (mb_strlen($name) < 2 || mb_strlen($name) > 150)                 { $errors['name'] = 'Please enter your full name.'; }
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL))                     { $errors['email'] = 'Please enter a valid email address.'; }
-    if ($phone !== '' && !preg_match('/^[0-9+()\-\s]{6,30}$/', $phone))  { $errors['phone'] = 'That phone number doesn\'t look right.'; }
-    if ($service !== '' && !in_array($service, $serviceOptions, true))  { $errors['service'] = 'Please pick a service from the list.'; }
-    if ($budget !== '' && !in_array($budget, $budgetOptions, true))     { $errors['budget'] = 'Please pick a budget range from the list.'; }
-    if ($source !== '' && !in_array($source, $sourceOptions, true))     { $errors['source'] = 'Please pick an option from the list.'; }
-    if (mb_strlen($message) < 10)                                       { $errors['message'] = 'Tell us a little more (at least 10 characters).'; }
-
-    /* simple honeypot: bots fill hidden fields */
-    $honeypot = isset($_POST['website_url']) ? trim((string) $_POST['website_url']) : '';
-    if ($honeypot !== '') {
-        if ($isAjax) { contactJson(true, 'Thanks! We\'ll be in touch within 24 hours.'); }
-        header('Location: ' . url('contact'));
-        exit;
-    }
-
-    if ($errors) {
-        $first = reset($errors);
-        if ($isAjax) { contactJson(false, $first, $errors); }
-        setFlash('err', $first);
-        header('Location: ' . url('contact'));
-        exit;
-    }
-
-    $submission = array(
-        'name'       => $name,
-        'email'      => $email,
-        'phone'      => $phone,
-        'company'    => $company,
-        'service'    => $service,
-        'budget'     => $budget,
-        'message'    => $message,
-        'source'     => $source,
-        'status'     => 'new',
-        'notes'      => '',
-        'ip_address' => pieClientIp(),
-        'user_agent' => isset($_SERVER['HTTP_USER_AGENT']) ? mb_substr((string) $_SERVER['HTTP_USER_AGENT'], 0, 500) : '',
-        'created_at' => date('Y-m-d H:i:s'),
-    );
-
-    $newId = dbInsert(
-        'INSERT INTO contact_submissions (name, email, phone, company, service, budget, message, source, status, notes, ip_address, user_agent)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, "new", "", ?, ?)',
-        array($name, $email, $phone, $company, $service, $budget, $message, $source, $submission['ip_address'], $submission['user_agent'])
-    );
-
-    if ($newId < 0) {
-        if ($isAjax) { contactJson(false, 'We couldn\'t save your message. Please email us directly at ' . getSetting('site_email', ADMIN_EMAIL) . '.'); }
-        setFlash('err', 'Something went wrong saving your message — please email us directly.');
-        header('Location: ' . url('contact'));
-        exit;
-    }
-
-    /* Notifications (never block the visitor if mail is misconfigured) */
-    try {
-        sendEmail(getSetting('site_email', ADMIN_EMAIL), 'New Contact Form Submission — ' . $name, emailAdminNotification($submission));
-        sendEmail($email, 'We received your message, ' . $name, emailClientAutoReply($submission));
-    } catch (Throwable $mailError) {
-        error_log('[TPT] Contact mail error: ' . $mailError->getMessage());
-    }
-
-    if ($isAjax) {
-        contactJson(true, 'Thanks ' . explode(' ', $name)[0] . '! Your message is with our strategy team — a senior strategist replies within one business day.');
-    }
-    setFlash('ok', 'Thanks! Your message has been received — a senior strategist replies within one business day.');
-    header('Location: ' . url('contact') . '?sent=1');
-    exit;
-}
+require_once BASE_PATH . '/app/Models/Repository.php';
+require_once BASE_PATH . '/app/Controllers/ContactController.php';
+ContactController::handle($serviceOptions, $budgetOptions, $sourceOptions);
 
 $sentFlash = isset($_GET['sent']) ? true : false;
 $whats     = preg_replace('/[^0-9]/', '', getSetting('whatsapp_number', ''));
@@ -242,7 +144,7 @@ require_once __DIR__ . '/includes/header.php';
             <aside class="contact-side" data-aos="fade-up" data-aos-delay="120">
                 <?php if ($whats !== ''): ?>
                 <a class="info-card" href="https://wa.me/<?= esc($whats) ?>?text=<?= rawurlencode('Hi! I\'d like to discuss a project with The Pie Technologies.') ?>" target="_blank" rel="noopener noreferrer" style="border-color:rgba(37,211,102,.4)">
-                    <span class="icon" style="background:rgba(37,211,102,.14);border-color:rgba(37,211,102,.4);color:#25d366"><?= icon('whatsapp', 22) ?></span>
+                    <span class="info-icon" style="background:rgba(37,211,102,.14);border-color:rgba(37,211,102,.4);color:#25d366"><?= icon('whatsapp', 22) ?></span>
                     <span>
                         <strong>WhatsApp us directly</strong>
                         <p><?= esc(getSetting('whatsapp_number')) ?> · fastest reply, Mon–Sat</p>
@@ -250,41 +152,41 @@ require_once __DIR__ . '/includes/header.php';
                 </a>
                 <?php endif; ?>
                 <div class="info-card">
-                    <span class="icon"><?= icon('mail', 22) ?></span>
+                    <span class="info-icon"><?= icon('mail', 22) ?></span>
                     <span>
                         <strong>Email</strong>
                         <p><a href="mailto:<?= esc(getSetting('site_email', 'info@thepietechnologies.com')) ?>"><?= esc(getSetting('site_email', 'info@thepietechnologies.com')) ?></a></p>
                     </span>
                 </div>
                 <div class="info-card">
-                    <span class="icon"><?= icon('phone', 22) ?></span>
+                    <span class="info-icon"><?= icon('phone', 22) ?></span>
                     <span>
                         <strong>Phone</strong>
                         <p><a href="tel:<?= esc(preg_replace('/[^0-9+]/', '', getSetting('site_phone', '+1 (213) 257 8242'))) ?>"><?= esc(getSetting('site_phone', '+1 (213) 257 8242')) ?></a></p>
                     </span>
                 </div>
                 <div class="info-card">
-                    <span class="icon"><?= icon('pin', 22) ?></span>
+                    <span class="info-icon"><?= icon('pin', 22) ?></span>
                     <span>
                         <strong>Two locations, one standard</strong>
                         <p><?= esc(getSetting('site_address', 'Collingswood, NJ, USA · Punjab, Pakistan')) ?></p>
                     </span>
                 </div>
                 <div class="info-card">
-                    <span class="icon"><?= icon('clock', 22) ?></span>
+                    <span class="info-icon"><?= icon('clock', 22) ?></span>
                     <span>
                         <strong>Business hours</strong>
                         <p>Monday – Saturday<br>9:00 – 19:00 (ET &amp; PKT coverage)</p>
                     </span>
                 </div>
                 <div class="info-card">
-                    <span class="icon"><?= icon('sparkle', 22) ?></span>
+                    <span class="info-icon"><?= icon('sparkle', 22) ?></span>
                     <span>
                         <strong>Follow along</strong>
                         <p class="footer-socials" style="margin-top:10px">
-                            <?php foreach (array('instagram_url' => 'instagram', 'facebook_url' => 'facebook', 'linkedin_url' => 'linkedin', 'tiktok_url' => 'tiktok', 'twitter_url' => 'twitter') as $sKey => $sIcon): $sHref = getSetting($sKey); if ($sHref !== ''): ?>
-                            <a href="<?= esc($sHref) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= esc($sIcon) ?>"><?= icon($sIcon, 16) ?></a>
-                            <?php endif; endforeach; ?>
+                            <?php foreach (pieSocialLinks() as $social): ?>
+                            <a href="<?= esc($social['url']) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= esc($social['label']) ?>"><?= icon($social['icon'], 18) ?></a>
+                            <?php endforeach; ?>
                         </p>
                     </span>
                 </div>

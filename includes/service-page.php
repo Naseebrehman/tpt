@@ -15,6 +15,12 @@ if (!isset($service) || !is_array($service)) {
     return;
 }
 
+require_once BASE_PATH . '/core/Content.php';
+$serviceOverride = Content::get('/services/' . $service['key']);
+if (!empty($serviceOverride['headline'])) { $service['title'] = $serviceOverride['headline']; }
+if (!empty($serviceOverride['lead'])) { $service['lead'] = $serviceOverride['lead']; }
+if (isset($serviceOverride['faqs'])) { $service['faq'] = $serviceOverride['faqs']; }
+
 $svcMeta    = pieServiceByKey($service['key']);
 $pageTitle  = isset($service['seoTitle']) ? $service['seoTitle'] : $service['title'] . ' — ' . ($svcMeta ? $svcMeta['name'] : 'Services');
 $metaDesc   = isset($service['seoDesc']) ? $service['seoDesc'] : (isset($service['lead']) ? $service['lead'] : '');
@@ -163,13 +169,13 @@ if ($svcMeta) {
         </div>
         <div class="services-acc faq-style" data-accordion="single">
             <?php foreach ($service['accordion']['items'] as $ai => $accItem): ?>
-            <div class="acc-item<?= $ai === 0 ? ' open' : '' ?>">
-                <button class="acc-head" type="button">
+            <div class="acc-item">
+                <button class="acc-head" type="button" aria-expanded="false">
                     <span class="acc-num mono"><?= str_pad((string) ($ai + 1), 2, '0', STR_PAD_LEFT) ?></span>
                     <span class="acc-title" style="font-size:clamp(1.05rem,2.2vw,1.45rem)"><?= esc($accItem['title']) ?></span>
                     <span class="acc-icon"><?= icon('plus', 16) ?></span>
                 </button>
-                <div class="acc-body">
+                <div class="acc-body" inert>
                     <div class="acc-inner" style="grid-template-columns:1fr">
                         <div class="acc-copy"><p><?= esc($accItem['body']) ?></p></div>
                     </div>
@@ -499,11 +505,11 @@ if ($serviceTestimonial): ?>
         <div class="faq" data-accordion="single">
             <?php foreach ($service['faq'] as $fi => $faqItem): ?>
             <div class="acc-item">
-                <button class="acc-head" type="button">
+                <button class="acc-head" type="button" aria-expanded="false">
                     <span class="acc-title"><?= esc($faqItem['q']) ?></span>
                     <span class="acc-icon"><?= icon('plus', 14) ?></span>
                 </button>
-                <div class="acc-body">
+                <div class="acc-body" inert>
                     <p class="acc-copy"><?= esc($faqItem['a']) ?></p>
                 </div>
             </div>

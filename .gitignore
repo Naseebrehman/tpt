@@ -11,3 +11,7 @@
 /includes/config.local.php
 .DS_Store
 *.log
+
+/config/config.local.php
+/storage/*/*
+!/storage/*/.gitkeep

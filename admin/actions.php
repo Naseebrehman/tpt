@@ -28,6 +28,11 @@ $action = isset($_POST['action']) ? (string) $_POST['action'] : '';
 $id     = isset($_POST['id']) ? (int) $_POST['id'] : 0;
 
 switch ($action) {
+    case 'seed_samples':
+        if (!DB_OK) { actionJson(false, 'Connect the database first.'); }
+        try { $added = SampleContent::seed($GLOBALS['pdo']); actionJson(true, $added . ' sample records added. Existing content was preserved.'); }
+        catch (Throwable $error) { error_log('[TPT] Sample content import failed.'); actionJson(false, 'Could not add samples. Check the database schema.'); }
+        break;
 
     /* ------------------------- submissions ------------------------- */
     case 'update_submission':
@@ -120,7 +125,7 @@ switch ($action) {
         if (!filter_var($to, FILTER_VALIDATE_EMAIL)) { actionJson(false, 'Enter a valid test email address.'); }
         $sent = sendEmail($to, 'Test email from The Pie Technologies dashboard',
             emailShell('<h1 style="margin:0 0 10px;font-size:24px;color:#fff">SMTP is working 🎉</h1><p style="color:#c7c7d1;line-height:1.7">This test email was sent from your admin dashboard at ' . date('j M Y, H:i') . ' UTC.</p>'));
-        actionJson($sent, $sent ? 'Test email sent to ' . $to . '.' : 'Sending failed — check SMTP settings and credentials.');
+        actionJson($sent, $sent ? 'Test email sent to ' . $to . '.' : ('Sending failed: ' . ($GLOBALS['pieMailError'] ?? 'Check SMTP settings.')));
         break;
 
     case 'test_gemini':

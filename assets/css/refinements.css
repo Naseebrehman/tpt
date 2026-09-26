@@ -1,0 +1,145 @@
+/* Responsive refinements. Soft charcoal surfaces preserve the dark TPT identity. */
+.sample-notice{padding:14px 18px;border:1px solid var(--line-strong);border-radius:12px;margin-bottom:24px;font-size:.88rem;color:var(--muted)}
+.sample-notice strong{color:var(--text)}
+
+/* A stable header and centered mega-menu instead of viewport-dependent offsets. */
+.site-nav{background:rgba(27,28,35,.96);border-bottom-color:rgba(255,255,255,.09)}
+.nav-inner{gap:14px}
+.nav-links .nav-link{padding-inline:9px;font-size:.84rem}
+.nav-links{margin-left:auto}
+.dropdown-disciplines{position:fixed;top:calc(var(--nav-h) - 1px);left:50%;width:min(1100px,calc(100vw - 48px));transform:translate(-50%,12px);max-height:calc(100dvh - var(--nav-h) - 24px);overflow-y:auto}
+.nav-item:hover .dropdown-disciplines,.nav-item:focus-within .dropdown-disciplines{transform:translate(-50%,0)}
+@media (max-width:1239px){.nav-links{display:none}.nav-burger{display:flex}.nav-cta{margin-left:auto}}
+@media (min-width:1240px){.nav-links{display:block}.nav-burger{display:none}}
+
+/* The menu is top-aligned and independently scrollable, including its own header. */
+.mobile-menu{display:block;height:100vh;height:100dvh;padding:0 0 max(30px,env(safe-area-inset-bottom));background:var(--bg-soft);overscroll-behavior:contain;scrollbar-gutter:stable}
+.mobile-menu-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:calc(16px + env(safe-area-inset-top)) 24px 16px;background:var(--bg-soft);border-bottom:1px solid rgba(255,255,255,.12)}
+.mobile-menu-head .brand{white-space:normal;font-size:clamp(.95rem,3.8vw,1.15rem)}
+.mobile-menu-close{display:grid;place-items:center;width:44px;height:44px;flex:none;border:1px solid var(--line-strong);border-radius:50%;color:#fff}
+.mobile-menu nav{width:min(calc(100% - 48px),640px);padding-top:18px}
+.mobile-links>li{overflow:visible;border-bottom:1px solid rgba(255,255,255,.12)}
+.mobile-links>li>a,.mobile-services-disclosure>summary{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:15px 0;font:600 clamp(1.25rem,5.2vw,1.9rem)/1.25 var(--font-display);letter-spacing:-.025em;color:#f7f4ff;opacity:1;transform:none;transition:color .2s}
+.mobile-services-disclosure>summary{cursor:pointer;list-style:none}
+.mobile-services-disclosure>summary::-webkit-details-marker{display:none}
+.mobile-nav-number{font:500 .73rem/1 var(--font-body);letter-spacing:.12em;color:#bbb4d0;display:flex;align-items:center;gap:12px}
+.mobile-nav-number>span{font-size:1.3rem;transition:transform .2s}
+.mobile-services-disclosure[open] .mobile-nav-number>span{transform:rotate(45deg)}
+.mobile-services{margin:0 0 20px;padding:4px 0 4px 14px;border-left:2px solid var(--violet);opacity:1}
+.mobile-services .eyebrow{margin:18px 0 8px;color:#c5b2f3;font-size:.67rem}
+.mobile-service-links{display:grid;gap:0;margin:0}
+.mobile-links .mobile-service-links a,.mobile-links .mobile-all-services{padding:9px 0;border:0;border-radius:0;font:400 .95rem/1.5 var(--font-body);letter-spacing:0;white-space:normal;color:#ded9ed;opacity:1;transform:none}
+.mobile-links .mobile-all-services{margin-top:12px;color:#c7b1ff;font-weight:600}
+.mobile-project{margin-top:24px}
+.mobile-contact{display:grid;gap:9px;margin:24px 0 12px;font-size:.86rem;color:#c2bcd2;overflow-wrap:anywhere}
+body.menu-open .chatbot,body.menu-open .whatsapp-float,body.menu-open .back-to-top{visibility:hidden;pointer-events:none}
+
+/* On smaller screens the System is a readable card stack, never a pinned viewport. */
+@media (max-width:900px),(prefers-reduced-motion:reduce){
+  .system .system-sticky{position:static;display:block;height:auto;min-height:0;overflow:visible;padding:56px var(--gutter)}
+  .system .system-side{display:block;margin-bottom:28px}
+  .system .system-stage{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+  .system .system-panel{position:static;inset:auto;display:flex;justify-content:flex-start;gap:16px;min-width:0;padding:24px;background:var(--surface);border:1px solid var(--line);border-radius:18px;opacity:1;visibility:visible;transform:none;transition:none}
+  .system .system-progress,.system .system-spacer{display:none}
+  .system .system-num{font-size:3.2rem}
+  .system .system-panel h3{font-size:1.7rem;overflow-wrap:anywhere}
+  .system .system-panel .desc{font-size:.95rem}
+  .system .system-metrics{margin-top:auto;gap:18px;padding-top:16px}
+  .system .system-tags .chip{white-space:normal;min-width:0;line-height:1.4}
+}
+@media (max-width:600px){
+  .system .system-stage{grid-template-columns:1fr}
+  .system .system-panel{padding:22px}
+  .nav-inner>.brand{font-size:.9rem}
+  .nav-inner>.brand img{max-width:180px!important}
+  .acc-inner{padding-left:0}
+}
+/* Intrinsic accordion height prevents long answers clipping on narrow screens. */
+.acc-body{display:grid;grid-template-rows:0fr;max-height:none!important;transition:grid-template-rows .35s ease}
+.acc-item.open>.acc-body{grid-template-rows:1fr}
+.acc-body>.acc-inner,.acc-body>.acc-copy{min-height:0;overflow:hidden}
+.acc-item:not(.open)>.acc-body>.acc-inner,.acc-item:not(.open)>.acc-body>.acc-copy{padding-top:0;padding-bottom:0}
+.acc-body[inert]{pointer-events:none}
+
+.alia-portrait{width:100%;height:100%;object-fit:cover;object-position:50% 40%;border-radius:50%}
+.chatbot-fab{padding:3px;background:#fff;border:2px solid var(--violet);box-shadow:0 6px 28px rgba(33,24,67,.3)}
+.chatbot-avatar{overflow:hidden;flex:none}
+.back-to-top{position:fixed;right:28px;bottom:96px;z-index:890;display:grid;place-items:center;width:44px;height:44px;border:1px solid #d9d3ed;border-radius:50%;background:#faf8ff;color:#6329b5;box-shadow:0 6px 24px rgba(25,17,50,.16);font-size:1.6rem;line-height:1}
+.back-to-top[hidden]{display:none}
+.back-to-top:hover{background:#e9e0fc}
+body:has(.chatbot-window.open) .back-to-top{visibility:hidden}
+@media(max-width:600px){.back-to-top{right:22px;bottom:calc(96px + env(safe-area-inset-bottom))}.chatbot{bottom:calc(22px + env(safe-area-inset-bottom))}.chatbot-window{max-height:calc(100dvh - 120px)}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.mobile-menu,.mobile-links a,.acc-body{transition:none}}
+/* Keep the desktop services menu open while the pointer crosses the header gap. */
+.nav-item::before{content:"";position:absolute;top:100%;left:0;right:0;height:24px}
+/* Visibility changes immediately so opening the dialog can move keyboard focus. */
+.mobile-menu{transition:opacity .25s ease}
+
+/* Contact: icon containers and inline SVGs must not share the same box styles. */
+.info-card > .info-icon{display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;padding:0}
+.info-icon > svg.icon{display:block;flex:none;width:22px;height:22px;padding:0;border:0;border-radius:0;background:none}
+.info-card > span:not(.info-icon){min-width:0}
+.info-card p,.info-card a{overflow-wrap:anywhere}
+.info-card .footer-socials svg{width:18px;height:18px;padding:0;border:0;background:none}
+
+/* Reference-style industry selector; every original industry and service link remains. */
+.industry-tabs{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:24px}
+.industry-tabs[hidden],.industry-detail[hidden]{display:none}
+.industry-tab{display:flex;align-items:center;gap:10px;min-height:48px;padding:8px 14px 8px 8px;border:1px solid var(--line-strong);border-radius:10px;background:var(--surface);color:var(--muted);font-size:.87rem;text-align:left;transition:background .2s,border-color .2s,color .2s}
+.industry-tab-code{display:grid;place-items:center;flex:none;width:30px;height:30px;border-radius:6px;background:rgba(124,58,237,.09);font:.68rem var(--font-display);letter-spacing:.06em;color:var(--violet-soft)}
+.industry-tab:hover,.industry-tab[aria-selected="true"]{border-color:var(--violet);background:rgba(124,58,237,.12);color:var(--text)}
+.industry-tab[aria-selected="true"] .industry-tab-code{background:var(--violet);color:white}
+.industry-detail{display:grid;grid-template-columns:120px minmax(0,1fr);gap:32px;padding:32px;border:1px solid var(--line-strong);border-radius:18px;background:linear-gradient(120deg,rgba(124,58,237,.09),var(--surface));margin-top:16px}
+.industry-detail-code{display:grid;place-items:center;align-self:start;width:120px;height:120px;border:1px solid rgba(124,58,237,.3);border-radius:18px;color:var(--violet-soft);font:600 2.8rem var(--font-display);letter-spacing:-.05em;background:rgba(124,58,237,.08)}
+.industry-detail-copy{min-width:0}
+.industry-detail-copy .eyebrow{font-size:.62rem;margin-bottom:12px}
+.industry-detail h3{font-size:clamp(1.55rem,3vw,2.2rem);margin-bottom:14px}
+.industry-detail-copy>p:not(.eyebrow){max-width:760px;color:var(--muted);font-size:.96rem;line-height:1.75}
+.industry-detail .industry-services{margin-top:18px}
+.industry-discuss{margin-top:22px}
+@media(max-width:600px){
+  .industry-tabs{gap:8px}
+  .industry-tab{flex:1 1 calc(50% - 8px);font-size:.78rem;padding:7px;gap:7px}
+  .industry-tab-code{width:26px;height:26px}
+  .industry-detail{grid-template-columns:1fr;gap:18px;padding:22px}
+  .industry-detail-code{width:64px;height:64px;font-size:1.8rem;border-radius:12px}
+}
+
+/* A founder note, not another full-height hero. */
+.founder-section{padding-block:28px 48px}
+.founder-compact{display:grid;grid-template-columns:80px minmax(0,1fr) auto;align-items:center;gap:24px;padding:28px;border-radius:18px}
+.founder-avatar{width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid rgba(124,58,237,.4)}
+.founder-note .eyebrow{margin-bottom:8px;font-size:.62rem}
+.founder-note h2{font-size:clamp(1.3rem,2.5vw,1.65rem);margin-bottom:10px}
+.founder-note>p:not(.eyebrow){font-size:.9rem;line-height:1.65;color:var(--muted);max-width:630px}
+.founder-note .founder-sig{display:block;margin-top:10px;font-size:.8rem}
+.founder-book{font-size:.84rem;white-space:nowrap}
+.mission-card{display:block}
+@media(max-width:900px){.founder-compact{grid-template-columns:64px minmax(0,1fr);gap:18px;padding:24px}.founder-avatar{width:64px;height:64px;align-self:start}.founder-book{grid-column:2;justify-self:start}}
+@media(max-width:480px){.founder-compact{grid-template-columns:48px minmax(0,1fr);padding:20px;gap:16px}.founder-avatar{width:48px;height:48px}.founder-book{grid-column:1/-1;width:100%}.founder-note .eyebrow{font-size:.55rem;letter-spacing:.1em}}
+
+/* Three compact team profiles with real configured photos or initials, never broken images. */
+.team-card{padding:24px}
+.team-photo{width:88px;height:88px;aspect-ratio:auto;border-radius:50%;background:rgba(124,58,237,.13);border:1px solid rgba(124,58,237,.3);margin-bottom:22px}
+.team-photo img{filter:none}
+.team-initials{width:100%;height:100%;display:grid;place-items:center;color:var(--violet-soft);font:600 1.7rem var(--font-display)}
+.team-body{padding:0}
+.team-preview-note{color:var(--muted-2);font-size:.8rem;margin:-8px 0 22px;max-width:720px}
+
+/* Compact footer: no long repeated service directory. */
+.footer-compact .footer-grid{grid-template-columns:minmax(0,1.15fr) minmax(0,.8fr) minmax(0,1fr);gap:32px;padding:32px 0 26px}
+.footer-compact .footer-brand .brand{font-size:1rem;white-space:normal}
+.footer-compact .footer-brand p{font-size:.8rem;line-height:1.6;margin:10px 0 14px;max-width:360px}
+.footer-compact .footer-socials{gap:8px}
+.footer-compact .footer-socials a{width:40px;height:40px}
+.footer-compact .footer-col h4{font-size:.7rem;margin-bottom:12px}
+.footer-compact .footer-col ul{gap:7px}
+.footer-compact .footer-links{grid-template-columns:1fr 1fr;gap:7px 18px}
+.footer-compact .footer-col a,.footer-compact .footer-col span{font-size:.8rem;line-height:1.6;overflow-wrap:anywhere}
+.footer-compact .footer-contact li{gap:8px;min-width:0}
+.footer-compact .footer-bottom{padding:14px 0;font-size:.73rem;gap:8px 16px}
+@media(max-width:780px){.footer-compact .footer-grid{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:24px}.footer-compact .footer-brand{grid-column:1/-1}.footer-compact .footer-links{grid-template-columns:1fr}.footer-compact .footer-brand p{max-width:100%}}
+@media(prefers-reduced-motion:reduce){.industry-tab{transition:none}}
+/* Leave room for the floating Alia button beside the legal links. */
+.footer-compact .footer-bottom{padding-right:76px}
+body:has(.whatsapp-float) .footer-compact .footer-bottom{padding-left:56px}
