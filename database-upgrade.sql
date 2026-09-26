@@ -1,7 +1,15 @@
 -- ===========================================================================
---  The Pie Technologies — database upgrade script (existing installations)
---  Run AFTER backing up your database. Safe to review; re-running will skip
---  rows that already exist. Fabricated demo content is DEACTIVATED, never
+--  The Pie Technologies — LEGACY upgrade script (pre-2026 databases only)
+-- ===========================================================================
+--  PREFERRED UPGRADE PATH: from Hostinger SSH run
+--      php bin/cli.php migrate
+--  It applies the additive migrations in database/migrations/ with per-column
+--  checks and records versions in schema_migrations.
+--
+--  Only use THIS file for databases that predate the migration system, and
+--  only AFTER a full database backup. Some ALTER TABLE statements fail if
+--  re-run (MySQL/MariaDB "duplicate column"); treat an error as "already
+--  applied" and continue. Fabricated demo content is DEACTIVATED, never
 --  deleted — re-enable anything from the admin dashboard if you want it back.
 -- ===========================================================================
 

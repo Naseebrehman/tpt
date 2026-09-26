@@ -1,5 +1,20 @@
--- Fresh install only; existing sites must use bin/cli.php migrate.
+-- ===========================================================================
+--  The Pie Technologies — canonical schema for FRESH installations.
+--  Applied by: php bin/cli.php install  (statement-by-statement)
+--
+--  This file is the complete current schema: it already contains every column
+--  and table the /admin dashboard expects (including chatbot lead fields,
+--  contact_submissions.notification_status and payment_events — formerly only
+--  added by database/migrations/001_application.php on older installs).
+--
+--  Existing installations must NOT re-import this file; use:
+--      php bin/cli.php migrate
+--
+--  Statements are split on ";" outside quotes/comments before execution, so
+--  this file must stay delimiter-simple (no stored procedures / DELIMITER).
+-- ===========================================================================
 SET NAMES utf8mb4;
+
 CREATE TABLE IF NOT EXISTS admin_users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   username VARCHAR(100) NOT NULL,
@@ -33,6 +48,7 @@ CREATE TABLE IF NOT EXISTS contact_submissions (
   notes TEXT,
   ip_address VARCHAR(45),
   user_agent TEXT,
+  notification_status VARCHAR(30) NOT NULL DEFAULT 'unknown',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   KEY idx_sub_status (status),
   KEY idx_sub_created (created_at)
@@ -62,7 +78,9 @@ CREATE TABLE IF NOT EXISTS blog_posts (
   published_at DATETIME,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   KEY idx_post_status (status),
-  KEY idx_post_cat (category_id)
+  KEY idx_post_cat (category_id),
+  CONSTRAINT fk_post_category FOREIGN KEY (category_id)
+    REFERENCES blog_categories (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS blog_comments (
@@ -73,7 +91,9 @@ CREATE TABLE IF NOT EXISTS blog_comments (
   comment TEXT,
   status ENUM('pending','approved','spam') DEFAULT 'pending',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  KEY idx_comment_post (post_id)
+  KEY idx_comment_post (post_id),
+  CONSTRAINT fk_comment_post FOREIGN KEY (post_id)
+    REFERENCES blog_posts (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS portfolio (
@@ -150,6 +170,12 @@ CREATE TABLE IF NOT EXISTS chatbot_leads (
   session_id VARCHAR(100),
   name VARCHAR(150),
   email VARCHAR(150),
+  phone VARCHAR(30),
+  company VARCHAR(150),
+  service VARCHAR(100),
+  status VARCHAR(30) NOT NULL DEFAULT 'new',
+  notes TEXT,
+  conversation TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -169,6 +195,16 @@ CREATE TABLE IF NOT EXISTS payments (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS payment_events (
+  event_id VARCHAR(255) PRIMARY KEY,
+  payment_id INT NOT NULL,
+  event_type VARCHAR(100) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_payment_event (payment_id),
+  CONSTRAINT fk_event_payment FOREIGN KEY (payment_id)
+    REFERENCES payments (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS settings (
   id INT AUTO_INCREMENT PRIMARY KEY,
   setting_key VARCHAR(100) UNIQUE NOT NULL,
@@ -182,4 +218,9 @@ CREATE TABLE IF NOT EXISTS page_views (
   views INT DEFAULT 0,
   view_date DATE,
   UNIQUE KEY uniq_page_date (page, view_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  version VARCHAR(150) PRIMARY KEY,
+  applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -57,6 +57,43 @@ check(!Ratelimit::allow('one', 2, 60, $dir), 'rate limit blocks excess');
 check(Ratelimit::allow('two', 2, 60, $dir), 'rate limit isolates identities');
 unlink($dir . '/ratelimits.json'); rmdir($dir);
 check(count(Repository::search('SEO')) > 0, 'service search works without DB');
+
+/* ------------------------- installer (no DB needed) ---------------------- */
+require BASE_PATH . '/core/Installer.php';
+$s = Installer::splitSql("SET NAMES utf8mb4; CREATE TABLE a (id INT);");
+check(count($s) === 2 && $s[0] === 'SET NAMES utf8mb4' && $s[1] === 'CREATE TABLE a (id INT)', 'splitSql splits statements');
+$s = Installer::splitSql("INSERT INTO t VALUES ('a;b', \"c;d\", `e;f`); SELECT 1;");
+check(count($s) === 2 && strpos($s[0], 'a;b') !== false, 'splitSql keeps semicolons inside quotes/identifiers');
+$s = Installer::splitSql("INSERT INTO t VALUES ('it''s', 'back\\\\slash');");
+check(count($s) === 1 && strpos($s[0], 'it''s') !== false, 'splitSql handles doubled quotes and escapes');
+$s = Installer::splitSql("-- comment ; with semicolon\nSELECT 1; # hash comment\nSELECT 2;");
+check(count($s) === 2, 'splitSql strips -- and # comments');
+$s = Installer::splitSql("/* ordinary ; comment */ SELECT 1; /*!40101 SET @old=1 */;");
+check(count($s) === 2 && strpos($s[1], '/*!40101') === 0, 'splitSql keeps /*! */ executable comments, drops plain ones');
+$s = Installer::splitSql(";;");
+check(count($s) === 0, 'splitSql ignores empty statements');
+$schemaStmts = Installer::splitSql((string) file_get_contents(BASE_PATH . '/database/schema-mysql.sql'));
+check(count($schemaStmts) >= 17, 'schema-mysql.sql splits into its full statement set');
+$bad = 0;
+foreach ($schemaStmts as $stmt) { if (!preg_match('/^(SET|CREATE)\b/i', $stmt)) { $bad++; } }
+check($bad === 0, 'every schema statement starts with SET or CREATE');
+$seedSql = require BASE_PATH . '/database/seed.php';
+check(is_string($seedSql) && strpos($seedSql, 'INSERT') !== false, 'database/seed.php returns idempotent seed SQL');
+foreach (Installer::splitSql($seedSql) as $stmt) { if (!preg_match('/^INSERT\b/i', $stmt)) { $bad++; } }
+check($bad === 0, 'every seed statement is an INSERT');
+$createTables = array();
+foreach ($schemaStmts as $stmt) { if (preg_match('/^CREATE TABLE IF NOT EXISTS `?(\w+)`?/i', $stmt, $m)) { $createTables[] = strtolower($m[1]); } }
+check(count($createTables) >= 16, 'fresh schema creates all application tables');
+$notOwned = array_diff($createTables, Installer::$appTables);
+check(count($notOwned) === 0, 'installer recognizes every table it creates');
+$notCreated = array_diff(Installer::$appTables, $createTables);
+check(count($notCreated) === 0, 'every application table is created by the fresh schema');
+foreach (array('notification_status', 'chatbot_leads', 'payment_events') as $must) {
+    if (strpos((string) file_get_contents(BASE_PATH . '/database/schema-mysql.sql'), $must) === false) { $bad++; }
+}
+check($bad === 0, 'fresh schema includes former migration-001 additions');
+check(strpos((string) file_get_contents(BASE_PATH . '/database.sql'), 'Admin@123') !== false, 'phpMyAdmin dump documents its default password');
+
 $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(BASE_PATH));
 foreach ($files as $file) {
     if ($file->isFile() && substr($file->getFilename(), -4) === '.php' && strpos($file->getPathname(), '/.git/') === false) { token_get_all(file_get_contents($file->getPathname()), TOKEN_PARSE); }

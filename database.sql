@@ -1,17 +1,25 @@
 -- ===========================================================================
---  The Pie Technologies — MySQL schema + seed data
---  Import via phpMyAdmin (Hostinger hPanel → Databases → phpMyAdmin).
---  Default admin login: admin@thepietechnologies.com / Admin@123
---  CHANGE THE PASSWORD IMMEDIATELY after first login (Settings → Change Password).
+--  The Pie Technologies — MySQL schema + seed data (phpMyAdmin import option)
+-- ===========================================================================
+--  PREFERRED INSTALL: from Hostinger SSH run
+--      php bin/cli.php install
+--  It creates this same schema, then prompts you for your own admin
+--  email/password (bcrypt-hashed). Use THIS file only if you prefer
+--  phpMyAdmin (hPanel → Databases → phpMyAdmin → Import).
+--
+--  SECURITY: this file creates a default admin account
+--      admin@thepietechnologies.com / Admin@123
+--  Log in at /admin/ and change the password IMMEDIATELY
+--  (Admin → Change Password). Never leave the default in place.
+--
+--  Safe to re-import into an empty database only. Never import into an
+--  existing production database — use  php bin/cli.php migrate  for upgrades.
+--  Existing rows are protected by INSERT IGNORE / empty-table guards.
 -- ===========================================================================
 
-SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
-SET SQL_MODE = 'NO_AUTO_VALUE_ON_ZERO';
 
--- ---------------------------------------------------------------------------
--- Tables
--- ---------------------------------------------------------------------------
+SET NAMES utf8mb4;
 
 CREATE TABLE IF NOT EXISTS admin_users (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -46,6 +54,7 @@ CREATE TABLE IF NOT EXISTS contact_submissions (
   notes TEXT,
   ip_address VARCHAR(45),
   user_agent TEXT,
+  notification_status VARCHAR(30) NOT NULL DEFAULT 'unknown',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   KEY idx_sub_status (status),
   KEY idx_sub_created (created_at)
@@ -75,7 +84,9 @@ CREATE TABLE IF NOT EXISTS blog_posts (
   published_at DATETIME,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   KEY idx_post_status (status),
-  KEY idx_post_cat (category_id)
+  KEY idx_post_cat (category_id),
+  CONSTRAINT fk_post_category FOREIGN KEY (category_id)
+    REFERENCES blog_categories (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS blog_comments (
@@ -86,7 +97,9 @@ CREATE TABLE IF NOT EXISTS blog_comments (
   comment TEXT,
   status ENUM('pending','approved','spam') DEFAULT 'pending',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  KEY idx_comment_post (post_id)
+  KEY idx_comment_post (post_id),
+  CONSTRAINT fk_comment_post FOREIGN KEY (post_id)
+    REFERENCES blog_posts (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS portfolio (
@@ -163,6 +176,12 @@ CREATE TABLE IF NOT EXISTS chatbot_leads (
   session_id VARCHAR(100),
   name VARCHAR(150),
   email VARCHAR(150),
+  phone VARCHAR(30),
+  company VARCHAR(150),
+  service VARCHAR(100),
+  status VARCHAR(30) NOT NULL DEFAULT 'new',
+  notes TEXT,
+  conversation TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -182,6 +201,16 @@ CREATE TABLE IF NOT EXISTS payments (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS payment_events (
+  event_id VARCHAR(255) PRIMARY KEY,
+  payment_id INT NOT NULL,
+  event_type VARCHAR(100) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_payment_event (payment_id),
+  CONSTRAINT fk_event_payment FOREIGN KEY (payment_id)
+    REFERENCES payments (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS settings (
   id INT AUTO_INCREMENT PRIMARY KEY,
   setting_key VARCHAR(100) UNIQUE NOT NULL,
@@ -197,35 +226,33 @@ CREATE TABLE IF NOT EXISTS page_views (
   UNIQUE KEY uniq_page_date (page, view_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ---------------------------------------------------------------------------
--- Seed: admin user  (password: Admin@123 — bcrypt hash)
--- ---------------------------------------------------------------------------
-INSERT INTO admin_users (username, email, password_hash) VALUES
-('admin', 'admin@thepietechnologies.com', '$2y$12$R9h/cIPz0gi.URNNX3kh2O05GzCKIQQSraH95qooKp4d3EpLZ8Zte');
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  version VARCHAR(150) PRIMARY KEY,
+  applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------
--- Seed: blog categories + posts
+--  Seed data (idempotent: re-importing skips rows that already exist)
 -- ---------------------------------------------------------------------------
-INSERT INTO blog_categories (id, name, slug) VALUES
+-- Seed: blog categories + posts
+INSERT IGNORE INTO blog_categories (id, name, slug) VALUES
 (1, 'Social Media', 'social-media'),
 (2, 'Websites', 'websites'),
 (3, 'Local SEO', 'local-seo'),
 (4, 'Meta Ads', 'meta-ads'),
 (5, 'SEO', 'seo');
 
-INSERT INTO blog_posts (id, title, slug, category_id, featured_image, excerpt, content, tags, author, meta_title, meta_description, reading_time, views, status, published_at) VALUES
+INSERT IGNORE INTO blog_posts (id, title, slug, category_id, featured_image, excerpt, content, tags, author, meta_title, meta_description, reading_time, views, status, published_at) VALUES
 (1, 'Why "Post More" Is the Worst Social Media Advice in Marketing', 'why-post-more-is-bad-advice', 1, 'assets/images/blog-social.jpg', 'Volume without identity is noise. Here is the framework we use instead — pillars, formats, rhythm and the feedback loop that actually grows an account.', '<p>Every struggling account we audit was told the same thing by someone: post more. And every struggling account obeyed — five posts a week of whatever was handy, each one a little different from the last, none of them adding up to anything. Then the numbers stayed flat and the conclusion was “social doesn’t work for us.”</p><p>It does. The advice was just backwards. Volume without identity is noise; identity without rhythm is a hobby. Growth comes from the structure underneath the posting.</p><h2>Pillars before posts</h2><p>Before anything gets designed, every account we run gets four pillars, each with a job: <strong>Educate</strong> — answer the questions your sales team repeats every week. <strong>Prove</strong> — results, completed jobs, before-and-afters, customer words. <strong>Humanize</strong> — the team, the process, the opinions. <strong>Convert</strong> — offers with one clear next step. Every post is assigned a pillar and a job before it exists. If it has neither, it doesn’t get made.</p><h2>Formats are platform-native or invisible</h2><p>One idea, adapted per platform: Reels for reach, carousels for saves, stories for conversation, documents for LinkedIn authority. Cross-posting the same asset unchanged everywhere is how brands manage to be present on five platforms and memorable on none.</p><h2>Rhythm beats volume</h2><p>A sustainable cadence — three strong posts and daily engagement — outperforms seven rushed posts and an empty comment section. The weekly rhythm matters more than the weekly count: publish from an approved calendar, spend a real hour in the comments and DMs, and capture raw material (job photos, customer wins, team moments) into a content bank every Friday so next month’s batch is never a scramble.</p><h2>The feedback loop</h2><p>This is the part “post more” never includes. Judge posts on business outcomes — profile visits, link clicks, DM conversations, leads — not follower theater. Each month, the top two performers get doubled down into next month’s calendar and the weakest pillar mix gets rewritten. The account learns; that’s what growth actually looks like.</p><blockquote>Frequency is a tactic. Identity, rhythm and feedback are the system. The system is what compounds.</blockquote><p>If your posting has been climbing while your results stay flat, the answer is not the eighth post this week. It’s the framework underneath all of them — and the honest monthly review that keeps tightening it.</p>', 'social media, content strategy, growth', 'TPT Strategy Team', 'Why "Post More" Is the Worst Social Media Advice in Marketing | TPT Journal', 'Volume without identity is noise. Here is the framework we use instead — pillars, formats, rhythm and the feedback loop that actually grows an account.', 2, 0, 'published', NOW() - INTERVAL 3 DAY),
 (2, 'Is Your Website a Brochure or a Salesperson? A 10-Point Check', 'website-brochure-or-salesperson', 2, 'assets/images/work-saas.jpg', 'Most business websites describe; few persuade. A ten-minute honesty check to find out which one you own — and the three fixes that pay back fastest.', '<p>Your best salesperson would never greet a prospect by talking about themselves. Yet that is exactly what most business websites do: history, mission, team photos, a wall of services — and a “Contact Us” button that asks for faith instead of giving a reason. Brochures describe. Salespeople persuade. Here is the ten-point check.</p><h2>The check</h2><ul><li><strong>1. Five-second test.</strong> Can a stranger say what you do, for whom, and why you — from the top of the homepage alone?</li><li><strong>2. One primary action.</strong> Does every page have exactly one next step, or six competing ones?</li><li><strong>3. Proof placement.</strong> Do testimonials and results appear near the ask — or are they buried on an About page nobody reaches?</li><li><strong>4. Objection answers.</strong> Does the site answer the questions your sales team hears every day — cost, timeline, trust, process?</li><li><strong>5. Speed on a real phone.</strong> Not your office desktop: a mid-range phone on mobile data. Under 2.5 seconds or it’s taxed.</li><li><strong>6. Form friction.</strong> Does your form qualify (budget, timing, area) or just collect names into a void?</li><li><strong>7. Lead routing.</strong> When a form is submitted, does a human know within five minutes?</li><li><strong>8. Mobile-first paths.</strong> Is the phone number tappable everywhere, and does the menu reach money pages in two taps?</li><li><strong>9. Measurement.</strong> Can you say which page produced last month’s leads — or only how many visitors you had?</li><li><strong>10. Freshness.</strong> Does anything on the site prove the business is alive this quarter?</li></ul><h2>The three fixes that pay back fastest</h2><p>If you scored badly, don’t rebuild everything. Start with these: <strong>Rewrite the homepage hero</strong> to state the outcome you deliver in the customer’s words (a day of work, lifts every campaign pointing at it). <strong>Move proof next to the ask</strong> — testimonials beside forms, results beside claims (an afternoon, changes the temperature of every visit). <strong>Wire routing and tracking</strong> so submissions reach a human in minutes and you can finally see which pages produce pipeline (a weekend, ends the guessing forever).</p><blockquote>A brochure costs money to maintain. A salesperson earns it back. The difference is never the design — it’s the job the page was built to do.</blockquote><p>Run the ten points honestly. Most sites fail four or five — and the fixes are usually weeks, not months.</p>', 'websites, conversion, web development', 'TPT Strategy Team', 'Is Your Website a Brochure or a Salesperson? A 10-Point Check | TPT Journal', 'Most business websites describe; few persuade. A ten-minute honesty check to find out which one you own — and the three fixes that pay back fastest.', 2, 0, 'published', NOW() - INTERVAL 7 DAY),
 (3, 'Local SEO in 2026: What Actually Moves the Map Pack', 'local-seo-what-moves-map-pack', 3, 'assets/images/why-data.jpg', 'Forget the folklore. After auditing dozens of local profiles, here is what genuinely moves rankings: category discipline, review velocity, and pages that prove you serve where you say.', '<p>Local SEO folklore is a whole industry: citation blast services, geo-tagged photo tricks, “secret” ranking buttons in the Business Profile. After auditing dozens of local profiles — and watching which changes actually moved grid rankings — the honest list is shorter and more boring. That’s good news: boring is repeatable.</p><h2>1. Category discipline</h2><p>Your primary category tells Google what search moments you belong in; the secondary categories refine it. Most profiles we audit have a primary category chosen at setup and never revisited — “Contractor” when “Roofing Contractor” is the money category, or a secondary list padded with services the profile can’t evidence. Map every category to real search demand, keep secondaries honest, and align the services list and description with what you actually sell.</p><h2>2. Review velocity — recent beats total</h2><p>A competitor with 140 stale reviews loses to you with 40 arriving steadily, answered within 24 hours and specific about the job. Install a post-job request flow (SMS + email, timed when the win is fresh), answer everything in your voice, and track velocity monthly. Reviews are also content: the words customers use become the words your pages should use.</p><h2>3. Pages that prove service areas</h2><p>“We serve the tri-state area” is a claim; a page per service × area with real jobs, local schema, directions and photos is evidence. Google (and every AI assistant reading your site) rewards evidence. Build the architecture honestly — no PO-box cities, no doorway pages with swapped nouns. Those get listings suspended.</p><h2>4. Profile freshness</h2><p>Photos, posts and Q&amp;A signal a business that exists this month, not this decade. A ten-minute weekly touch — new job photos, one post, answered questions — outperforms a quarterly content blitz.</p><h2>What didn’t make the list</h2><p>Citation-blast services (consistency matters; volume beyond the major directories doesn’t), geo-tagging photos, embedding keywords in the business name (against the rules and enforced), and any tool promising to “hack the map pack.” None survived contact with real grid data.</p><blockquote>The map pack is won by completeness, recency and evidence — maintained weekly. There is no trick, which is exactly why it works.</blockquote><p>Run a grid scan of your service areas, fix the categories this week, install the review flow this month, and build the area pages next quarter. In six months the map looks different.</p>', 'local seo, google business profile, map pack', 'TPT Strategy Team', 'Local SEO in 2026: What Actually Moves the Map Pack | TPT Journal', 'Forget the folklore. After auditing dozens of local profiles, here is what genuinely moves rankings: category discipline, review velocity, and pages that prove you serve where you say.', 2, 0, 'published', NOW() - INTERVAL 12 DAY);
 
-INSERT INTO blog_comments (post_id, name, email, comment, status) VALUES
-(1, 'Sarah Malik', 'sarah@example.com', 'The pillars-before-posts point reframed our whole calendar. We cut posting frequency in half and our DMs doubled — conversations, not comments.', 'approved'),
-(3, 'Danish Iqbal', 'danish@example.com', 'Finally a local SEO article without the folklore. We fixed our primary category last week and the grid scan already looks different.', 'approved');
+INSERT INTO blog_comments (post_id, name, email, comment, status)
+SELECT * FROM (SELECT 1 AS post_id, 'Sarah Malik' AS name, 'sarah@example.com' AS email, 'The pillars-before-posts point reframed our whole calendar. We cut posting frequency in half and our DMs doubled — conversations, not comments.' AS comment, 'approved' AS status UNION ALL SELECT 3, 'Danish Iqbal', 'danish@example.com', 'Finally a local SEO article without the folklore. We fixed our primary category last week and the grid scan already looks different.', 'approved') AS seed_rows
+WHERE NOT EXISTS (SELECT 1 FROM blog_comments LIMIT 1);
 
--- ---------------------------------------------------------------------------
 -- Seed: portfolio case studies
--- ---------------------------------------------------------------------------
-INSERT INTO portfolio (id, client_name, service_category, industry, slug, thumbnail, challenge, strategy, results, stats_json, chart_data_json, testimonial, testimonial_author, display_order, is_active) VALUES
+INSERT IGNORE INTO portfolio (id, client_name, service_category, industry, slug, thumbnail, challenge, strategy, results, stats_json, chart_data_json, testimonial, testimonial_author, display_order, is_active) VALUES
 (1,
  'Confidential — Professional Services', 'Meta Ads, Website Development, Data Analytics', 'Professional Services', 'lead-generation-engine-meta-ads', 'assets/images/work-saas.jpg',
  'The firm was boosting posts and sending all traffic to a generic homepage. Leads were sporadic, unqualified, and nobody could say which ad produced which enquiry.',
@@ -239,20 +266,13 @@ INSERT INTO portfolio (id, client_name, service_category, industry, slug, thumbn
  'Execution, end to end: the Google Business Profile rebuilt and categorized with services, photos and Q&A; location and service-area pages created with local schema; a post-job review request flow installed (SMS + email); citations cleaned and standardized across major directories; and calls and form leads tracked from day one — so every ring is attributable to the visibility work that produced it. Specific figures are client-confidential.',
  NULL, NULL, NULL, NULL, 2, 1);
 
--- ---------------------------------------------------------------------------
--- Seed: testimonials
--- ---------------------------------------------------------------------------
-INSERT INTO testimonials (name, company, role, content, rating, photo, service, is_active) VALUES
-('Harris', 'Nicks Roofing', 'Roofing', 'At The Pie Technologies, we are a passionate team of innovators and problem-solvers dedicated to delivering exceptional digital solutions. With expertise in software development and digital marketing, we help businesses grow, thrive, and succeed in today''s fast-paced digital landscape.', 5, '', 'Roofing', 1),
-('Alex Johnson', 'Alpha Global LLC', 'E-commerce / Retail', 'I enthusiastically endorse The Pie Technologies for their exceptional SEO expertise. Their team expertly elevated our search rankings, increased organic traffic, and crafted a strategy that was perfectly aligned with our goals. Their excellent communication ensured a smooth and efficient process from start to finish.', 5, '', 'SEO', 1),
-('Emily Carter', 'Professional Services', 'Professional Services', 'I highly recommend The Pie Technologies for Google Ads. Their team created effective ad strategies that significantly increased leads and conversions. Communication was smooth, and they ensured excellent ROI with regular updates.', 5, '', 'Google Ads', 1),
-('Brandon Routh', 'Business Services', 'Business Services', 'The Pie Technologies delivered excellent data analysis work. Their expertise turned complex data into actionable insights that improved our business strategies. The team was professional, efficient, and communicated findings clearly.', 5, '', 'Data Analytics', 1),
-('M. Khan', 'Pay Stream LLC', 'Owner — Financial Services', 'As the owner of Pay Stream LLC, I highly recommend The Pie Technologies for their outstanding digital marketing support. Their structured approach and consistent reporting gave us complete visibility into our campaigns.', 5, '', 'Digital Marketing', 1);
+-- Seed: testimonials (only while the table is empty)
+INSERT INTO testimonials (name, company, role, content, rating, photo, service, is_active)
+SELECT * FROM (SELECT 'Harris' AS name, 'Nicks Roofing' AS company, 'Roofing' AS role, 'At The Pie Technologies, we are a passionate team of innovators and problem-solvers dedicated to delivering exceptional digital solutions. With expertise in software development and digital marketing, we help businesses grow, thrive, and succeed in today''s fast-paced digital landscape.' AS content, 5 AS rating, '' AS photo, 'Roofing' AS service, 1 AS is_active UNION ALL SELECT 'Alex Johnson', 'Alpha Global LLC', 'E-commerce / Retail', 'I enthusiastically endorse The Pie Technologies for their exceptional SEO expertise. Their team expertly elevated our search rankings, increased organic traffic, and crafted a strategy that was perfectly aligned with our goals. Their excellent communication ensured a smooth and efficient process from start to finish.', 5, '', 'SEO', 1 UNION ALL SELECT 'Emily Carter', 'Professional Services', 'Professional Services', 'I highly recommend The Pie Technologies for Google Ads. Their team created effective ad strategies that significantly increased leads and conversions. Communication was smooth, and they ensured excellent ROI with regular updates.', 5, '', 'Google Ads', 1 UNION ALL SELECT 'Brandon Routh', 'Business Services', 'Business Services', 'The Pie Technologies delivered excellent data analysis work. Their expertise turned complex data into actionable insights that improved our business strategies. The team was professional, efficient, and communicated findings clearly.', 5, '', 'Data Analytics', 1 UNION ALL SELECT 'M. Khan', 'Pay Stream LLC', 'Owner — Financial Services', 'As the owner of Pay Stream LLC, I highly recommend The Pie Technologies for their outstanding digital marketing support. Their structured approach and consistent reporting gave us complete visibility into our campaigns.', 5, '', 'Digital Marketing', 1) AS seed_rows
+WHERE NOT EXISTS (SELECT 1 FROM testimonials LIMIT 1);
 
--- ---------------------------------------------------------------------------
--- Seed: resources (8 guides + 3 templates + 2 videos)
--- ---------------------------------------------------------------------------
-INSERT INTO resources (title, slug, resource_type, description, cover_image, file_path, category, content, video_url, reading_time, download_count, is_active) VALUES
+-- Seed: resources (guides + templates + playbooks)
+INSERT IGNORE INTO resources (title, slug, resource_type, description, cover_image, file_path, category, content, video_url, reading_time, download_count, is_active) VALUES
 ('The Local Business Marketing Blueprint', 'local-business-marketing-blueprint', 'blueprint', 'The complete growth system for local and service businesses: map visibility, reviews, Meta Ads, Google Ads, follow-up speed and the website that ties it together.', 'assets/images/covers/local-business-marketing-blueprint.svg', NULL, 'Business Growth', '<p>Local businesses do not have a traffic problem — they have a system problem. Leads exist in every town; the question is whether your business is visible when someone searches, credible when they compare, and fast when they call. This blueprint lays out the full system in the order we install it.</p><h2>1. Visibility first</h2><p>Start where the buying moment happens: the map pack and local search. A rebuilt Google Business Profile (categories, services, photos, posts, Q&amp;A), consistent citations, and service-area pages on your site. If you are invisible here, everything downstream is wasted spend.</p><h2>2. Trust on autopilot</h2><p>Reviews are the conversion layer of local marketing. Install a post-job request flow (SMS + email), answer every review within 24 hours, and track velocity weekly. Recent, specific, answered reviews beat a higher star average with stale feedback.</p><h2>3. Paid demand capture</h2><p>Google Ads (Search and Local Service Ads) captures people searching right now. Meta Ads creates demand for planned purchases — roofs, kitchens, solar. Run both against tracked calls and forms, not impressions.</p><h2>4. Follow-up speed</h2><p>Most local leads are won or lost in the first hour. Route calls and forms instantly, text back within five minutes, and have a two-touch follow-up sequence for the not-yet-ready. Speed is the cheapest conversion optimization in local.</p><h2>5. The website that ties it together</h2><p>One page per service × area, proof above the fold, a phone number everywhere, and a form that qualifies. Track everything: calls, forms, direction requests — by source and by area.</p><p>Run these five layers as one system with one owner and local marketing stops being a lottery. Start with visibility and reviews; they compound while the paid layers produce this month.</p>', '', 9, 0, 1),
 ('The SEO Blueprint', 'seo-blueprint', 'blueprint', 'Technical foundation, intent mapping, content that deserves to rank, and authority that lasts — the complete order of operations for search growth.', 'assets/images/covers/seo-blueprint.svg', NULL, 'SEO', '<p>SEO fails when it is done out of order: content published on a broken foundation, links pointed at pages that cannot convert, technical work with no topic strategy above it. This blueprint is the sequence we run.</p><h2>Stage 1 — Technical foundation</h2><ul><li>Crawl and indexation: every money page reachable, nothing wasted crawling.</li><li>Core Web Vitals in the green on mobile field data.</li><li>Schema: organization, service, FAQ, article — machines should never guess what a page is.</li><li>Redirects, canonicals and duplicate resolution.</li></ul><h2>Stage 2 — Intent mapping</h2><p>List every query that could produce a customer and classify it: buy-now, compare, learn, local. Each query gets exactly one page. No cannibalization, no orphan intent.</p><h2>Stage 3 — Money pages</h2><p>The highest-intent pages are optimized first: title and structure mirroring the live SERP, proof placed where doubt forms, one clear action, internal links from everything relevant.</p><h2>Stage 4 — Content engine</h2><p>Buying-cycle content — comparisons, cost guides, problem pages — each internally linked to the money page it feeds. Refresh existing pages before creating new ones; an updated page outranks a new one.</p><h2>Stage 5 — Authority</h2><p>Links earned through digital PR, original data and real partnerships. Toxic links cleaned. Authority tracked per topic, not per vanity domain score.</p><p>Measurement ties it together: rankings for money queries, organic leads, and revenue — reviewed monthly. If a stage cannot be measured, it cannot be managed; wire the tracking before you start stage one.</p>', '', 8, 0, 1),
 ('The Local SEO Blueprint', 'local-seo-blueprint', 'blueprint', 'Own the map pack in your service areas: Google Business Profile, reviews, citations and location pages — the complete local visibility system in one guide.', 'assets/images/covers/local-seo-blueprint.svg', NULL, 'Local SEO', '<p>For local businesses the map pack is the new front page: three businesses get seen, everyone else gets scraps. The winners are not always the best companies — they are the most complete profiles with the most recent trust signals. This blueprint is the system.</p><h2>The flywheel</h2><p>Search → map pack → profile → reviews → call → job → next review. Every stage feeds the next; the work is installing the flywheel and keeping it turning.</p><h2>Workstream 1 — Business Profile</h2><ul><li>Categories, services and descriptions mapped to search reality.</li><li>Photos and posts on a schedule — profiles age like food.</li><li>Q&amp;A seeded and answered.</li><li>Spam fighting and listing protection.</li></ul><h2>Workstream 2 — Reviews</h2><p>A system, not a hope: post-job requests by SMS/email timed right, response templates in your voice, a negative-review protocol, and velocity tracking. Steady beats spiky.</p><h2>Workstream 3 — Citations</h2><p>Clean NAP everywhere it matters, nowhere it hurts. Audit, fix inconsistencies, build the directories that count, suppress duplicates.</p><h2>Workstream 4 — On-site local</h2><p>Service × area page architecture, LocalBusiness and service schema, localized content that proves you actually work there, embedded maps and directions.</p><h2>The first 90 days</h2><p>Days 1–14 baseline grid scan; 15–30 profile rebuild; 30–45 review engine; 45–60 coverage pages; 60–75 citations and authority; then monthly grid reports by area. Profile rebuilds can shift visibility in weeks; owning competitive areas is a 3–6 month flywheel.</p>', '', 8, 0, 1),
@@ -266,33 +286,23 @@ INSERT INTO resources (title, slug, resource_type, description, cover_image, fil
 ('The AI Search Visibility Blueprint', 'ai-search-visibility-blueprint', 'blueprint', 'How to make your business legible to ChatGPT, Gemini, Perplexity and AI Overviews — entity clarity, structured data and answer-shaped content. Honest scope, real checks.', 'assets/images/covers/ai-search-visibility-blueprint.svg', NULL, 'AI Search', '<p>Customers increasingly ask assistants instead of search engines: “Who''s the best roofer near me?” The assistants answer with whoever they can read, trust and cite. This blueprint makes that you — honestly.</p><h2>What AI engines reward</h2><ul><li><strong>Entity clarity:</strong> one consistent name, description, service list and location data everywhere you appear — site, profiles, directories and the sources engines already trust.</li><li><strong>Structured data:</strong> Organization, LocalBusiness, Service and FAQ schema so machines never guess what a page means.</li><li><strong>Answer-shaped content:</strong> pages that answer one question completely, with the answer up front and the evidence below.</li></ul><h2>The build order</h2><p>First, audit your footprint: ask the major assistants your money questions and record who they cite and why. Then fix entity consistency across your own properties before chasing mentions elsewhere. Then publish question-shaped pages for the queries that matter — cost questions, comparison questions, “near me” questions. Finally, earn citations: original data, expert commentary and real mentions the engines already trust.</p><h2>Honest scope</h2><p>No one controls AI answers, and anyone selling “guaranteed ChatGPT rankings” is selling folklore. What is controllable: legibility (can the machine read you), trust (does the ecosystem corroborate you), and monitoring (do you know when it changes). We track appearances monthly across AI surfaces and report citations alongside traditional rankings.</p><p>AI visibility is not a separate discipline — it is SEO with machines as the primary reader. Do the foundation properly and both audiences are served.</p>', '', 7, 0, 1),
 ('The Website Conversion Blueprint', 'website-conversion-blueprint', 'blueprint', 'Why sites leak leads and how to fix it page by page: the conversion architecture behind every website we build — positioning, proof, path, performance.', 'assets/images/covers/website-conversion-blueprint.svg', NULL, 'Website Development', '<p>Traffic is rented; conversion is owned. This blueprint is the architecture behind every site we build — the four systems that decide whether a visit becomes a customer.</p><h2>Positioning — five seconds</h2><p>Above the fold, in plain language: what you do, for whom, and why you. If a stranger cannot answer those three questions in five seconds, nothing below matters. Headline states the outcome; subhead states the mechanism; the primary button states the next step.</p><h2>Proof — placed where doubt forms</h2><p>Testimonials near the ask, results near the claims, credentials near the price discussion, real photos near the promises. Proof scattered on an “About” page is proof wasted. Every objection your sales team hears should have a visible answer on the page where it arises.</p><h2>Path — one action per page</h2><p>Each page has one primary action (call, form, booking, purchase) and supporting paths for the not-ready (guides, library, FAQ). Forms qualify before they collect; routing delivers leads to a human in minutes, not days.</p><h2>Performance — the silent conversion rate</h2><p>Sub-second loads on mid-range phones, mobile-first layouts, no layout shift. Every extra second is a measurable tax on every ad click you buy.</p><h2>Instrument everything</h2><p>Analytics, scroll depth, form abandonment, call tracking — wired at launch. Then improve monthly from behavior, not opinion: where visitors leave is the fix list, ranked by revenue impact.</p>', '', 7, 0, 1);
 
--- ---------------------------------------------------------------------------
--- Seed: team
--- ---------------------------------------------------------------------------
-INSERT INTO team_members (name, role, photo, bio, linkedin, twitter, display_order, is_active) VALUES
-('Ali Raza', 'Founder & Growth Strategist', 'assets/images/team-1.jpg', 'Started The Pie Technologies with one client and one rule: if we can''t measure it, we don''t sell it.', 'https://linkedin.com/in/', '', 1, 1),
-('Hina Shahid', 'Head of Paid Media', 'assets/images/team-2.jpg', 'Runs every Meta and Google account in the house. Allergic to vanity metrics since 2018.', 'https://linkedin.com/in/', '', 2, 1),
-('Daniyal Khan', 'Lead Developer', 'assets/images/team-3.jpg', 'Builds the sub-second websites our clients'' competitors keep screenshotting.', 'https://linkedin.com/in/', '', 3, 1);
+-- Seed: team (only while the table is empty)
+INSERT INTO team_members (name, role, photo, bio, linkedin, twitter, display_order, is_active)
+SELECT * FROM (SELECT 'Ali Raza' AS name, 'Founder & Growth Strategist' AS role, 'assets/images/team-1.jpg' AS photo, 'Started The Pie Technologies with one client and one rule: if we can''t measure it, we don''t sell it.' AS bio, 'https://linkedin.com/in/' AS linkedin, '' AS twitter, 1 AS display_order, 1 AS is_active UNION ALL SELECT 'Hina Shahid', 'Head of Paid Media', 'assets/images/team-2.jpg', 'Runs every Meta and Google account in the house. Allergic to vanity metrics since 2018.', 'https://linkedin.com/in/', '', 2, 1 UNION ALL SELECT 'Daniyal Khan', 'Lead Developer', 'assets/images/team-3.jpg', 'Builds the sub-second websites our clients'' competitors keep screenshotting.', 'https://linkedin.com/in/', '', 3, 1) AS seed_rows
+WHERE NOT EXISTS (SELECT 1 FROM team_members LIMIT 1);
 
--- ---------------------------------------------------------------------------
--- Seed: sample contact submissions (for dashboard demo)
--- ---------------------------------------------------------------------------
-INSERT INTO contact_submissions (name, email, phone, company, service, budget, message, source, status, created_at) VALUES
-('Fatima Noor', 'fatima@velastudio.com', '+92 301 2223344', 'Vela Studio', 'Meta Ads', '$1000–$2500', 'We sell handmade jewellery online and our current ads break even at best. Would love an audit and a plan for Q4.', 'Instagram', 'new', NOW() - INTERVAL 3 HOUR),
-('James Carter', 'james@cartersdental.co.uk', '+44 20 7946 0011', 'Carters Dental', 'SEO', '$2500–$5000', 'Ranking nowhere for "dentist manchester" despite five years in business. Need local SEO properly done.', 'Google', 'in_progress', NOW() - INTERVAL 2 DAY),
-('Mona Ellis', 'mona@lumenbeauty.co', '', 'Lumen Skincare', 'Social Media Management', '$1000–$2500', 'Looking for a full content calendar and Reels production for a skincare launch in January.', 'Referral', 'replied', NOW() - INTERVAL 6 DAY),
-('Ahmed Sultan', 'ahmed@kardeefoods.com', '+971 50 123 4567', 'Kardee Foods', 'Website Development', '$5000+', 'Our Shopify store is slow and checkout drops 60% of carts. Want a rebuild proposal with timelines.', 'LinkedIn', 'new', NOW() - INTERVAL 9 DAY),
-('Priya Anand', 'priya@nimbushealth.io', '', 'Nimbus Health', 'Not Sure', "Let's Discuss", 'Early-stage healthtech. Not sure if we need ads, SEO or content first — looking for direction before we spend.', 'Google', 'closed', NOW() - INTERVAL 14 DAY);
+-- Seed: sample contact submissions (only while the table is empty)
+INSERT INTO contact_submissions (name, email, phone, company, service, budget, message, source, status, created_at)
+SELECT * FROM (SELECT 'Fatima Noor' AS name, 'fatima@velastudio.com' AS email, '+92 301 2223344' AS phone, 'Vela Studio' AS company, 'Meta Ads' AS service, '$1000–$2500' AS budget, 'We sell handmade jewellery online and our current ads break even at best. Would love an audit and a plan for Q4.' AS message, 'Instagram' AS source, 'new' AS status, NOW() - INTERVAL 3 HOUR AS created_at UNION ALL SELECT 'James Carter', 'james@cartersdental.co.uk', '+44 20 7946 0011', 'Carters Dental', 'SEO', '$2500–$5000', 'Ranking nowhere for "dentist manchester" despite five years in business. Need local SEO properly done.', 'Google', 'in_progress', NOW() - INTERVAL 2 DAY UNION ALL SELECT 'Mona Ellis', 'mona@lumenbeauty.co', '', 'Lumen Skincare', 'Social Media Management', '$1000–$2500', 'Looking for a full content calendar and Reels production for a skincare launch in January.', 'Referral', 'replied', NOW() - INTERVAL 6 DAY UNION ALL SELECT 'Ahmed Sultan', 'ahmed@kardeefoods.com', '+971 50 123 4567', 'Kardee Foods', 'Website Development', '$5000+', 'Our Shopify store is slow and checkout drops 60% of carts. Want a rebuild proposal with timelines.', 'LinkedIn', 'new', NOW() - INTERVAL 9 DAY UNION ALL SELECT 'Priya Anand', 'priya@nimbushealth.io', '', 'Nimbus Health', 'Not Sure', 'Let''s Discuss', 'Early-stage healthtech. Not sure if we need ads, SEO or content first — looking for direction before we spend.', 'Google', 'closed', NOW() - INTERVAL 14 DAY) AS seed_rows
+WHERE NOT EXISTS (SELECT 1 FROM contact_submissions LIMIT 1);
 
--- ---------------------------------------------------------------------------
 -- Seed: newsletter + settings
--- ---------------------------------------------------------------------------
-INSERT INTO newsletter_subscribers (email, name, is_active) VALUES
+INSERT IGNORE INTO newsletter_subscribers (email, name, is_active) VALUES
 ('fatima@velastudio.com', 'Fatima Noor', 1),
 ('mona@lumenbeauty.co', 'Mona Ellis', 1),
 ('test@subscribed-example.com', 'Test Subscriber', 0);
 
-INSERT INTO settings (setting_key, setting_value) VALUES
+INSERT IGNORE INTO settings (setting_key, setting_value) VALUES
 ('smtp_host', ''),
 ('smtp_port', '587'),
 ('smtp_encryption', 'tls'),
@@ -300,9 +310,17 @@ INSERT INTO settings (setting_key, setting_value) VALUES
 ('smtp_pass', ''),
 ('smtp_from_name', 'The Pie Technologies'),
 ('smtp_from_email', 'info@thepietechnologies.com'),
+('smtp_reply_to', ''),
 ('gemini_api_key', ''),
+('gemini_model', 'gemini-2.5-flash'),
+('gemini_temperature', '0.7'),
+('gemini_max_tokens', '300'),
 ('chatbot_system_prompt', 'You are Alia, the growth assistant for The Pie Technologies (TPT) — never call yourself a chatbot, bot or AI bot. TPT is a growth agency across five disciplines — GROW (Meta Ads, Social Media Management, Google Ads, Digital Marketing), GET FOUND (SEO, Local SEO, AI Business Optimization), BUILD (Website Development, App Development), CREATE (Graphic Design) and MEASURE (Data Analytics & Reporting). Locations: Collingswood, NJ, USA and Punjab, Pakistan. Contact: info@thepietechnologies.com, +1 (213) 257 8242. Answer only from real TPT information: services, the six-step process (Discover, Strategize, Build, Launch, Optimize, Scale), the free Growth Library resources, published case studies and testimonials. NEVER invent pricing, statistics, results, client names or availability. If asked about pricing, explain engagements are scoped per goal and market, and offer to capture their details for a written quote. If you are not sure of an answer, say exactly: I don''t want to guess. You can speak with the TPT team here — and point them to the contact page. Help visitors pick the right service or blueprint for their goal, suggest relevant free Growth Library resources, and when they show buying intent, encourage them to start a project via the contact page. Be concise, warm and specific. Stay on topic: TPT services, growth strategy and the agency. If asked something unrelated, politely redirect.'),
 ('alia_enabled', '1'),
+('alia_welcome', 'Hi, I''m Alia. How can I help you today?'),
+('alia_fallback', 'Please contact our team for help.'),
+('alia_lead_collection', '1'),
+('sample_content_enabled', '1'),
 ('site_name', 'The Pie Technologies'),
 ('site_tagline', 'Clicks are easy. Growth is engineered. A full-service growth agency across five disciplines — GROW, GET FOUND, BUILD, CREATE and MEASURE — run as one system with one owner.'),
 ('site_phone', '+1 (213) 257 8242'),
@@ -315,6 +333,10 @@ INSERT INTO settings (setting_key, setting_value) VALUES
 ('meta_description', 'A growth agency across five disciplines: Meta Ads, Google Ads, SEO, Local SEO, social media, web and app development, graphic design, AI optimization and analytics — one system, one accountable team.'),
 ('og_image', 'assets/images/og-image.jpg'),
 ('founder_name', 'Ali Raza'),
+('brand_primary', '#7c3aed'),
+('brand_secondary', '#22d3ee'),
+('brand_accent', '#f59e0b'),
+('brand_font', 'default'),
 ('instagram_url', 'https://instagram.com/thepietechnologies'),
 ('facebook_url', 'https://facebook.com/thepietechnologies'),
 ('linkedin_url', 'https://linkedin.com/company/thepietechnologies'),
@@ -325,6 +347,7 @@ INSERT INTO settings (setting_key, setting_value) VALUES
 ('stripe_mode', 'test'),
 ('stripe_publishable_key', ''),
 ('stripe_secret_key', ''),
+('stripe_webhook_secret', ''),
 ('paypal_enabled', '0'),
 ('paypal_mode', 'sandbox'),
 ('paypal_client_id', ''),
@@ -332,5 +355,12 @@ INSERT INTO settings (setting_key, setting_value) VALUES
 ('pay_online_enabled', '1'),
 ('maintenance_mode', '0'),
 ('maintenance_ip', '');
+-- ---------------------------------------------------------------------------
+--  Seed: default admin account — CHANGE THE PASSWORD IMMEDIATELY AFTER LOGIN.
+--  (php bin/cli.php install instead asks you for your own credentials.)
+--  bcrypt hash below is: Admin@123
+-- ---------------------------------------------------------------------------
+INSERT IGNORE INTO admin_users (username, email, password_hash) VALUES
+('admin', 'admin@thepietechnologies.com', '$2y$12$R9h/cIPz0gi.URNNX3kh2O05GzCKIQQSraH95qooKp4d3EpLZ8Zte');
 
 SET FOREIGN_KEY_CHECKS = 1;
