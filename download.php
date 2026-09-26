@@ -9,6 +9,8 @@ require_once __DIR__ . '/includes/init.php';
 $id       = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 $resource = $id ? dbOne('SELECT * FROM resources WHERE id = ? AND is_active = 1', array($id)) : null;
 
+if (!$resource && $id < 0) { $resource = SampleContent::find('resources', 'id', $id); }
+
 if (!$resource || empty($resource['file_path'])) {
     http_response_code(404);
     header('Content-Type: text/plain; charset=utf-8');

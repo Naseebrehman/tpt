@@ -108,26 +108,39 @@
     var burger = document.getElementById('navBurger');
     var menu = document.getElementById('mobileMenu');
     if (burger && menu) {
-      burger.addEventListener('click', function () {
-        var open = document.body.classList.toggle('menu-open');
-        burger.setAttribute('aria-expanded', open ? 'true' : 'false');
+      var close = document.getElementById('mobileMenuClose');
+      var main = document.getElementById('main');
+      function setMenu(open) {
+        document.body.classList.toggle('menu-open', open);
+        burger.setAttribute('aria-expanded', String(open));
         burger.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
-        menu.setAttribute('aria-hidden', open ? 'false' : 'true');
-      });
-      menu.addEventListener('click', function (e) {
-        if (e.target.closest('a')) {
-          document.body.classList.remove('menu-open');
-          burger.setAttribute('aria-expanded', 'false');
-          menu.setAttribute('aria-hidden', 'true');
+        menu.setAttribute('aria-hidden', String(!open));
+        menu.inert = !open;
+        if (main) main.inert = open;
+        if (nav) nav.inert = open;
+        if (open) {
+          menu.scrollTop = 0;
+          requestAnimationFrame(function () {
+            if (close && document.body.classList.contains('menu-open')) close.focus({preventScroll:true});
+          });
         }
-      });
+        else { burger.focus({preventScroll:true}); }
+      }
+      burger.addEventListener('click', function () { setMenu(!document.body.classList.contains('menu-open')); });
+      if (close) close.addEventListener('click', function () { setMenu(false); });
+      menu.addEventListener('click', function (e) { if (e.target.closest('a')) setMenu(false); });
       document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape' && document.body.classList.contains('menu-open')) {
-          document.body.classList.remove('menu-open');
-          burger.setAttribute('aria-expanded', 'false');
-          burger.focus();
+        if (!document.body.classList.contains('menu-open')) return;
+        if (e.key === 'Escape') { e.preventDefault(); setMenu(false); }
+        if (e.key === 'Tab') {
+          var focusables = Array.from(menu.querySelectorAll('a[href],button,summary,[tabindex="0"]')).filter(function (el) { return el.getClientRects().length > 0; });
+          var first = focusables[0], last = focusables[focusables.length - 1];
+          if (!menu.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+          else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+          else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
         }
       });
+      window.addEventListener('resize', function () { if (innerWidth >= 1240 && document.body.classList.contains('menu-open')) setMenu(false); });
     }
   }
 
@@ -271,7 +284,15 @@
   function initAccordions() {
     document.querySelectorAll('[data-accordion]').forEach(function (group) {
       var single = group.getAttribute('data-accordion') !== 'multi';
-      group.querySelectorAll('.acc-head').forEach(function (head) {
+      group.querySelectorAll('.acc-head').forEach(function (head, index) {
+        var item = head.closest('.acc-item');
+        var body = item.querySelector('.acc-body');
+        item.classList.remove('open');
+        if (body) {
+          body.id = body.id || 'accordion-panel-' + Array.from(document.querySelectorAll('.acc-body')).indexOf(body);
+          head.setAttribute('aria-controls', body.id);
+          body.inert = true;
+        }
         head.setAttribute('aria-expanded', head.closest('.acc-item').classList.contains('open') ? 'true' : 'false');
         head.addEventListener('click', function () {
           var item = head.closest('.acc-item');
@@ -281,11 +302,14 @@
               if (other !== item) {
                 other.classList.remove('open');
                 other.querySelector('.acc-head').setAttribute('aria-expanded', 'false');
+                var otherBody = other.querySelector('.acc-body');
+                if (otherBody) otherBody.inert = true;
               }
             });
           }
           item.classList.toggle('open', willOpen);
           head.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+          if (body) body.inert = !willOpen;
         });
       });
     });
@@ -344,19 +368,25 @@
         b.classList.toggle('done', i < index);
       });
     }
-    activate(0);
-    if (!('IntersectionObserver' in window) || innerWidth <= 900) {
-      panels.forEach(function (p) { p.classList.add('is-active'); });
-      return;
+    var io = null;
+    var mobile = window.matchMedia('(max-width: 900px), (prefers-reduced-motion: reduce)');
+    function configure() {
+      if (io) { io.disconnect(); io = null; }
+      if (mobile.matches || !('IntersectionObserver' in window)) {
+        panels.forEach(function (p) { p.classList.add('is-active'); });
+        return;
+      }
+      activate(0);
+      io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) activate(parseInt(entry.target.getAttribute('data-index'), 10) || 0);
+        });
+      }, { rootMargin: '-45% 0px -45% 0px', threshold: 0 });
+      triggers.forEach(function (t) { io.observe(t); });
     }
-    var io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) {
-        if (entry.isIntersecting) {
-          activate(parseInt(entry.target.getAttribute('data-index'), 10) || 0);
-        }
-      });
-    }, { rootMargin: '-45% 0px -45% 0px', threshold: 0 });
-    triggers.forEach(function (t) { io.observe(t); });
+    configure();
+    if (mobile.addEventListener) mobile.addEventListener('change', configure);
+    else mobile.addListener(configure);
   }
 
   /* ---------------------------------------------------------------------
@@ -605,6 +635,53 @@
     window.addEventListener('scroll', update, { passive: true });
   }
 
+  function initIndustryExplorer() {
+    document.querySelectorAll('[data-industry-explorer]').forEach(function (root) {
+      var list = root.querySelector('.industry-tabs');
+      var tabs = Array.from(root.querySelectorAll('.industry-tab'));
+      var panels = Array.from(root.querySelectorAll('.industry-detail'));
+      if (!list || !tabs.length || tabs.length !== panels.length) return;
+      list.hidden = false;
+      function select(index, focus) {
+        tabs.forEach(function (tab, i) {
+          tab.setAttribute('aria-selected', String(i === index));
+          tab.tabIndex = i === index ? 0 : -1;
+          panels[i].hidden = i !== index;
+          panels[i].setAttribute('role', 'tabpanel');
+          panels[i].setAttribute('aria-labelledby', tab.id);
+          panels[i].tabIndex = 0;
+        });
+        if (focus) tabs[index].focus({preventScroll:true});
+      }
+      tabs.forEach(function (tab, index) {
+        tab.addEventListener('click', function () { select(index, false); });
+        tab.addEventListener('keydown', function (event) {
+          var next = index;
+          if (event.key === 'ArrowRight' || event.key === 'ArrowDown') next = (index + 1) % tabs.length;
+          else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') next = (index - 1 + tabs.length) % tabs.length;
+          else if (event.key === 'Home') next = 0;
+          else if (event.key === 'End') next = tabs.length - 1;
+          else return;
+          event.preventDefault(); select(next, true);
+        });
+      });
+      select(0, false);
+    });
+  }
+
+  function initBackToTop() {
+    var button = document.getElementById('backToTop');
+    if (!button) return;
+    function update() { button.hidden = window.scrollY < 400; }
+    button.addEventListener('click', function () {
+      window.scrollTo({top:0, behavior:prefersReduced ? 'auto' : 'smooth'});
+      var brand = document.querySelector('#siteNav .brand');
+      if (brand) brand.focus({preventScroll:true});
+    });
+    window.addEventListener('scroll', update, {passive:true});
+    update();
+  }
+
   /* ---------------------------------------------------------------------
      Boot
      --------------------------------------------------------------------- */
@@ -613,6 +690,8 @@
     initCursor();
     initMagnetic();
     initNav();
+    initBackToTop();
+    initIndustryExplorer();
     initAOS();
     initTyped();
     initParticles();

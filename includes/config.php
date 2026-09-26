@@ -15,7 +15,8 @@
  * the database/domain values there. Environment variables are also supported.
  */
 $pieLocalConfig = array();
-$pieLocalConfigFile = __DIR__ . '/config.local.php';
+$pieLocalConfigFile = is_file(dirname(__DIR__) . '/config/config.local.php')
+    ? dirname(__DIR__) . '/config/config.local.php' : __DIR__ . '/config.local.php';
 if (is_file($pieLocalConfigFile)) {
     $pieLoadedConfig = require $pieLocalConfigFile;
     if (is_array($pieLoadedConfig)) {
@@ -66,7 +67,7 @@ if (!defined('BASE_URL')) {
     $pieDir    = trim(dirname($pieScript), '/');
     $pieTop    = $pieDir === '' ? '' : explode('/', $pieDir)[0];
     /* known top-level folders of this project are not install roots */
-    if (in_array($pieTop, array('services', 'admin', 'portfolio', 'includes', 'assets', 'uploads'), true)) {
+    if (in_array($pieTop, array('services', 'admin', 'portfolio', 'includes', 'assets', 'uploads', 'api'), true)) {
         $pieDir = '';
     }
     define('BASE_URL', $pieDir === '' ? '' : '/' . $pieDir);

@@ -9,6 +9,8 @@ if (!$post && isset($_GET['id'])) {
     $post = getPostById((int) $_GET['id']);
 }
 
+if ($post && (int) $post['id'] < 0 && $_SERVER['REQUEST_METHOD'] === 'POST') { http_response_code(422); exit('Comments are not available on sample previews.'); }
+
 if ($post && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['comment_submit'])) {
     if (!validateCSRF()) {
         setFlash('err', 'Security token expired — please try again.');
@@ -41,6 +43,7 @@ dbExec('UPDATE blog_posts SET views = views + 1 WHERE id = ?', array((int) $post
 
 $pageTitle = $post['meta_title'] !== '' ? $post['meta_title'] : $post['title'];
 $metaDesc  = $post['meta_description'] !== '' ? $post['meta_description'] : $post['excerpt'];
+$noIndex = strpos($post['slug'], 'sample-') === 0;
 $activeNav = 'blog';
 $ogImage   = $post['featured_image'] !== '' ? $post['featured_image'] : 'assets/images/og-image.jpg';
 
@@ -142,6 +145,9 @@ require_once __DIR__ . '/includes/header.php';
     </div>
     <?php endforeach; ?>
 
+    <?php if ((int) $post['id'] < 0): ?>
+    <p class="sample-notice">Comments are disabled on this sample preview.</p>
+    <?php else: ?>
     <form method="post" action="<?= url('blog/' . $post['slug']) ?>#comments" class="contact-panel" style="margin-top:34px">
         <?= csrfField() ?>
         <h2 style="font-size:1.3rem">Leave a comment</h2>
@@ -164,6 +170,7 @@ require_once __DIR__ . '/includes/header.php';
             </div>
         </div>
     </form>
+    <?php endif; ?>
 </section>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

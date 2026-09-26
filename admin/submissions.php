@@ -126,6 +126,7 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
         <dt>Company</dt><dd><?= esc($row['company'] !== '' ? $row['company'] : '—') ?></dd>
         <dt>Service</dt><dd><?= esc($row['service'] !== '' ? $row['service'] : '—') ?></dd>
         <dt>Budget</dt><dd><?= esc($row['budget'] !== '' ? $row['budget'] : '—') ?></dd>
+        <dt>Email notification</dt><dd><?= esc($row['notification_status'] ?? 'unknown') ?></dd>
         <dt>Source</dt><dd><?= esc($row['source'] !== '' ? $row['source'] : '—') ?></dd>
         <dt>IP / Agent</dt><dd class="td-sub"><?= esc($row['ip_address']) ?> · <?= esc(mb_substr((string) $row['user_agent'], 0, 90)) ?></dd>
         <dt>Message</dt><dd style="white-space:pre-wrap"><?= esc($row['message']) ?></dd>

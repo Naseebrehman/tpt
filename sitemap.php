@@ -6,6 +6,8 @@
  */
 require_once __DIR__ . '/includes/init.php';
 
+require_once BASE_PATH . '/core/Content.php';
+
 header('Content-Type: application/xml; charset=utf-8');
 
 $urls = array();
@@ -13,8 +15,11 @@ $today = date('Y-m-d');
 
 function sitemapAdd(&$urls, $path, $priority, $changefreq, $lastmod = null)
 {
+    if (strpos($path, '/sample-') !== false) { return; }
+    $override = Content::get('/' . ltrim($path, '/'));
+    if (!empty($override['noindex'])) { return; }
     $urls[] = array(
-        'loc'        => canonicalUrl($path),
+        'loc'        => !empty($override['canonical']) ? $override['canonical'] : canonicalUrl($path === '' ? '/' : $path),
         'lastmod'    => $lastmod ? date('Y-m-d', strtotime($lastmod)) : null,
         'changefreq' => $changefreq,
         'priority'   => $priority,

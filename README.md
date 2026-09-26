@@ -1,6 +1,6 @@
 # The Pie Technologies — Full-Service Growth Agency Website
 
-A complete, production-ready PHP + MySQL website for **The Pie Technologies**: 13 public pages,
+A PHP + MySQL website for **The Pie Technologies**: 13 public pages,
 7 service pages, a Gemini-powered chatbot, and a full admin dashboard (submissions, blog,
 resources, portfolio, team, testimonials, subscribers, settings).
 
@@ -9,6 +9,22 @@ sections, custom cursor, magnetic buttons, particles hero, marquee, count-up sta
 Swiper testimonials, Chart.js graphs, AOS reveals — all with graceful CDN fallbacks.
 
 ---
+
+## Architecture upgrade (September 2026)
+
+**Existing installations: read [DEPLOYMENT.md](DEPLOYMENT.md) before deploying.**
+Run `php bin/cli.php migrate` against a backed-up staging copy first. Do not
+reimport the legacy SQL seeds into production. New installs can use
+`php bin/cli.php install`, which creates a user-chosen strong admin password.
+
+The existing frontend, assets and dashboard remain. Clean URLs now have a
+compatibility router (`front.php`, `app/routes.php`); contact handling has a
+controller/repository boundary; working SMTP, Gemini, payments and uploads live
+in `core/` with legacy include wrappers. Branding, Alia controls/leads, content/SEO
+overrides, signed Stripe webhooks and dependency-free regression tests were added.
+See [the audit](docs/AUDIT.md) and deployment guide for limitations and pending
+staging checks. This is an incremental upgrade, not a claim that every legacy
+page has been rewritten into MVC or every requested CMS feature is complete.
 
 ## 1. Installation and Hostinger Git deployment
 
@@ -26,7 +42,8 @@ blocked from web requests by the included `.htaccess`.
    uses a different document root, use that folder instead.
 3. **Create a MySQL database** in hPanel → Databases. Note the database name, user, password,
    and host shown by Hostinger.
-4. **Import `database.sql`** through phpMyAdmin (select the new database → Import).
+4. For a fresh installation, follow the guarded CLI installation in DEPLOYMENT.md.
+   For an existing installation, run migrations only; never reimport seed SQL.
 5. In the deployed `includes/` folder, copy `config.local.php.example` to
    `config.local.php` and enter your DB credentials and real domain. This live-only file is
    ignored by Git, so future Git deployments will not overwrite it. Do not put production
@@ -35,8 +52,8 @@ blocked from web requests by the included `.htaccess`.
 6. **Folder permissions:** `/uploads/` → `755` (and its subfolders); PHP files → `644`.
    Ensure `/uploads/` is writable by PHP so admin uploads work.
 7. Visit your domain, then `your-domain.com/admin/login.php`.
-8. **Login:** `admin@thepietechnologies.com` / `Admin@123`, then immediately change the
-   password in the admin dashboard.
+8. **Login:** use the email and password chosen during CLI installation. If the site
+   was previously installed using the legacy SQL seed, rotate that old default password immediately.
 9. Add SMTP credentials in *Settings → SMTP* and click **Send Test Email**.
 10. Add your Gemini API key in *Settings → Gemini API* and click **Test Connection**.
 11. Replace placeholder images in `/assets/images/` with real photography and update agency
@@ -73,11 +90,11 @@ chart, service bar chart, recent table, quick links, system status), `submission
 `settings.php` (SMTP / Gemini / Site / Social / Maintenance tabs with live test buttons),
 `password.php`, `actions.php` (AJAX router), `export.php` (CSV).
 
-### Chatbot (PIE Bot)
+### Alia
 Widget on every page (footer). Client: `assets/js/chatbot.js` (history in `sessionStorage`,
 skippable name/email lead capture). Backend: `includes/chatbot-api.php` routed through the
 public `chatbot-api.php` endpoint — reads the key + editable system prompt from the
-`settings` table, calls `gemini-1.5-flash`, stores leads in `chatbot_leads`, and falls back
+`settings` table, calls the admin-selected Gemini model, stores leads in `chatbot_leads`, and falls back
 to a friendly offline message if the API is unreachable or unconfigured.
 
 ---
@@ -105,7 +122,7 @@ name, default SEO tags) lives in the **settings table**, editable from the dashb
 
 `sendEmail()` tries, in order: **PHPMailer** (if you run `composer require phpmailer/phpmailer`
 in the site root so `/vendor/autoload.php` exists), then the **built-in SMTP client**
-(`includes/Mailer.php`, supports TLS/SSL + AUTH LOGIN), then PHP `mail()`.
+(`core/Mailer.php`, supports TLS/SSL + AUTH LOGIN), and reports delivery failure without silently falling back to PHP `mail()`.
 Templates: branded dark admin notification + client auto-reply + newsletter welcome
 (`includes/email-templates.php`).
 

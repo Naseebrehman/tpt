@@ -23,6 +23,15 @@ $metaDesc  = isset($metaDesc) && $metaDesc !== '' ? $metaDesc : getSetting('meta
 $pageLibs  = isset($pageLibs) && is_array($pageLibs) ? $pageLibs : array();
 $bodyClass = isset($bodyClass) ? $bodyClass : '';
 $ogImage   = isset($ogImage) && $ogImage !== '' ? $ogImage : getSetting('og_image', 'assets/images/og-image.jpg');
+require_once BASE_PATH . '/core/Content.php';
+$contentOverride = Content::get(Content::currentPath());
+if (!empty($contentOverride['title'])) { $pageTitle = $contentOverride['title']; }
+if (!empty($contentOverride['description'])) { $metaDesc = $contentOverride['description']; }
+if (!empty($contentOverride['og_image'])) { $ogImage = $contentOverride['og_image']; }
+if (!empty($contentOverride['noindex'])) { $noIndex = true; }
+$pageCanonical = !empty($contentOverride['canonical']) ? $contentOverride['canonical'] : canonicalUrl(Content::currentPath());
+$ogImageUrl = preg_match('~^https://~', $ogImage) ? $ogImage : canonicalUrl($ogImage);
+$activeNav = isset($activeNav) ? $activeNav : '';
 $siteName  = getSetting('site_name', SITE_NAME);
 $services  = pieServices();
 $navItems  = pieNav();
@@ -38,20 +47,20 @@ $fbPixel   = getSetting('facebook_pixel_id');
 <meta property="og:title" content="<?= esc($pageTitle) ?>">
 <meta property="og:description" content="<?= esc($metaDesc) ?>">
 <meta property="og:type" content="website">
-<meta property="og:image" content="<?= esc(canonicalUrl($ogImage)) ?>">
-<meta property="og:url" content="<?= esc(canonicalUrl()) ?>">
+<meta property="og:image" content="<?= esc($ogImageUrl) ?>">
+<meta property="og:url" content="<?= esc($pageCanonical) ?>">
 <meta property="og:site_name" content="<?= esc($siteName) ?>">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="<?= esc($pageTitle) ?>">
 <meta name="twitter:description" content="<?= esc($metaDesc) ?>">
-<meta name="twitter:image" content="<?= esc(canonicalUrl($ogImage)) ?>">
-<link rel="canonical" href="<?= esc(canonicalUrl()) ?>">
-<meta name="theme-color" content="#08080a">
+<meta name="twitter:image" content="<?= esc($ogImageUrl) ?>">
+<link rel="canonical" href="<?= esc($pageCanonical) ?>">
+<meta name="theme-color" content="#18191e">
 <?php if (!empty($noIndex)): ?>
 <meta name="robots" content="noindex,nofollow">
 <?php endif; ?>
-<link rel="icon" type="image/svg+xml" href="<?= asset('assets/images/favicon.svg') ?>">
-<link rel="apple-touch-icon" href="<?= asset($ogImage) ?>">
+<link rel="icon" href="<?= esc(asset(getSetting('brand_favicon', 'assets/images/favicon.svg'))) ?>">
+<link rel="apple-touch-icon" href="<?= esc($ogImageUrl) ?>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -60,8 +69,13 @@ $fbPixel   = getSetting('facebook_pixel_id');
 <?php if (!empty($pageLibs['swiper'])): ?>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
 <?php endif; ?>
-<link rel="stylesheet" href="<?= asset('assets/css/style.css') ?>">
-<link rel="stylesheet" href="<?= asset('assets/css/sections.css') ?>">
+<link rel="stylesheet" href="<?= asset('assets/css/style.css') ?>?v=<?= (int) filemtime(BASE_PATH . '/assets/css/style.css') ?>">
+<link rel="stylesheet" href="<?= asset('assets/css/sections.css') ?>?v=<?= (int) filemtime(BASE_PATH . '/assets/css/sections.css') ?>">
+<link rel="stylesheet" href="<?= asset('assets/css/refinements.css') ?>?v=<?= (int) filemtime(BASE_PATH . '/assets/css/refinements.css') ?>">
+<style>:root {
+<?php foreach (array('brand_primary' => '--violet', 'brand_secondary' => '--cyan', 'brand_accent' => '--amber') as $key => $variable) { $color = getSetting($key); if (preg_match('/^#[0-9a-f]{6}$/iD', $color)) { echo $variable . ':' . $color . ';'; } } ?>
+<?php if (getSetting('brand_font') === 'system'): ?>--font-display:system-ui,sans-serif;--font-body:system-ui,sans-serif;<?php endif; ?>
+}</style>
 <?php if ($gaId): ?>
 <!-- Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=<?= esc($gaId) ?>"></script>
@@ -105,7 +119,7 @@ fbq('track', 'PageView');
 <header class="site-nav" id="siteNav">
     <div class="container nav-inner">
         <a class="brand" href="<?= url('') ?>" aria-label="<?= esc($siteName) ?> — home">
-            The&nbsp;Pie<span class="brand-dot">.</span>&nbsp;Technologies
+            <?php if (getSetting('brand_logo') !== ''): ?><img src="<?= esc(asset(getSetting('brand_logo'))) ?>" alt="<?= esc($siteName) ?>" style="max-height:48px;max-width:220px"><?php else: ?>The&nbsp;Pie<span class="brand-dot">.</span>&nbsp;Technologies<?php endif; ?>
         </a>
 
         <nav class="nav-links" aria-label="Primary">
@@ -150,25 +164,42 @@ fbq('track', 'PageView');
     </div>
 </header>
 
-<div class="mobile-menu" id="mobileMenu" aria-hidden="true">
+<div class="mobile-menu" id="mobileMenu" role="dialog" aria-modal="true" aria-label="Navigation" aria-hidden="true" inert>
+    <div class="mobile-menu-head">
+        <a class="brand" href="<?= url('') ?>"><?= esc($siteName) ?></a>
+        <button type="button" id="mobileMenuClose" class="mobile-menu-close" aria-label="Close menu"><?= icon('close', 24) ?></button>
+    </div>
     <nav aria-label="Mobile">
         <ul class="mobile-links">
             <?php foreach ($navItems as $i => $navItem): ?>
-            <li style="--i:<?= $i ?>"><a href="<?= esc($navItem['url']) ?>"><?= esc($navItem['label']) ?></a></li>
+            <li style="--i:<?= $i ?>">
+                <?php if ($navItem['key'] === 'services'): ?>
+                <details class="mobile-services-disclosure">
+                    <summary><?= esc($navItem['label']) ?><span class="mobile-nav-number"><?= sprintf('%02d', $i + 1) ?> <span aria-hidden="true">+</span></span></summary>
+                    <div class="mobile-services">
+                        <?php foreach (pieDisciplines() as $disc): ?>
+                        <?php $discSvcs = pieServicesByDiscipline($disc['key']); if (!$discSvcs) { continue; } ?>
+                        <p class="eyebrow"><?= esc($disc['name']) ?></p>
+                        <div class="mobile-service-links">
+                            <?php foreach ($discSvcs as $svc): ?>
+                            <a href="<?= url('services/' . $svc['key']) ?>"><?= esc($svc['name']) ?></a>
+                            <?php endforeach; ?>
+                        </div>
+                        <?php endforeach; ?>
+                        <a class="mobile-all-services" href="<?= url('services') ?>">All services →</a>
+                    </div>
+                </details>
+                <?php else: ?>
+                <a href="<?= esc($navItem['url']) ?>"<?= $activeNav === $navItem['key'] ? ' aria-current="page"' : '' ?>><?= esc($navItem['label']) ?><span class="mobile-nav-number"><?= sprintf('%02d', $i + 1) ?></span></a>
+                <?php endif; ?>
+            </li>
             <?php endforeach; ?>
         </ul>
-        <div class="mobile-services">
-            <?php foreach (pieDisciplines() as $disc): ?>
-            <?php $discSvcs = pieServicesByDiscipline($disc['key']); if (!$discSvcs) { continue; } ?>
-            <p class="eyebrow" style="margin-top:14px"><?= esc($disc['name']) ?></p>
-            <div class="mobile-service-links">
-                <?php foreach ($discSvcs as $svc): ?>
-                <a href="<?= url('services/' . $svc['key']) ?>"><?= esc($svc['name']) ?></a>
-                <?php endforeach; ?>
-            </div>
-            <?php endforeach; ?>
+        <a href="<?= url('contact') ?>" class="btn btn-primary btn-block mobile-project">Start a Project <?= icon('arrow-r', 18) ?></a>
+        <div class="mobile-contact">
+            <a href="mailto:<?= esc(getSetting('site_email', 'info@thepietechnologies.com')) ?>"><?= esc(getSetting('site_email', 'info@thepietechnologies.com')) ?></a>
+            <a href="tel:<?= esc(preg_replace('/[^0-9+]/', '', getSetting('site_phone', '+1 (213) 257 8242'))) ?>"><?= esc(getSetting('site_phone', '+1 (213) 257 8242')) ?></a>
         </div>
-        <a href="<?= url('contact') ?>" class="btn btn-primary btn-block">Start a Project</a>
     </nav>
 </div>
 

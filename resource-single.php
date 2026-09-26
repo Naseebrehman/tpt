@@ -22,6 +22,7 @@ $typeLabel = isset($typeLabels[$res['resource_type']]) ? $typeLabels[$res['resou
 
 $pageTitle = $res['title'] . ' — Free ' . $typeLabel;
 $metaDesc  = $res['description'] !== '' ? $res['description'] : 'A free resource from the TPT Growth Library.';
+$noIndex = strpos($res['slug'], 'sample-') === 0;
 $activeNav = 'resources';
 
 $jsonLd = json_encode(array(

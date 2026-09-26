@@ -20,7 +20,7 @@ function emailShell($innerHtml, $preheader = '')
         . '<tr><td align="center">'
         . '<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#101014;border:1px solid #23232b;border-radius:14px;overflow:hidden;">'
         . '<tr><td style="background:#0d0d11;padding:26px 32px;border-bottom:1px solid #23232b;">'
-        . '<span style="font-size:20px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">The Pie<span style="color:#7c3aed;">.</span> Technologies</span>'
+        . '<span style="font-size:20px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">' . $siteName . '</span>'
         . '<span style="float:right;font-size:11px;color:#6b7280;letter-spacing:2px;text-transform:uppercase;padding-top:6px;">Growth Agency</span>'
         . '</td></tr>'
         . '<tr><td style="padding:34px 32px;">' . $innerHtml . '</td></tr>'

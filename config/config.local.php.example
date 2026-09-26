@@ -1,0 +1,17 @@
+<?php
+/**
+ * Copy this file to config.local.php on the server and fill in your values.
+ * config.local.php is intentionally ignored by Git so deploys never overwrite
+ * your live secrets. Do not commit the copied file.
+ */
+return array(
+    'APP_ENV'    => 'production',
+    'DB_HOST'    => 'localhost',
+    'DB_NAME'    => 'YOUR_HOSTINGER_DATABASE_NAME',
+    'DB_USER'    => 'YOUR_HOSTINGER_DATABASE_USER',
+    'DB_PASS'    => 'YOUR_HOSTINGER_DATABASE_PASSWORD',
+    'SITE_URL'   => 'https://your-domain.com',
+    'SITE_NAME'  => 'The Pie Technologies',
+    'ADMIN_EMAIL'=> 'you@your-domain.com',
+    'PRETTY_URLS'=> true,
+);

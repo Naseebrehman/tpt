@@ -12,6 +12,8 @@ $adminUser  = currentAdmin();
 $flash      = getFlash();
 
 $adminNav = array(
+    array('key' => 'leads', 'label' => 'Alia Leads', 'href' => 'leads.php', 'icon' => 'users'),
+    array('key' => 'content', 'label' => 'Content & SEO', 'href' => 'content.php', 'icon' => 'edit'),
     array('key' => 'dashboard',    'label' => 'Dashboard',     'href' => 'index.php',        'icon' => 'grid'),
     array('key' => 'submissions',  'label' => 'Submissions',   'href' => 'submissions.php',  'icon' => 'mail'),
     array('key' => 'payments',     'label' => 'Payments',      'href' => 'payments.php',     'icon' => 'card'),

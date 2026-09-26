@@ -36,6 +36,7 @@ require_once __DIR__ . '/includes/header.php';
 
 <section class="section">
     <div class="container">
+        <?php if (SampleContent::usesFallback('blog_posts')): ?><p class="sample-notice"><strong>Sample content.</strong> These examples are for previewing the website, not claims about real clients or results. Add your own content in the dashboard to replace them.</p><?php endif; ?>
         <div class="blog-toolbar">
             <div class="filter-tabs" style="margin-bottom:0" role="group" aria-label="Filter articles by category">
                 <a class="filter-tab<?= $category === '' ? ' active' : '' ?>" href="<?= blogQueryUrl(array('q' => $search)) ?>">All</a>
