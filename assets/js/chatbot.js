@@ -1,7 +1,9 @@
 /* ===========================================================================
-   Alia — the TPT growth assistant (Gemini-powered chat widget client)
+   Alia — the TPT growth assistant (chat widget client)
    History lives in sessionStorage; optional lead capture (name + email).
-   Alia never invents facts: when unsure she hands off to a human.
+   Robust networking: request timeouts, malformed-response handling and a
+   professional fallback message whenever the AI provider fails, so the
+   widget never becomes stuck (Task 13).
    =========================================================================== */
 (function () {
   'use strict';
@@ -29,6 +31,7 @@
     history: []
   };
   try { state.history = JSON.parse(SS.getItem('pie_history') || '[]'); } catch (e) { state.history = []; }
+  if (!Array.isArray(state.history)) state.history = [];
   SS.setItem('pie_session', state.sessionId);
 
   /* ------------------------------ helpers ------------------------------ */
@@ -66,7 +69,7 @@
     }
   }
   function saveHistory() {
-    SS.setItem('pie_history', JSON.stringify(state.history.slice(-12)));
+    try { SS.setItem('pie_history', JSON.stringify(state.history.slice(-12))); } catch (e) { /* storage full — ignore */ }
   }
   function setOpen(open) {
     state.open = open;
@@ -135,6 +138,12 @@
       + '<div class="chat-lead-actions"><a href="' + esc(base) + '/contact">Talk to a Human →</a></div>');
   }
 
+  /* Connection problems get their own professional message (Task 13). */
+  function aliaConnectionError() {
+    pushHtml(esc(PIE.error || 'I’m having trouble connecting right now. Please try again in a moment.')
+      + '<div class="chat-lead-actions"><a href="' + esc((window.PIE && window.PIE.base) || '') + '/contact">Talk to a Human →</a></div>');
+  }
+
   /* ------------------------------- sending ----------------------------- */
   function send(text) {
     text = String(text || '').trim();
@@ -167,7 +176,7 @@
     }
 
     push('user', text);
-    state.history.push({ role: 'user', parts: [{ text: text }] });
+    state.history.push({ role: 'user', content: text });
     saveHistory();
     state.busy = true;
     typing(true);
@@ -181,27 +190,40 @@
       email: state.lead.email
     };
 
+    /* Timeout keeps the widget usable even when the network hangs (Task 13). */
+    var controller = typeof AbortController === 'function' ? new AbortController() : null;
+    var timer = controller ? setTimeout(function () { controller.abort(); }, 40000) : null;
+
     fetch(PIE.api, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: controller ? controller.signal : undefined
     })
-      .then(function (res) { return res.json(); })
+      .then(function (res) {
+        return res.json().catch(function () { throw new Error('malformed response'); });
+      })
       .then(function (json) {
         typing(false);
         if (json && json.success && json.reply) {
           push('bot', json.reply);
-          state.history.push({ role: 'model', parts: [{ text: json.reply }] });
+          state.history.push({ role: 'model', content: json.reply });
           saveHistory();
+        } else if (json && json.reply && json.code && json.code !== 'provider' && json.code !== 'empty') {
+          /* Server-sent fallback/config message with a human hand-off. */
+          aliaFallback(json.reply);
         } else {
-          aliaFallback(json && json.reply);
+          aliaConnectionError();
         }
       })
       .catch(function () {
         typing(false);
-        aliaFallback();
+        aliaConnectionError();
       })
-      .then(function () { state.busy = false; });
+      .then(function () {
+        if (timer) clearTimeout(timer);
+        state.busy = false;
+      });
   }
 
   /* ------------------------------- wiring ------------------------------ */

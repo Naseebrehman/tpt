@@ -184,6 +184,8 @@ CREATE TABLE IF NOT EXISTS payments (
   token VARCHAR(64) UNIQUE NOT NULL,
   name VARCHAR(150),
   email VARCHAR(150),
+  phone VARCHAR(30) NOT NULL DEFAULT '',
+  service VARCHAR(100) NOT NULL DEFAULT '',
   reference VARCHAR(150),
   amount_usd DECIMAL(10,2) DEFAULT 0,
   notes TEXT,
@@ -210,6 +212,25 @@ CREATE TABLE IF NOT EXISTS settings (
   setting_key VARCHAR(100) UNIQUE NOT NULL,
   setting_value TEXT,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS notification_emails (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  email VARCHAR(150) NOT NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  categories VARCHAR(255) NOT NULL DEFAULT 'contact,payment,lead,chatbot,system,security',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_notification_email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS email_templates (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  template_key VARCHAR(60) NOT NULL,
+  subject VARCHAR(255) NOT NULL DEFAULT '',
+  body MEDIUMTEXT NOT NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_template_key (template_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS page_views (

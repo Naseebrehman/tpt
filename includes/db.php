@@ -36,69 +36,77 @@ try {
 
 define('DB_OK', $pieDbOk);
 
-/**
+/*
  * Small helper used everywhere: run a prepared statement and return rows.
  *
  * @param string $sql
  * @param array  $params
  * @return array
  */
-function dbAll($sql, $params = array())
-{
-    if (!DB_OK) {
-        return array();
-    }
-    try {
-        $st = $GLOBALS['pdo']->prepare($sql);
-        $st->execute($params);
-        return $st->fetchAll();
-    } catch (PDOException $e) {
-        error_log('[TPT] Query failed: ' . $e->getMessage() . ' | ' . $sql);
-        return array();
+if (!function_exists('dbAll')) {
+    function dbAll($sql, $params = array())
+    {
+        if (!DB_OK) {
+            return array();
+        }
+        try {
+            $st = $GLOBALS['pdo']->prepare($sql);
+            $st->execute($params);
+            return $st->fetchAll();
+        } catch (PDOException $e) {
+            error_log('[TPT] Query failed: ' . $e->getMessage() . ' | ' . $sql);
+            return array();
+        }
     }
 }
 
 /**
  * Run a prepared statement and return the first row (or null).
  */
-function dbOne($sql, $params = array())
-{
-    $rows = dbAll($sql, $params);
-    return $rows ? $rows[0] : null;
+if (!function_exists('dbOne')) {
+    function dbOne($sql, $params = array())
+    {
+        $rows = dbAll($sql, $params);
+        return $rows ? $rows[0] : null;
+    }
 }
 
 /**
  * Run a prepared write statement, return affected row count (-1 on failure).
  */
-function dbExec($sql, $params = array())
-{
-    if (!DB_OK) {
-        return -1;
-    }
-    try {
-        $st = $GLOBALS['pdo']->prepare($sql);
-        $st->execute($params);
-        return $st->rowCount();
-    } catch (PDOException $e) {
-        error_log('[TPT] Write failed: ' . $e->getMessage() . ' | ' . $sql);
-        return -1;
+if (!function_exists('dbExec')) {
+    function dbExec($sql, $params = array())
+    {
+        if (!DB_OK) {
+            return -1;
+        }
+        try {
+            $st = $GLOBALS['pdo']->prepare($sql);
+            $st->execute($params);
+            return $st->rowCount();
+        } catch (PDOException $e) {
+            error_log('[TPT] Write failed: ' . $e->getMessage() . ' | ' . $sql);
+            return -1;
+        }
     }
 }
 
 /**
  * Insert and return last insert id (-1 on failure).
  */
-function dbInsert($sql, $params = array())
-{
-    if (!DB_OK) {
-        return -1;
-    }
-    try {
-        $st = $GLOBALS['pdo']->prepare($sql);
-        $st->execute($params);
-        return (int) $GLOBALS['pdo']->lastInsertId();
-    } catch (PDOException $e) {
-        error_log('[TPT] Insert failed: ' . $e->getMessage() . ' | ' . $sql);
-        return -1;
+if (!function_exists('dbInsert')) {
+    function dbInsert($sql, $params = array())
+    {
+        if (!DB_OK) {
+            return -1;
+        }
+        try {
+            $st = $GLOBALS['pdo']->prepare($sql);
+            $st->execute($params);
+            return (int) $GLOBALS['pdo']->lastInsertId();
+        } catch (PDOException $e) {
+            error_log('[TPT] Insert failed: ' . $e->getMessage() . ' | ' . $sql);
+            return -1;
+        }
     }
 }

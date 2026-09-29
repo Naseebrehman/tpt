@@ -128,23 +128,34 @@ switch ($action) {
         actionJson($sent, $sent ? 'Test email sent to ' . $to . '.' : ('Sending failed: ' . ($GLOBALS['pieMailError'] ?? 'Check SMTP settings.')));
         break;
 
+    case 'test_ai':
+        /* Test one AI provider slot through the shared provider layer (Task 14). */
+        require_once BASE_PATH . '/core/AIProviders.php';
+        $slot = isset($_POST['ai_provider1_slot']) ? (int) $_POST['ai_provider1_slot'] : (isset($_POST['ai_provider2_slot']) ? (int) $_POST['ai_provider2_slot'] : AIProviders::activeSlot());
+        $cfg  = AIProviders::config($slot);
+        if (!$cfg['enabled']) { actionJson(false, 'Provider ' . $slot . ' is disabled — enable it and save first.'); }
+        if ($cfg['api_key'] === '') { actionJson(false, 'No API key saved for provider ' . $slot . ' — save your settings first.'); }
+        $gen = AIProviders::generation();
+        $testTurn = array(array('role' => 'user', 'content' => 'Reply with exactly: connection OK'));
+        $result = $cfg['type'] === 'gemini'
+            ? AIProviders::callGemini($cfg, $testTurn, '', $gen)
+            : AIProviders::callOpenAI($cfg, $testTurn, '', $gen);
+        if ($result && $result['ok']) {
+            actionJson(true, 'Provider ' . $cfg['slot'] . ' responded.', array('reply' => mb_substr($result['reply'], 0, 200)));
+        }
+        $errorLabels = array('auth' => 'Invalid API key.', 'rate_limit' => 'Rate limited by the provider — try again shortly.', 'timeout' => 'Connection timed out.', 'model' => 'Model not found — check the model name.', 'config' => 'Provider is not fully configured.', 'provider' => 'The provider returned an error.');
+        $errCode = $result ? $result['error'] : 'provider';
+        actionJson(false, 'Connection failed: ' . (isset($errorLabels[$errCode]) ? $errorLabels[$errCode] : $errorLabels['provider']));
+        break;
+
     case 'test_gemini':
-        $apiKey = getSetting('gemini_api_key');
-        if ($apiKey === '') { actionJson(false, 'No API key saved yet — save your settings first.'); }
-        $payload = array(
-            'contents'         => array(array('role' => 'user', 'parts' => array(array('text' => 'Reply with exactly: Alia connection OK')))),
-            'generationConfig' => array('maxOutputTokens' => 40, 'temperature' => 0.2),
-        );
-        $decoded = chatbotCallGemini($apiKey, $payload);
-        $reply = null;
-        if (is_array($decoded) && isset($decoded['candidates'][0]['content']['parts'][0]['text'])) {
-            $reply = trim($decoded['candidates'][0]['content']['parts'][0]['text']);
+        /* Legacy alias — tests the active provider through the shared layer. */
+        require_once BASE_PATH . '/core/AIProviders.php';
+        $result = AIProviders::chat(array(array('role' => 'user', 'content' => 'Reply with exactly: Alia connection OK')), '');
+        if ($result['ok']) {
+            actionJson(true, 'Provider responded.', array('reply' => mb_substr($result['reply'], 0, 200)));
         }
-        if ($reply !== null && $reply !== '') {
-            actionJson(true, 'Gemini responded.', array('reply' => $reply));
-        }
-        $errMsg = is_array($decoded) && isset($decoded['error']['message']) ? $decoded['error']['message'] : 'No response from the API.';
-        actionJson(false, 'Connection failed: ' . $errMsg);
+        actionJson(false, 'Connection failed: ' . ($result['detail'] !== '' ? 'check the API key, model and quota.' : 'unknown error.'));
         break;
 
     default:

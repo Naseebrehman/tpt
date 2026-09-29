@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/init.php';
+require_once BASE_PATH . '/core/Captcha.php';
 
 $slug = isset($_GET['slug']) ? sanitize($_GET['slug']) : '';
 $post = $slug !== '' ? getPostBySlug($slug) : null;
@@ -18,7 +19,11 @@ if ($post && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['comment_subm
         $cName    = sanitize(isset($_POST['name']) ? $_POST['name'] : '');
         $cEmail   = sanitize(isset($_POST['email']) ? $_POST['email'] : '');
         $cComment = sanitizeMultiline(isset($_POST['comment']) ? $_POST['comment'] : '');
-        if ($cName === '' || !filter_var($cEmail, FILTER_VALIDATE_EMAIL) || mb_strlen($cComment) < 4) {
+        if (!Ratelimit::allow('comment:' . pieClientIp(), 5, 600)) {
+            setFlash('err', 'Too many comments in a short time — please try again in a few minutes.');
+        } elseif (!Captcha::verify(Captcha::tokenFromRequest(), pieClientIp())) {
+            setFlash('err', 'Please complete the security check and try again.');
+        } elseif ($cName === '' || !filter_var($cEmail, FILTER_VALIDATE_EMAIL) || mb_strlen($cComment) < 4) {
             setFlash('err', 'Please add your name, a valid email and a comment.');
         } else {
             dbInsert(
@@ -165,6 +170,9 @@ require_once __DIR__ . '/includes/header.php';
                 <label for="cComment">Comment <span class="req">*</span></label>
                 <textarea id="cComment" name="comment" required maxlength="2000"></textarea>
             </div>
+            <?php if (Captcha::enabled()): ?>
+            <div class="field full"><?= Captcha::field() ?></div>
+            <?php endif; ?>
             <div class="full">
                 <button class="btn btn-primary" type="submit" name="comment_submit" value="1">Post Comment</button>
             </div>

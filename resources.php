@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/init.php';
+require_once BASE_PATH . '/core/Captcha.php';
 
 $pageTitle = 'Growth Library — Free Blueprints, Playbooks & Checklists';
 $metaDesc  = 'Steal our playbooks. The frameworks TPT runs on client accounts — published in full. Blueprints, playbooks, checklists and templates. Free, because educated clients build better systems.';
@@ -140,6 +141,9 @@ require_once __DIR__ . '/includes/header.php';
                         <label for="nlEmail">Email <span class="req">*</span></label>
                         <input id="nlEmail" type="email" name="email" placeholder="you@company.com" required autocomplete="email" maxlength="150">
                     </div>
+                    <?php if (class_exists('Captcha') && Captcha::enabled()): ?>
+                    <div style="flex-basis:100%"><?= Captcha::field() ?></div>
+                    <?php endif; ?>
                     <div style="flex-basis:100%">
                         <button class="btn btn-primary btn-block" type="submit">Subscribe Free <?= icon('send', 16) ?></button>
                     </div>

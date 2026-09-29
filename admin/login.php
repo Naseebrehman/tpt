@@ -42,6 +42,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $lockedUntil = date('Y-m-d H:i:s', time() + 900);
                     $attempts = 0;
                     $lockMsg = 'Too many failed attempts. This login is locked for 15 minutes.';
+                    /* Security notification — throttled so admins are never spammed (Task 9). */
+                    try {
+                        require_once BASE_PATH . '/core/Notifications.php';
+                        Notifications::eventThrottled('admin_lockout', 3600, 'security', 'system', array(
+                            'subject' => 'Admin login locked out',
+                            'message' => 'Multiple failed admin login attempts triggered a 15-minute lockout for ' . $email . ' (IP ' . $ip . ').',
+                        ), array('table' => ''));
+                    } catch (Throwable $securityMailError) {
+                        error_log('[TPT] Security notification failed: ' . $securityMailError->getMessage());
+                    }
                 }
                 dbExec('UPDATE admin_lockouts SET attempts = ?, locked_until = ? WHERE id = ?', array($attempts, $lockedUntil, (int) $lock['id']));
             } else {

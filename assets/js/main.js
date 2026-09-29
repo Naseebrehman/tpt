@@ -402,8 +402,16 @@
         spaceBetween: 28,
         loop: true,
         speed: 700,
+        watchOverflow: true,
+        autoHeight: true,
+        touchRatio: 1,
         autoplay: prefersReduced ? false : { delay: 6000, disableOnInteraction: true },
-        grabCursor: true
+        grabCursor: true,
+        breakpoints: {
+          320: { spaceBetween: 14 },
+          640: { spaceBetween: 20 },
+          900: { spaceBetween: 28 }
+        }
       });
       if (pag) {
         pag.querySelectorAll('button').forEach(function (btn, i) {
@@ -414,9 +422,50 @@
           pag.querySelectorAll('button').forEach(function (b, i) { b.classList.toggle('active', i === real); });
         });
       }
-    } else if (pag) {
-      pag.style.display = 'none';
+    } else {
+      /* CDN fallback: hide the pagination dots and stack cards — never cut off. */
+      host.classList.add('swiper-fallback');
+      if (pag) pag.style.display = 'none';
     }
+  }
+
+  /* ---------------------------------------------------------------------
+     International phone input (contact + payment forms)
+     --------------------------------------------------------------------- */
+  function initIntlPhone() {
+    if (!window.intlTelInput) return;
+    document.querySelectorAll('[data-intl-phone]').forEach(function (input) {
+      if (input.dataset.itiInit === '1') return;
+      input.dataset.itiInit = '1';
+      var iti = window.intlTelInput(input, {
+        initialCountry: 'us',
+        preferredCountries: ['us', 'gb', 'pk', 'ca', 'au', 'in'],
+        separateDialCode: true,
+        nationalMode: false,
+        autoPlaceholder: 'polite',
+        utilsScript: 'https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/utils.js'
+      });
+      /* Submit the normalised E.164 number in a hidden companion field. */
+      var form = input.closest('form');
+      if (form) {
+        form.addEventListener('submit', function () {
+          try {
+            var full = iti.getNumber();
+            if (full && input.value.trim() !== '') {
+              var hidden = form.querySelector('[name="' + input.name + '_e164"]');
+              if (!hidden) {
+                hidden = document.createElement('input');
+                hidden.type = 'hidden';
+                hidden.name = input.name + '_e164';
+                form.appendChild(hidden);
+              }
+              hidden.value = full;
+              input.value = full;
+            }
+          } catch (e) { /* utils not loaded yet — keep the typed value */ }
+        }, true);
+      }
+    });
   }
 
   /* ---------------------------------------------------------------------
@@ -533,6 +582,23 @@
   /* ---------------------------------------------------------------------
      AJAX forms (contact + newsletter + comment)
      --------------------------------------------------------------------- */
+  function clearFieldErrors(form) {
+    form.querySelectorAll('.field-msg').forEach(function (el) { el.parentNode.removeChild(el); });
+    form.querySelectorAll('[aria-invalid]').forEach(function (el) { el.removeAttribute('aria-invalid'); });
+  }
+  function showFieldErrors(form, errors) {
+    clearFieldErrors(form);
+    Object.keys(errors || {}).forEach(function (name) {
+      var input = form.querySelector('[name="' + name + '"]');
+      if (!input) return;
+      input.setAttribute('aria-invalid', 'true');
+      var holder = input.closest('.field') || input.parentNode;
+      var msg = document.createElement('small');
+      msg.className = 'field-msg';
+      msg.textContent = errors[name];
+      holder.appendChild(msg);
+    });
+  }
   function ajaxForm(form, onSuccess) {
     form.addEventListener('submit', function (e) {
       e.preventDefault();
@@ -540,6 +606,7 @@
       var submitBtn = form.querySelector('[type="submit"]');
       if (submitBtn) submitBtn.disabled = true;
       if (status) { status.className = 'form-status'; status.textContent = ''; }
+      clearFieldErrors(form);
       var data = new FormData(form);
       fetch(form.getAttribute('action') || window.location.href, {
         method: 'POST',
@@ -551,6 +618,7 @@
           if (json && json.success) {
             onSuccess(json, form);
           } else {
+            if (json && json.errors) showFieldErrors(form, json.errors);
             if (status) {
               status.className = 'form-status err show';
               status.textContent = (json && json.message) ? json.message : 'Something went wrong. Please try again.';
@@ -704,6 +772,7 @@
     initCharts();
     initContactForm();
     initNewsletterForms();
+    initIntlPhone();
     initReadingProgress();
     initVideoLoads();
   });

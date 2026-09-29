@@ -1,16 +1,25 @@
 <?php
 /**
  * ---------------------------------------------------------------------------
- *  The Pie Technologies — branded HTML email templates
+ *  The Pie Technologies — branded HTML email layout + template helpers
+ * ---------------------------------------------------------------------------
+ *  emailShell() is the reusable global brand layout (Task 11) — logo, brand
+ *  colours, typography, content area and footer — used by every outgoing
+ *  message. Template content and subjects live in core/EmailTemplates.php
+ *  (admin-editable, {{variable}} placeholders); this file only renders the
+ *  shared chrome and a few backwards-compatible helpers.
  * ---------------------------------------------------------------------------
  */
 
-/** Shared dark email shell. */
-function emailShell($innerHtml, $preheader = '')
+require_once __DIR__ . '/../core/EmailTemplates.php';
+
+/** Shared dark email shell — the global branded layout. */
+function emailShell($innerHtml, $preheader = '', $unsubscribeUrl = null)
 {
     $siteName = esc(getSetting('site_name', SITE_NAME));
     $siteUrl  = esc(rtrim(SITE_URL, '/'));
     $year     = date('Y');
+    $unsub    = $unsubscribeUrl !== null ? $unsubscribeUrl : rtrim(SITE_URL, '/') . '/resources';
     $html = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">'
         . '<meta name="viewport" content="width=device-width, initial-scale=1">'
         . '<title>' . $siteName . '</title></head>'
@@ -26,97 +35,68 @@ function emailShell($innerHtml, $preheader = '')
         . '<tr><td style="padding:34px 32px;">' . $innerHtml . '</td></tr>'
         . '<tr><td style="padding:22px 32px;border-top:1px solid #23232b;background:#0d0d11;">'
         . '<p style="margin:0 0 6px;font-size:12px;color:#8b8b96;">&copy; ' . $year . ' ' . $siteName . ' &middot; '
-        . esc(getSetting('site_address', 'Lahore, Pakistan')) . '</p>'
+        . esc(getSetting('site_address', 'Collingswood, NJ, USA · Punjab, Pakistan')) . '</p>'
         . '<p style="margin:0;font-size:12px;color:#6b7280;">'
         . '<a href="' . $siteUrl . '" style="color:#a78bfa;text-decoration:none;">Website</a> &nbsp;&middot;&nbsp; '
         . '<a href="' . $siteUrl . '/contact" style="color:#a78bfa;text-decoration:none;">Contact</a> &nbsp;&middot;&nbsp; '
         . '<a href="{{UNSUBSCRIBE}}" style="color:#6b7280;text-decoration:underline;">Unsubscribe</a></p>'
         . '</td></tr>'
         . '</table></td></tr></table></body></html>';
-    /* Resolve the unsubscribe placeholder for every template by default. */
-    return str_replace('{{UNSUBSCRIBE}}', rtrim(SITE_URL, '/') . '/resources', $html);
+    return str_replace('{{UNSUBSCRIBE}}', $unsub, $html);
 }
 
-/** Admin notification: new contact form submission. */
-function emailAdminNotification($submission)
+/** Detail rows shared by contact notifications. */
+function emailContactRows($submission)
 {
     $rows = array(
-        'Name'     => $submission['name'],
-        'Email'    => $submission['email'],
-        'Phone'    => $submission['phone'],
-        'Company'  => $submission['company'],
-        'Service'  => $submission['service'],
-        'Budget'   => $submission['budget'],
-        'Source'   => $submission['source'],
-        'IP'       => $submission['ip_address'],
-        'Received' => $submission['created_at'],
+        'Name'     => esc($submission['name']),
+        'Email'    => esc($submission['email']),
+        'Phone'    => esc($submission['phone'] !== '' ? $submission['phone'] : '—'),
+        'Company'  => esc($submission['company'] !== '' ? $submission['company'] : '—'),
+        'Service'  => esc($submission['service'] !== '' ? $submission['service'] : '—'),
+        'Received' => esc($submission['created_at']),
     );
-    $table = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:22px 0;">';
-    foreach ($rows as $label => $value) {
-        $table .= '<tr>'
-            . '<td style="padding:9px 14px;border:1px solid #23232b;color:#8b8b96;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:110px;">' . esc($label) . '</td>'
-            . '<td style="padding:9px 14px;border:1px solid #23232b;color:#f4f4f6;font-size:14px;">' . esc($value === '' ? '—' : $value) . '</td>'
-            . '</tr>';
-    }
-    $table .= '<tr>'
-        . '<td style="padding:9px 14px;border:1px solid #23232b;color:#8b8b96;font-size:12px;text-transform:uppercase;letter-spacing:1px;vertical-align:top;">Message</td>'
-        . '<td style="padding:9px 14px;border:1px solid #23232b;color:#f4f4f6;font-size:14px;line-height:1.6;">' . nl2br(esc($submission['message'])) . '</td>'
-        . '</tr></table>';
-
-    $dashboardUrl = esc(rtrim(SITE_URL, '/') . '/admin/submissions.php');
-
-    $inner = '<h1 style="margin:0 0 8px;font-size:24px;color:#ffffff;font-weight:800;letter-spacing:-0.5px;">New Contact Form Submission</h1>'
-        . '<p style="margin:0;font-size:14px;color:#9ca3af;line-height:1.6;">A visitor just sent a project enquiry through the website.</p>'
-        . $table
-        . '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 4px;"><tr><td style="background:#7c3aed;border-radius:8px;">'
-        . '<a href="' . $dashboardUrl . '" style="display:inline-block;padding:13px 26px;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;">View in Dashboard</a>'
-        . '</td></tr></table>';
-
-    return emailShell($inner, 'New enquiry from ' . $submission['name']);
+    if (!empty($submission['budget'])) { $rows['Budget'] = esc($submission['budget']); }
+    if (!empty($submission['source'])) { $rows['Source'] = esc($submission['source']); }
+    $rows['Message'] = nl2br(esc($submission['message']));
+    return $rows;
 }
 
-/** Client auto-reply after submitting the contact form. */
+/** Admin notification: new contact form submission (template: contact_admin). */
+function emailAdminNotification($submission)
+{
+    $composed = EmailTemplates::compose('contact_admin', array(
+        'name'       => $submission['name'],
+        'email'      => $submission['email'],
+        'phone'      => $submission['phone'],
+        'service'    => $submission['service'],
+        'message'    => nl2br(esc($submission['message'])),
+    ), array(
+        'table'     => EmailTemplates::detailTable(emailContactRows($submission)),
+        'admin_url' => rtrim(SITE_URL, '/') . '/admin/submissions.php',
+    ));
+    return $composed['html'];
+}
+
+/** Client auto-reply after submitting the contact form (template: contact_confirm). */
 function emailClientAutoReply($submission)
 {
-    $name = trim($submission['name']);
-    $firstName = $name !== '' ? explode(' ', $name)[0] : 'there';
-
-    $inner = '<h1 style="margin:0 0 10px;font-size:26px;color:#ffffff;font-weight:800;letter-spacing:-0.5px;">Thanks ' . esc($firstName) . ', we&rsquo;ve received your message!</h1>'
-        . '<p style="margin:0 0 18px;font-size:15px;color:#c7c7d1;line-height:1.7;">Your enquiry is now sitting with our strategy team. Here is a quick summary of what you sent us:</p>'
-        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 22px;">'
-        . '<tr><td style="padding:10px 14px;border:1px solid #23232b;color:#8b8b96;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:110px;">Service</td>'
-        . '<td style="padding:10px 14px;border:1px solid #23232b;color:#f4f4f6;font-size:14px;">' . esc($submission['service'] !== '' ? $submission['service'] : 'Not sure yet') . '</td></tr>'
-        . '<tr><td style="padding:10px 14px;border:1px solid #23232b;color:#8b8b96;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Budget</td>'
-        . '<td style="padding:10px 14px;border:1px solid #23232b;color:#f4f4f6;font-size:14px;">' . esc($submission['budget'] !== '' ? $submission['budget'] : 'To discuss') . '</td></tr>'
-        . '<tr><td style="padding:10px 14px;border:1px solid #23232b;color:#8b8b96;font-size:12px;text-transform:uppercase;letter-spacing:1px;vertical-align:top;">Details</td>'
-        . '<td style="padding:10px 14px;border:1px solid #23232b;color:#f4f4f6;font-size:14px;line-height:1.6;">' . nl2br(esc($submission['message'])) . '</td></tr>'
-        . '</table>'
-        . '<p style="margin:0 0 22px;font-size:15px;color:#c7c7d1;line-height:1.7;"><strong style="color:#ffffff;">We&rsquo;ll be in touch within 24 hours</strong> &mdash; usually much sooner. '
-        . 'In the meantime, feel free to browse our work or grab one of our free guides.</p>'
-        . '<table role="presentation" cellpadding="0" cellspacing="0"><tr>'
-        . '<td style="background:#7c3aed;border-radius:8px;"><a href="' . esc(rtrim(SITE_URL, '/') . '/portfolio') . '" style="display:inline-block;padding:13px 24px;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;">See Our Work</a></td>'
-        . '<td width="10"></td>'
-        . '<td style="border:1px solid #34343e;border-radius:8px;"><a href="' . esc(rtrim(SITE_URL, '/') . '/resources') . '" style="display:inline-block;padding:12px 24px;color:#e5e5ea;font-size:14px;font-weight:700;text-decoration:none;">Free Guides</a></td>'
-        . '</tr></table>'
-        . '<p style="margin:26px 0 0;font-size:13px;color:#8b8b96;line-height:1.7;">'
-        . 'Need us faster? Email <a href="mailto:' . esc(getSetting('site_email', 'hello@thepietechnologies.com')) . '" style="color:#a78bfa;text-decoration:none;">' . esc(getSetting('site_email', 'hello@thepietechnologies.com')) . '</a>'
-        . ' or WhatsApp <a href="https://wa.me/' . esc(preg_replace('/[^0-9]/', '', getSetting('whatsapp_number', ''))) . '" style="color:#a78bfa;text-decoration:none;">' . esc(getSetting('whatsapp_number', '—')) . '</a>.</p>';
-
-    return emailShell($inner, 'We received your message, ' . $firstName);
+    $composed = EmailTemplates::compose('contact_confirm', array(
+        'name'    => $submission['name'],
+        'email'   => $submission['email'],
+        'phone'   => $submission['phone'],
+        'service' => $submission['service'],
+        'message' => nl2br(esc($submission['message'])),
+    ), array(
+        'table' => EmailTemplates::detailTable(emailContactRows($submission)),
+    ));
+    return $composed['html'];
 }
 
-/** Newsletter welcome email. */
+/** Newsletter welcome email (template: newsletter_welcome). */
 function emailNewsletterWelcome($name, $email)
 {
-    $firstName = trim($name) !== '' ? explode(' ', trim($name))[0] : 'there';
-    $inner = '<h1 style="margin:0 0 10px;font-size:26px;color:#ffffff;font-weight:800;letter-spacing:-0.5px;">You&rsquo;re on the list, ' . esc($firstName) . ' 🎉</h1>'
-        . '<p style="margin:0 0 16px;font-size:15px;color:#c7c7d1;line-height:1.7;">Welcome to the growth letter from The Pie Technologies. Once or twice a month you&rsquo;ll get:</p>'
-        . '<p style="margin:0 0 16px;font-size:15px;color:#c7c7d1;line-height:1.9;">&bull;&nbsp; Playbooks we&rsquo;re running right now on live client accounts<br>'
-        . '&bull;&nbsp; New guides, templates and teardowns<br>'
-        . '&bull;&nbsp; Zero fluff, zero spam &mdash; unsubscribe anytime</p>'
-        . '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:6px 0 4px;"><tr><td style="background:#7c3aed;border-radius:8px;">'
-        . '<a href="' . esc(rtrim(SITE_URL, '/') . '/resources') . '" style="display:inline-block;padding:13px 26px;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;">Grab a Free Guide</a>'
-        . '</td></tr></table>';
-    $html = emailShell($inner, 'Welcome aboard');
-    return str_replace('{{UNSUBSCRIBE}}', rtrim(SITE_URL, '/') . '/newsletter.php?unsubscribe=' . urlencode($email), $html);
+    $composed = EmailTemplates::compose('newsletter_welcome', array('name' => $name, 'email' => $email), array(),
+        rtrim(SITE_URL, '/') . '/newsletter.php?unsubscribe=' . urlencode($email));
+    return $composed['html'];
 }

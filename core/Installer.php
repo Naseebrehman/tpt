@@ -23,7 +23,8 @@ class Installer
         'admin_users', 'admin_lockouts', 'schema_migrations', 'contact_submissions',
         'blog_categories', 'blog_posts', 'blog_comments', 'portfolio', 'team_members',
         'testimonials', 'resources', 'newsletter_subscribers', 'chatbot_leads',
-        'payments', 'payment_events', 'settings', 'page_views',
+        'payments', 'payment_events', 'settings', 'notification_emails', 'email_templates',
+        'page_views',
     );
 
     /* =====================================================================
