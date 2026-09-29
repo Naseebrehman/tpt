@@ -163,7 +163,7 @@ function handleChatbotRequest()
     $payload = array(
         'system_instruction' => array('parts' => array(array('text' => $systemInstruction))),
         'contents'           => $contents,
-        'generationConfig'   => array('maxOutputTokens' => max(64, min(8192, (int) getSetting('gemini_max_tokens', '300'))), 'temperature' => max(0, min(2, (float) getSetting('gemini_temperature', '0.7')))),
+        'generationConfig'   => array('maxOutputTokens' => max(64, min(8192, (int) getSetting('gemini_max_tokens', '180'))), 'temperature' => max(0, min(2, (float) getSetting('gemini_temperature', '0.7')))),
     );
 
     $decoded = chatbotCallGemini($apiKey, $payload);

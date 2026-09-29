@@ -121,16 +121,6 @@ INSERT IGNORE INTO settings (setting_key, setting_value) VALUES
 ('tiktok_url', 'https://tiktok.com/@thepietechnologies'),
 ('twitter_url', 'https://x.com/thepietechnologies'),
 ('youtube_url', 'https://youtube.com/@thepietechnologies'),
-('stripe_enabled', '0'),
-('stripe_mode', 'test'),
-('stripe_publishable_key', ''),
-('stripe_secret_key', ''),
-('stripe_webhook_secret', ''),
-('paypal_enabled', '0'),
-('paypal_mode', 'sandbox'),
-('paypal_client_id', ''),
-('paypal_secret', ''),
-('pay_online_enabled', '1'),
 ('maintenance_mode', '0'),
 ('maintenance_ip', '');
 TPT_SEED_SQL;

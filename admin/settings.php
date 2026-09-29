@@ -16,23 +16,21 @@ $textKeys = array(
     'ai_provider1_type', 'ai_provider1_model', 'ai_provider1_base_url', 'ai_provider1_api_key',
     'ai_provider2_type', 'ai_provider2_model', 'ai_provider2_base_url', 'ai_provider2_api_key', 'ai_active_provider',
     'captcha_provider', 'captcha_site_key', 'captcha_secret_key', 'phone_default_country',
-    'brand_primary', 'brand_secondary', 'brand_accent', 'brand_font', 'stripe_webhook_secret',
+    'brand_primary', 'brand_secondary', 'brand_accent', 'brand_font',
     'smtp_host', 'smtp_port', 'smtp_encryption', 'smtp_user', 'smtp_pass', 'smtp_from_name', 'smtp_from_email',
     'gemini_api_key', 'chatbot_system_prompt',
     'site_name', 'site_tagline', 'site_phone', 'site_email', 'site_address', 'whatsapp_number',
     'google_analytics_id', 'facebook_pixel_id', 'meta_title', 'meta_description', 'founder_name', 'maintenance_ip',
     'instagram_url', 'facebook_url', 'linkedin_url', 'tiktok_url', 'twitter_url', 'youtube_url',
-    'stripe_mode', 'stripe_publishable_key', 'stripe_secret_key',
-    'paypal_mode', 'paypal_client_id', 'paypal_secret',
 );
 
 $toggleKeys = array(
-    'sample_content_enabled', 'alia_lead_collection', 'maintenance_mode', 'alia_enabled', 'stripe_enabled',
-    'paypal_enabled', 'pay_online_enabled', 'ai_provider1_enabled', 'ai_provider2_enabled', 'captcha_enabled',
+    'sample_content_enabled', 'alia_lead_collection', 'maintenance_mode', 'alia_enabled',
+    'ai_provider1_enabled', 'ai_provider2_enabled', 'captcha_enabled',
 );
 /* Notification category toggles live on the Notifications tab (notif_cats_save). */
 
-$secretKeys = array('smtp_pass', 'gemini_api_key', 'stripe_secret_key', 'stripe_webhook_secret', 'paypal_secret',
+$secretKeys = array('smtp_pass', 'gemini_api_key',
     'ai_provider1_api_key', 'ai_provider2_api_key', 'captcha_secret_key');
 
 function saveSetting($key, $value)
@@ -256,67 +254,11 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
     <!-- ============================ PAYMENTS ============================ -->
     <div class="a-tabpanel" data-panel="payments">
         <div class="a-card">
-            <h3>Payment settings</h3>
-            <label class="a-check"><input type="checkbox" name="pay_online_enabled" value="1"<?= getSetting('pay_online_enabled', '1') === '1' ? ' checked' : '' ?>> Online payments enabled — the Pay Online page is available</label>
-            <p class="hint">Currency is USD. Sensitive credentials are stored server-side and never returned to public JavaScript or unauthenticated endpoints.</p>
-        </div>
-        <div class="a-card">
-            <h3>Manage payment options</h3>
-            <p class="hint" style="margin-top:-8px">The service list, the PayPal integration and the Stripe integration each have their own section under <strong>Admin → Payments</strong>.</p>
+            <h3>Payment page</h3>
+            <p class="hint">The Pay Online page contains the payment form and separate PayPal and Stripe containers. Provider SDKs are customer-owned browser code; this site stores no gateway credentials and makes no provider API calls.</p>
             <div class="a-toolbar">
-                <a class="a-btn" href="<?= esc(url('admin/payments')) ?>?tab=services"><?= icon('card', 15) ?> Services</a>
-                <a class="a-btn" href="<?= esc(url('admin/payments')) ?>?tab=paypal"><?= icon('loop', 15) ?> PayPal code</a>
-                <a class="a-btn" href="<?= esc(url('admin/payments')) ?>?tab=stripe"><?= icon('card', 15) ?> Stripe code</a>
-            </div>
-        </div>
-        <div class="a-card">
-            <h3>PayPal</h3>
-            <div class="a-field">
-                <label class="a-check"><input type="checkbox" name="paypal_enabled" value="1"<?= getSetting('paypal_enabled', '0') === '1' ? ' checked' : '' ?>> PayPal enabled — shown as a payment option</label>
-            </div>
-            <div class="a-field">
-                <label for="paypal_mode">Environment</label>
-                <select id="paypal_mode" name="paypal_mode">
-                    <option value="sandbox"<?= getSetting('paypal_mode', 'sandbox') === 'sandbox' ? ' selected' : '' ?>>Sandbox (no real charges)</option>
-                    <option value="live"<?= getSetting('paypal_mode', 'sandbox') === 'live' ? ' selected' : '' ?>>Live (real charges)</option>
-                </select>
-            </div>
-            <div class="a-field">
-                <label for="paypal_client_id">Client ID (public — used by the PayPal Buttons)</label>
-                <input id="paypal_client_id" name="paypal_client_id" type="text" value="<?= esc(getSetting('paypal_client_id')) ?>" autocomplete="off" placeholder="AZXXimNpbgCVl9ho1c8I6KZ9vWrWdlcIKm7lMt5qS3IY6iEqoikTCX0zVoURHy4pmBq0kHNklLQP83TK">
-                <div class="hint">Leave empty to use the default provided client ID. The client ID is public by design.</div>
-            </div>
-            <div class="a-field">
-                <label for="paypal_secret">Secret (server-side only)</label>
-                <span class="pw-wrap"><input id="paypal_secret" name="paypal_secret" type="password" value="" autocomplete="new-password"><button class="pw-toggle" type="button" data-target="paypal_secret">Show</button></span>
-                <div class="hint">Used only for server-side order creation/capture. Never printed into page source or JavaScript. Buttons still work without it (client-side orders), but server-side verification is recommended.</div>
-            </div>
-        </div>
-        <div class="a-card">
-            <h3>Stripe</h3>
-            <div class="a-field">
-                <label class="a-check"><input type="checkbox" name="stripe_enabled" value="1"<?= getSetting('stripe_enabled', '0') === '1' ? ' checked' : '' ?>> Stripe enabled — card payments available</label>
-            </div>
-            <div class="a-field">
-                <label for="stripe_mode">Environment / mode</label>
-                <select id="stripe_mode" name="stripe_mode">
-                    <option value="test"<?= getSetting('stripe_mode', 'test') === 'test' ? ' selected' : '' ?>>Test (no real charges)</option>
-                    <option value="live"<?= getSetting('stripe_mode', 'test') === 'live' ? ' selected' : '' ?>>Live (real charges)</option>
-                </select>
-            </div>
-            <div class="a-field">
-                <label for="stripe_publishable_key">Publishable key (public)</label>
-                <input id="stripe_publishable_key" name="stripe_publishable_key" type="text" value="<?= esc(getSetting('stripe_publishable_key')) ?>" placeholder="pk_test_…" autocomplete="off">
-            </div>
-            <div class="a-field">
-                <label for="stripe_secret_key">Secret key (server-side only)</label>
-                <span class="pw-wrap"><input id="stripe_secret_key" name="stripe_secret_key" type="password" value="" autocomplete="new-password" placeholder="sk_test…"><button class="pw-toggle" type="button" data-target="stripe_secret_key">Show</button></span>
-                <div class="hint">Server-side only. Never printed into page source or JavaScript.</div>
-            </div>
-            <div class="a-field">
-                <label for="stripe_webhook_secret">Webhook signing secret</label>
-                <span class="pw-wrap"><input id="stripe_webhook_secret" name="stripe_webhook_secret" type="password" value="" autocomplete="new-password"><button class="pw-toggle" type="button" data-target="stripe_webhook_secret">Show</button></span>
-                <div class="hint">For verifying signed Stripe webhooks at <?= esc(rtrim(SITE_URL, '/') . '/api/webhooks/stripe') ?>.</div>
+                <a class="a-btn" href="<?= esc(url('admin/payments')) ?>"><?= icon('card', 15) ?> Manage service dropdown</a>
+                <a class="a-btn" href="<?= esc(url('pay-online')) ?>" target="_blank" rel="noopener">Preview Pay Online</a>
             </div>
         </div>
     </div>

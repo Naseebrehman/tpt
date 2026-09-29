@@ -10,7 +10,7 @@ class Settings
         foreach (array('smtp_from_email', 'smtp_reply_to', 'site_email') as $key) {
             if (!empty($input[$key]) && !filter_var($input[$key], FILTER_VALIDATE_EMAIL)) { return 'Invalid email: ' . $key; }
         }
-        foreach (array('smtp_encryption' => array('tls','ssl','none'), 'paypal_mode' => array('sandbox','live'), 'stripe_mode' => array('test','live'), 'brand_font' => array('default','system'),
+        foreach (array('smtp_encryption' => array('tls','ssl','none'), 'brand_font' => array('default','system'),
             'ai_provider1_type' => array('gemini','openai'), 'ai_provider2_type' => array('gemini','openai'),
             'ai_active_provider' => array('1','2'), 'captcha_provider' => array('turnstile','hcaptcha','recaptcha')) as $key => $allowed) {
             if (isset($input[$key]) && !in_array($input[$key], $allowed, true)) { return 'Invalid option: ' . $key; }

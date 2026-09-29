@@ -96,15 +96,6 @@ WHERE NOT EXISTS (SELECT 1 FROM blog_posts WHERE slug = 'local-seo-what-moves-ma
 -- New keys are inserted only if missing; existing values are never overwritten
 -- except where they still equal the old shipped defaults.
 INSERT INTO settings (setting_key, setting_value) SELECT 'alia_enabled', '1' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'alia_enabled');
-INSERT INTO settings (setting_key, setting_value) SELECT 'stripe_enabled', '0' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'stripe_enabled');
-INSERT INTO settings (setting_key, setting_value) SELECT 'stripe_mode', 'test' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'stripe_mode');
-INSERT INTO settings (setting_key, setting_value) SELECT 'stripe_publishable_key', '' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'stripe_publishable_key');
-INSERT INTO settings (setting_key, setting_value) SELECT 'stripe_secret_key', '' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'stripe_secret_key');
-INSERT INTO settings (setting_key, setting_value) SELECT 'paypal_enabled', '0' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'paypal_enabled');
-INSERT INTO settings (setting_key, setting_value) SELECT 'paypal_mode', 'sandbox' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'paypal_mode');
-INSERT INTO settings (setting_key, setting_value) SELECT 'paypal_client_id', '' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'paypal_client_id');
-INSERT INTO settings (setting_key, setting_value) SELECT 'paypal_secret', '' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'paypal_secret');
-INSERT INTO settings (setting_key, setting_value) SELECT 'pay_online_enabled', '1' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'pay_online_enabled');
 
 UPDATE settings SET setting_value = '+1 (213) 257 8242' WHERE setting_key = 'site_phone' AND setting_value = '+92 300 0000000';
 UPDATE settings SET setting_value = 'info@thepietechnologies.com' WHERE setting_key = 'site_email' AND setting_value = 'hello@thepietechnologies.com';

@@ -22,7 +22,6 @@ class ApiController
             }
             $_POST = $input;
         }
-        if ($file === 'pay-online.php' && getSetting('pay_online_enabled', '1') !== '1') { self::json(array('success' => false, 'message' => 'Payments are unavailable.'), 503); return; }
         $_SERVER['HTTP_ACCEPT'] = 'application/json';
         if ($submit) { $_POST[$submit] = '1'; }
         require BASE_PATH . '/' . $file;
