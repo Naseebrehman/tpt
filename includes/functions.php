@@ -427,7 +427,11 @@ function currentAdmin()
     if (!isAdminLoggedIn()) {
         return null;
     }
-    return dbOne('SELECT * FROM admin_users WHERE id = ?', array((int) $_SESSION['admin_id']));
+    $admin = dbOne('SELECT * FROM admin_users WHERE id = ?', array((int) $_SESSION['admin_id']));
+    if ($admin && isset($admin['is_active']) && (int) $admin['is_active'] === 0) {
+        return null;
+    }
+    return $admin;
 }
 
 /* ===========================================================================

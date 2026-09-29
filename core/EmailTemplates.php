@@ -21,6 +21,9 @@ class EmailTemplates
         'name', 'email', 'phone', 'service', 'amount', 'payment_method',
         'transaction_id', 'message', 'site_name', 'site_url', 'date',
         'company', 'reference', 'status', 'ip', 'budget', 'subject', 'admin_url',
+        'post_title', 'post_url', 'post_excerpt', 'featured_image', 'author', 'reading_time',
+        'resource_title', 'resource_url', 'resource_description', 'cover_image', 'category', 'resource_type',
+        'custom_message',
     );
 
     /**
@@ -104,6 +107,24 @@ class EmailTemplates
                     . '<p style="margin:0 0 16px;font-size:15px;color:#c7c7d1;line-height:1.7;">Welcome to the growth letter from {{site_name}}. Once or twice a month you&rsquo;ll get playbooks, new guides and teardowns &mdash; zero fluff, unsubscribe anytime.</p>'
                     . '<p style="margin:22px 0 0;"><a href="{{site_url}}" style="display:inline-block;padding:13px 26px;background:#7c3aed;border-radius:8px;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;">Grab a Free Guide</a></p>',
             ),
+            'subscriber_blog_notify' => array(
+                'subject' => 'New on the Blog: {{post_title}} — {{site_name}}',
+                'body'    => '<p style="margin:0 0 10px;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#a78bfa;">NEW BLOG POST</p>'
+                    . '<h1 style="margin:0 0 14px;font-size:24px;color:#ffffff;font-weight:800;letter-spacing:-0.5px;line-height:1.3;">{{post_title}}</h1>'
+                    . '{{featured_image}}'
+                    . '<p style="margin:0 0 18px;font-size:15px;color:#c7c7d1;line-height:1.7;">{{post_excerpt}}</p>'
+                    . '{{custom_message}}'
+                    . '<p style="margin:24px 0 0;"><a href="{{post_url}}" style="display:inline-block;padding:13px 28px;background:#7c3aed;border-radius:8px;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;">Read the Full Post &rarr;</a></p>',
+            ),
+            'subscriber_resource_notify' => array(
+                'subject' => 'New Resource: {{resource_title}} — {{site_name}}',
+                'body'    => '<p style="margin:0 0 10px;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#22d3ee;">NEW FREE RESOURCE</p>'
+                    . '<h1 style="margin:0 0 14px;font-size:24px;color:#ffffff;font-weight:800;letter-spacing:-0.5px;line-height:1.3;">{{resource_title}}</h1>'
+                    . '{{cover_image}}'
+                    . '<p style="margin:0 0 18px;font-size:15px;color:#c7c7d1;line-height:1.7;">{{resource_description}}</p>'
+                    . '{{custom_message}}'
+                    . '<p style="margin:24px 0 0;"><a href="{{resource_url}}" style="display:inline-block;padding:13px 28px;background:#7c3aed;border-radius:8px;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;">Access Resource &rarr;</a></p>',
+            ),
         );
     }
 
@@ -122,6 +143,8 @@ class EmailTemplates
             'welcome'                => 'Welcome email',
             'system'                 => 'System notification',
             'newsletter_welcome'     => 'Newsletter welcome',
+            'subscriber_blog_notify'     => 'Subscriber Blog Notification',
+            'subscriber_resource_notify' => 'Subscriber Resource Notification',
         );
         return $labels;
     }

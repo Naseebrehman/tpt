@@ -99,9 +99,9 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
     <h3>Quick links</h3>
     <div class="quick-grid">
         <a href="submissions.php"><?= icon('mail', 20) ?>Manage Submissions</a>
-        <a href="blog-edit.php"><?= icon('edit', 20) ?>Write Blog Post</a>
-        <a href="resources.php#add"><?= icon('download', 20) ?>Upload Resource</a>
-        <a href="team.php#add"><?= icon('users', 20) ?>Add Team Member</a>
+        <a href="media.php"><?= icon('image', 20) ?>Media Library</a>
+        <a href="admins.php"><?= icon('shield', 20) ?>Admin Management</a>
+        <a href="payments.php"><?= icon('card', 20) ?>Payment Settings</a>
         <a href="settings.php"><?= icon('cpu', 20) ?>Settings</a>
     </div>
 </div>

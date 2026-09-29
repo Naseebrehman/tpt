@@ -18,7 +18,7 @@ require BASE_PATH . '/app/Models/Repository.php';
 $count = 0;
 function check($condition, $message) { global $count; $count++; if (!$condition) { throw new RuntimeException('FAIL: ' . $message); } echo 'PASS: ' . $message . PHP_EOL; }
 $router = require BASE_PATH . '/app/routes.php';
-foreach (array('/', '/about', '/services', '/services/seo', '/work', '/work/example', '/resources', '/resources/example', '/portfolio', '/portfolio/', '/blog/example', '/contact', '/search', '/pay-online', '/legal/privacy-policy', '/admin', '/admin/login', '/admin/dashboard', '/admin/leads', '/admin/content', '/admin/profile', '/sitemap.xml') as $path) {
+foreach (array('/', '/about', '/services', '/services/seo', '/work', '/work/example', '/resources', '/resources/example', '/portfolio', '/portfolio/', '/blog/example', '/contact', '/search', '/pay-online', '/legal/privacy-policy', '/admin', '/admin/login', '/admin/dashboard', '/admin/leads', '/admin/content', '/admin/profile', '/admin/admins', '/admin/media', '/sitemap.xml') as $path) {
     check(isset($router->resolve('GET', $path)['handler']), 'route ' . $path);
 }
 foreach (array('/api/chat','/api/contact','/api/lead','/api/newsletter') as $path) {

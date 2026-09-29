@@ -100,3 +100,97 @@ function emailNewsletterWelcome($name, $email)
         rtrim(SITE_URL, '/') . '/newsletter.php?unsubscribe=' . urlencode($email));
     return $composed['html'];
 }
+
+/** Subscriber notification for new blog post. */
+function emailBlogNotification($post, $subscriber, $customMessage = '', $customSubject = '')
+{
+    $siteUrl  = rtrim(SITE_URL, '/');
+    $slug     = !empty($post['slug']) ? $post['slug'] : (string)($post['id'] ?? '');
+    $postUrl  = $siteUrl . '/blog/' . rawurlencode($slug);
+    $unsubUrl = $siteUrl . '/newsletter.php?unsubscribe=' . urlencode($subscriber['email']);
+
+    $imgHtml = '';
+    if (!empty($post['featured_image'])) {
+        $imgSrc = (strpos($post['featured_image'], 'http') === 0) ? $post['featured_image'] : $siteUrl . '/' . ltrim($post['featured_image'], '/');
+        $imgHtml = '<div style="margin:0 0 18px;"><img src="' . esc($imgSrc) . '" alt="' . esc($post['title']) . '" style="width:100%;max-width:536px;height:auto;border-radius:10px;display:block;border:1px solid #23232b;"></div>';
+    }
+
+    $msgHtml = '';
+    if (!empty($customMessage)) {
+        $msgHtml = '<div style="margin:0 0 18px;padding:14px 18px;border-left:3px solid #7c3aed;background:rgba(124,58,237,.08);border-radius:6px;font-size:14px;color:#d1d5db;line-height:1.6;">' . nl2br(esc($customMessage)) . '</div>';
+    }
+
+    $subName = !empty($subscriber['name']) ? $subscriber['name'] : 'Subscriber';
+
+    $vars = array(
+        'name'         => $subName,
+        'email'        => $subscriber['email'],
+        'post_title'   => $post['title'],
+        'post_url'     => $postUrl,
+        'post_excerpt' => !empty($post['excerpt']) ? $post['excerpt'] : mb_substr(strip_tags($post['content'] ?? ''), 0, 200),
+        'author'       => !empty($post['author']) ? $post['author'] : 'TPT Team',
+        'reading_time' => !empty($post['reading_time']) ? (string)$post['reading_time'] : '3',
+    );
+
+    $raw = array(
+        'featured_image' => $imgHtml,
+        'custom_message' => $msgHtml,
+    );
+
+    $composed = EmailTemplates::compose('subscriber_blog_notify', $vars, $raw, $unsubUrl);
+    if ($customSubject !== '') {
+        $composed['subject'] = str_replace(
+            array('{{post_title}}', '{{site_name}}', '{{name}}'),
+            array($post['title'], getSetting('site_name', SITE_NAME), $subName),
+            $customSubject
+        );
+    }
+    return $composed;
+}
+
+/** Subscriber notification for new resource. */
+function emailResourceNotification($resource, $subscriber, $customMessage = '', $customSubject = '')
+{
+    $siteUrl  = rtrim(SITE_URL, '/');
+    $slug     = !empty($resource['slug']) ? $resource['slug'] : (string)($resource['id'] ?? '');
+    $resUrl   = $siteUrl . '/resources/' . rawurlencode($slug);
+    $unsubUrl = $siteUrl . '/newsletter.php?unsubscribe=' . urlencode($subscriber['email']);
+
+    $imgHtml = '';
+    if (!empty($resource['cover_image'])) {
+        $imgSrc = (strpos($resource['cover_image'], 'http') === 0) ? $resource['cover_image'] : $siteUrl . '/' . ltrim($resource['cover_image'], '/');
+        $imgHtml = '<div style="margin:0 0 18px;"><img src="' . esc($imgSrc) . '" alt="' . esc($resource['title']) . '" style="width:100%;max-width:536px;height:auto;border-radius:10px;display:block;border:1px solid #23232b;"></div>';
+    }
+
+    $msgHtml = '';
+    if (!empty($customMessage)) {
+        $msgHtml = '<div style="margin:0 0 18px;padding:14px 18px;border-left:3px solid #22d3ee;background:rgba(34,211,238,.08);border-radius:6px;font-size:14px;color:#d1d5db;line-height:1.6;">' . nl2br(esc($customMessage)) . '</div>';
+    }
+
+    $subName = !empty($subscriber['name']) ? $subscriber['name'] : 'Subscriber';
+
+    $vars = array(
+        'name'                 => $subName,
+        'email'                => $subscriber['email'],
+        'resource_title'       => $resource['title'],
+        'resource_url'         => $resUrl,
+        'resource_description' => !empty($resource['description']) ? $resource['description'] : '',
+        'category'             => !empty($resource['category']) ? $resource['category'] : 'Growth Library',
+        'resource_type'        => !empty($resource['resource_type']) ? ucfirst($resource['resource_type']) : 'Guide',
+    );
+
+    $raw = array(
+        'cover_image'    => $imgHtml,
+        'custom_message' => $msgHtml,
+    );
+
+    $composed = EmailTemplates::compose('subscriber_resource_notify', $vars, $raw, $unsubUrl);
+    if ($customSubject !== '') {
+        $composed['subject'] = str_replace(
+            array('{{resource_title}}', '{{site_name}}', '{{name}}'),
+            array($resource['title'], getSetting('site_name', SITE_NAME), $subName),
+            $customSubject
+        );
+    }
+    return $composed;
+}
