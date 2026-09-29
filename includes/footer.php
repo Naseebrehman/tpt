@@ -99,6 +99,7 @@ $pageLibs = isset($pageLibs) && is_array($pageLibs) ? $pageLibs : array();
 <script>
 window.PIE = <?= json_encode(array(
     'base' => BASE_URL,
+    'siteUrl' => rtrim(SITE_URL, '/') . BASE_URL,
     'api' => asset('api/chat'),
     'csrf' => generateCSRF(),
     'fallback' => getSetting('alia_fallback', "I don't want to guess. You can speak with the TPT team here."),
@@ -119,7 +120,6 @@ window.PIE = <?= json_encode(array(
 <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/intlTelInput.min.js" defer></script>
 <?php endif; ?>
 <script src="<?= asset('assets/js/main.js') ?>?v=<?= (int) filemtime(BASE_PATH . '/assets/js/main.js') ?>" defer></script>
-<?php if (!empty($pageLibs['payment'])): ?><script src="<?= asset('assets/js/payment.js') ?>?v=<?= (int) filemtime(BASE_PATH . '/assets/js/payment.js') ?>" defer></script><?php endif; ?>
 <?php if (getSetting('alia_enabled', '1') === '1'): ?>
 <script src="<?= asset('assets/js/chatbot.js') ?>?v=<?= (int) filemtime(BASE_PATH . '/assets/js/chatbot.js') ?>" defer></script>
 <?php endif; ?>

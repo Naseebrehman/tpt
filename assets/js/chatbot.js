@@ -67,6 +67,42 @@
     return 'msg-' + (++state.messageId) + '-' + Date.now().toString(36);
   }
 
+  function renderBotText(text) {
+    var base = ((PIE.siteUrl || window.location.origin) + (PIE.siteUrl ? '' : (PIE.base || ''))).replace(/\/?$/, '/');
+    var raw = String(text || '').replace(/\*\*(\/(?:contact|about|services|portfolio|resources|blog|terms|privacy-policy)(?:\/[a-z0-9-]+)?)\*\*/gi, '$1');
+    raw = raw.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+|\/(?:contact|about|services|portfolio|resources|blog|terms|privacy-policy)(?:\/[a-z0-9-]+)?)\)/gi, '$1 $2');
+    var pattern = /https?:\/\/[^\s<>]+|\/(?:legal\/)?(?:contact|about|services|portfolio|resources|blog|terms|privacy-policy)(?:\/[a-z0-9-]+)?|\b(?:contact(?: us)?|about|services|portfolio|resources|blog|terms|privacy policy|growth library|seo|local seo|web development|app development|digital marketing|meta ads|social media management|ai optimization|graphic design|data analytics) page\b/gi;
+    var html = '';
+    var last = 0;
+    var match;
+    while ((match = pattern.exec(raw))) {
+      html += esc(raw.slice(last, match.index));
+      var label = match[0];
+      var href = label;
+      if (/ page$/i.test(label)) {
+        var slug = label.toLowerCase().replace(/ page$/, '');
+        var servicePages = { 'seo':'seo', 'local seo':'local-seo', 'web development':'web-development', 'app development':'app-development', 'digital marketing':'digital-marketing', 'meta ads':'meta-ads', 'social media management':'social-media-management', 'ai optimization':'ai-business-optimization', 'graphic design':'graphic-design', 'data analytics':'data-analytics' };
+        if (slug === 'contact us') slug = 'contact';
+        else if (slug === 'growth library') slug = 'resources';
+        else if (slug === 'privacy policy') slug = 'privacy-policy';
+        else if (slug === 'work') slug = 'portfolio';
+        else if (servicePages[slug]) slug = 'services/' + servicePages[slug];
+        href = new URL(slug, base).toString();
+      } else if (label.charAt(0) === '/') {
+        href = new URL(label.replace(/^\//, ''), base).toString();
+      }
+      var trailing = '';
+      var linkLabel = label;
+      if (/^https?:/i.test(label)) {
+        while (/[.,!?;:]$/.test(href)) { trailing = href.slice(-1) + trailing; href = href.slice(0, -1); }
+        linkLabel = href;
+      }
+      html += '<a href="' + esc(href) + '"' + (/^https?:\/\//i.test(label) ? ' target="_blank" rel="noopener noreferrer"' : '') + '>' + esc(linkLabel) + '</a>' + esc(trailing);
+      last = match.index + match[0].length;
+    }
+    return html + esc(raw.slice(last));
+  }
+
   function createBubble(role, content, options) {
     options = options || {};
     var wrap = document.createElement('div');
@@ -85,7 +121,7 @@
       avatarHtml +
       '<div class="msg-bubble-wrap">' +
         '<div class="msg-bubble ' + role + '" role="log" aria-live="polite">' +
-          (options.isHTML ? content : esc(content)) +
+          (options.isHTML ? content : (role === 'bot' ? renderBotText(content) : esc(content))) +
         '</div>' +
         '<div class="msg-meta">' +
           '<span class="msg-time">' + (options.time || nowTime()) + '</span>' +
@@ -104,21 +140,29 @@
    * The browser clamps the target when the conversation is shorter than the
    * viewport, so short threads simply stay in place.
    */
-  function revealMessage(el) {
-    if (!el) return;
-    if (state.userScrolledUp) return; /* the visitor is reading history — leave it alone */
-    var target = Math.max(0, (el.offsetTop || 0) - 8);
+  function revealMessage(el, role) {
+    if (!el || state.userScrolledUp) return;
+    var target;
+    if (role === 'user' || role === 'typing') {
+      target = messages.scrollHeight;
+    } else {
+      /* Position the top of a fresh assistant response in view so long replies
+         are read from their beginning rather than being jumped to the end. */
+      var box = messages.getBoundingClientRect();
+      var item = el.getBoundingClientRect();
+      target = messages.scrollTop + item.top - box.top - 8;
+    }
     try {
-      messages.scrollTo({ top: target, behavior: reduceMotion ? 'auto' : 'smooth' });
+      messages.scrollTo({ top: Math.max(0, target), behavior: reduceMotion ? 'auto' : 'smooth' });
     } catch (e) {
-      messages.scrollTop = target;
+      messages.scrollTop = Math.max(0, target);
     }
   }
 
   function appendBubble(role, content, options) {
     var el = createBubble(role, content, options);
     messages.appendChild(el);
-    requestAnimationFrame(function () { revealMessage(el); });
+    requestAnimationFrame(function () { revealMessage(el, role); });
     return el;
   }
 
@@ -134,7 +178,7 @@
     var bubble = el.querySelector('.msg-bubble');
     if (bubble) { bubble.classList.add('error'); }
     messages.appendChild(el);
-    requestAnimationFrame(function () { revealMessage(el); });
+    requestAnimationFrame(function () { revealMessage(el, 'bot'); });
     return el;
   }
 
@@ -148,7 +192,7 @@
       el.setAttribute('aria-live', 'polite');
       el.setAttribute('aria-label', 'Alia is typing');
       messages.appendChild(el);
-      requestAnimationFrame(function () { revealMessage(el); });
+      requestAnimationFrame(function () { revealMessage(el, 'typing'); });
     } else if (!on && el) {
       el.parentNode.removeChild(el);
     }
@@ -167,8 +211,7 @@
       setTimeout(function () { input.focus(); }, 250);
       if (!messages.childElementCount) startConversation();
       state.userScrolledUp = false;
-      var all = messages.querySelectorAll('.chat-msg-wrapper');
-      if (all.length) { requestAnimationFrame(function () { revealMessage(all[all.length - 1]); }); }
+      if (messages.childElementCount) { requestAnimationFrame(function () { messages.scrollTop = messages.scrollHeight; }); }
     } else {
       typing(false);
     }

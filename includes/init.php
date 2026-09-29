@@ -42,10 +42,9 @@ require_once __DIR__ . '/data.php';
 if (getSetting('maintenance_mode', '0') === '1') {
     $script     = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '';
     $isAdminArea = strpos(parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH), '/admin') === 0 || strpos($script, '/admin/') !== false;
-    $isWebhook = preg_match('~/api/webhooks/stripe/?$~D', parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH));
     $allowedIp  = getSetting('maintenance_ip', '');
     $clientIp   = pieClientIp();
-    if (!$isAdminArea && !$isWebhook && !isAdminLoggedIn() && ($allowedIp === '' || $clientIp !== $allowedIp)) {
+    if (!$isAdminArea && !isAdminLoggedIn() && ($allowedIp === '' || $clientIp !== $allowedIp)) {
         http_response_code(503);
         require BASE_PATH . '/maintenance.php';
         exit;
@@ -69,8 +68,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && !isAdminLoggedIn()) {
     foreach ($_POST as $fieldValue) {
         if (!is_scalar($fieldValue)) { http_response_code(422); header('Content-Type: application/json'); echo json_encode(array('success' => false, 'message' => 'Invalid form field.')); exit; }
     }
-    $requestPath = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
-    if (strpos($requestPath, '/api/webhooks/') === false && !Ratelimit::allow('post:' . pieClientIp(), 60, 600)) {
+    if (!Ratelimit::allow('post:' . pieClientIp(), 60, 600)) {
         http_response_code(429);
         header('Retry-After: 600');
         header('Content-Type: application/json; charset=utf-8');

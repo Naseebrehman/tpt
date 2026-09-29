@@ -172,8 +172,8 @@ body:has(.whatsapp-float) .footer-compact .footer-bottom{padding-left:56px}
 /* CDN-fallback stack: never cut cards off when Swiper is unavailable. */
 .testimonial-swiper.swiper-fallback .swiper-wrapper{display:grid;gap:22px}
 @media (max-width:640px){
-  .testimonial-card{padding:22px 18px;gap:16px;border-radius:18px}
-  .testimonial-quote{font-size:clamp(1.02rem,4.6vw,1.25rem);line-height:1.5}
+  .testimonial-card{width:100%;padding:20px 16px;gap:14px;border-radius:16px;text-align:left;align-items:stretch}
+  .testimonial-quote{font-size:clamp(.92rem,3.8vw,1.08rem);line-height:1.55;letter-spacing:0}
   .testimonial-who{gap:11px}
   .testimonial-who img,.testimonial-who .avatar-fallback{width:42px;height:42px}
   .testimonial-who strong{font-size:.9rem}
@@ -260,49 +260,13 @@ body:has(.whatsapp-float) .footer-compact .footer-bottom{padding-left:56px}
 .pay-summary dd{margin:0;color:#fff;font-size:.92rem;overflow-wrap:anywhere;text-align:right}
 .pay-summary dd.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.82rem}
 
-/* Stripe Element + PayPal buttons containers */
-.stripe-element{min-height:48px;border-radius:12px}
-.paypal-buttons{max-width:420px;min-width:min(100%,260px);margin-inline:auto}
-#paypalButtonWrap,#stripePaymentWrap{border:1px solid var(--line);border-radius:16px;padding:18px;background:rgba(255,255,255,.02)}
-#stripePaymentWrap .btn-block{width:100%}
-@media (max-width:640px){
-  .pay-result{padding:26px 16px}
-  .pay-summary dd{text-align:left}
-  .pay-summary>div{flex-direction:column;gap:2px}
-}
-
 /* =====================================================================
    Global overflow guards (Task 23)
    ===================================================================== */
 img{max-width:100%}
 .form-grid input,.form-grid select,.form-grid textarea{max-width:100%}
 blockquote,pre,table{max-width:100%}
-.iti,.captcha-field,.paypal-buttons,.stripe-element{max-width:100%}
-
-/* =====================================================================
-   Pay Online — one section per payment method (PayPal · Stripe · Invoice)
-   The surrounding form, headings and buttons stay identical across methods.
-   ===================================================================== */
-.pay-method-sections{margin-top:14px}
-.pay-method-section{
-  border:1px solid var(--line);border-radius:16px;padding:18px;background:rgba(255,255,255,.02);
-}
-.pay-method-section[hidden]{display:none}
-.pay-method-section .eyebrow{margin-bottom:12px}
-.pay-section-note p{color:var(--muted);font-size:.9rem;line-height:1.7}
-.pay-section-note p + p{margin-top:8px}
-/* Admin-managed SDK / integration code renders inside this themed box. */
-.pay-sdk-box{
-  border:1px solid var(--line);border-radius:14px;padding:16px;background:var(--surface);
-  overflow-x:auto;
-}
-.pay-sdk-box > *{max-width:100%}
-.pay-sdk-box iframe{max-width:100%;border:0;width:100%;min-height:320px}
-.pay-sdk-box img{max-width:100%;height:auto}
-@media (max-width:640px){
-  .pay-method-section{padding:14px;border-radius:14px}
-  .pay-sdk-box{padding:12px}
-}
+.iti,.captcha-field{max-width:100%}
 
 /* =====================================================================
    Blog post — mobile reading layout (Task 4)
@@ -348,4 +312,30 @@ blockquote,pre,table{max-width:100%}
 @media (max-width:640px){
   .newsletter-points li{font-size:.85rem}
   .newsletter-panel{border-radius:16px}
+}
+
+/* Pay Online: predictable form widths and independent SDK mount points. */
+.payment-layout{grid-template-columns:minmax(0,1.25fr) minmax(240px,.75fr)}
+.payment-form,.payment-form .form-grid,.payment-form .field{min-width:0}
+.payment-sdk-slot{padding:18px;border:1px solid var(--line-strong);border-radius:14px;background:var(--surface-2)}
+.payment-sdk-slot[hidden]{display:none!important}
+.payment-sdk-slot h3{font-size:1rem;margin:0 0 12px}
+.payment-sdk-container{width:100%;min-height:44px;max-width:100%}
+.payment-sdk-hint{margin:10px 0 0;color:var(--muted-2);font-size:.78rem;line-height:1.5}
+@media(max-width:720px){.payment-layout{grid-template-columns:minmax(0,1fr)}.payment-sdk-slot{padding:15px}}
+
+/* Keep Alia above the sticky navigation and inside narrow safe areas. */
+.chatbot{z-index:1200;right:max(18px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom))}
+.chatbot-window{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:94px;z-index:1201;max-height:calc(100dvh - 120px)}
+@media(max-width:480px){
+  .chatbot{right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom))}
+  .chatbot-window{position:fixed;right:12px;bottom:calc(78px + env(safe-area-inset-bottom));width:calc(100vw - 24px);height:min(640px,calc(100dvh - 100px));max-height:calc(100dvh - 100px);border-radius:18px}
+}
+/* Testimonials: use a single-column, tightly padded card on phones. */
+@media(max-width:480px){
+  .testimonial-swiper,.testimonial-swiper .swiper-wrapper,.testimonial-swiper .swiper-slide{width:100%;max-width:100%;min-width:0}
+  .testimonial-card{padding:16px 13px;gap:12px}
+  .testimonial-quote{font-size:.94rem;line-height:1.52}
+  .testimonial-stars{font-size:.88rem;letter-spacing:3px}
+  .testimonial-who{gap:9px}
 }

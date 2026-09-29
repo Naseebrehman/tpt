@@ -123,7 +123,7 @@ function chatbotCallGemini($apiKey, $payload)
  * Keep answers short: trim anything well beyond a readable chat bubble at a
  * sentence boundary so Alia never returns a wall of text.
  */
-function aliaTrimReply($reply, $limit = 700)
+function aliaTrimReply($reply, $limit = 360)
 {
     $reply = trim((string) $reply);
     if (mb_strlen($reply) <= $limit) {

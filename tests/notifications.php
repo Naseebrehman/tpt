@@ -1,7 +1,7 @@
 <?php
 /**
  * Dependency-free tests for the notification / email template / CAPTCHA /
- * AI provider / payment notification modules (Tasks 6–16, 20).
+ * AI provider, notification, and contact/email modules (Tasks 6–16, 20).
  * Run: php tests/notifications.php
  */
 error_reporting(E_ALL);
@@ -187,23 +187,10 @@ setFakeSetting('ai_provider2_model', 'bad model!!');
 $result = AIProviders::chat(array(array('role' => 'user', 'content' => 'hi')), '');
 check(!$result['ok'] && $result['error'] === 'model', 'invalid model name rejected before any network call');
 
-/* ------------------------- payment helpers (Tasks 3/6) ------------------ */
-check(piePaymentMethodLabel('paypal') === 'PayPal', 'payment method label PayPal');
-check(piePaymentMethodLabel('stripe') === 'Credit/Debit Card — Stripe', 'payment method label Stripe');
-$payment = array('token' => str_repeat('a', 32), 'name' => 'Jo', 'email' => 'jo@example.test', 'phone' => '+15551234567',
-    'service' => 'Web Development', 'amount_usd' => '1500.00', 'method' => 'paypal', 'status' => 'paid', 'provider_ref' => 'ORDER123', 'reference' => '');
-$pv = piePaymentVars($payment);
-check($pv['amount'] === '1,500.00' && $pv['transaction_id'] === 'ORDER123' && $pv['service'] === 'Web Development', 'payment template variables mapped');
-setFakeSetting('paypal_enabled', '1');
-$pieProviders = piePaymentProviders();
-check(isset($pieProviders['paypal']), 'PayPal offered when enabled with a client ID');
-check($pieProviders['paypal']['label'] === 'PayPal', 'PayPal uses the new simple label');
-setFakeSetting('stripe_enabled', '1');
-setFakeSetting('stripe_secret_key', 'sk_test_x');
-setFakeSetting('stripe_publishable_key', 'pk_test_x');
-$pieProviders = piePaymentProviders();
-check(isset($pieProviders['stripe']) && $pieProviders['stripe']['label'] === 'Credit/Debit Card — Stripe', 'Stripe offered with new card label when configured');
-check(piePayPalClientId() !== '', 'PayPal client ID falls back to the provided public ID');
+/* --------------------- provider integration removal ------------------- */
+check(function_exists('piePaymentServices'), 'admin-managed payment service list remains available');
+check(!function_exists('piePaymentProviders') && !function_exists('piePayPalOrder') && !function_exists('pieStripeCheckout'), 'gateway backend helpers are removed');
+check(!function_exists('piePayPalClientId') && !function_exists('pieStripeIntent'), 'gateway credential and intent helpers are removed');
 
 /* -------------------------------- done ---------------------------------- */
 echo "\n$count checks passed.\n";

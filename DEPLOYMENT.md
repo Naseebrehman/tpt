@@ -100,22 +100,20 @@ credentials in a public web form. A hosting operator with CLI access is required
   Configured SMTP failures no longer silently fall back to PHP mail. Success means
   the SMTP server accepted the message, not guaranteed inbox delivery; configure
   SPF/DKIM/DMARC and check spam folders. Admin sees the SMTP failure stage/response.
-- **Payments:** existing Stripe/PayPal/USD workflows remain. Add Stripe signing
-  secret and register `https://YOUR-DOMAIN/api/webhooks/stripe` for
-  `checkout.session.completed` and `checkout.session.async_payment_succeeded`.
-  The signature, timestamp, reference, session ID, USD currency and amount must
-  match before a transaction is marked paid. Event IDs are deduplicated in a DB
-  transaction. Configure test/live settings consistently.
+- **Payments:** the Pay Online page provides the form, service dropdown, and
+  separate PayPal and Stripe client-side mount containers. This project does not
+  include gateway credentials, provider API routes, or payment processing. Add
+  and maintain your own SDK code in the corresponding page containers. Services
+  remain editable in Admin → Payments.
 
 ## API compatibility
 
 GET `/api/search?q=...` returns published resources/articles and matching services.
-POST `/api/contact`, `/api/lead`, `/api/newsletter`, `/api/payment` accept existing
-form fields or a flat JSON object with `csrf_token`. Obtain the token from the
-rendered session-bound form. `/api/lead` shares contact validation and stores in
-contact_submissions (minimum message length 10). These are same-site APIs, not
-public cross-origin integrations. Payment JSON returns a `redirect` URL for the
-hosted checkout/status page; no browser secret is returned.
+POST `/api/contact`, `/api/lead`, `/api/newsletter` accept existing form fields or
+  a flat JSON object with `csrf_token`. Obtain the token from the rendered
+  session-bound form. `/api/lead` shares contact validation and stores in
+  `contact_submissions` (minimum message length 10). These are same-site APIs,
+  not public cross-origin integrations. There is no payment API endpoint.
 
 POST `/api/chat` accepts the current Alia JSON payload plus `csrf_token`; it uses
 an authenticated session token for lead ownership, not client-provided session_id.
@@ -140,11 +138,11 @@ rather than letting arbitrary X-Forwarded-For bypass limits.
   the previous deployment. Static CSS and original assets were not replaced.
 - Login/lockout/logout/password change, all old editor CRUD/upload/export flows,
   new leads/settings/content screens and migrations run twice without data loss.
-- Contact/newsletter/chat/payment success, invalid input, invalid CSRF, throttling,
+- Contact/newsletter/chat success, invalid input, invalid CSRF, throttling,
   database outage, SMTP accepted/rejected credentials, no secrets in public HTML.
-- Stripe sandbox completion/cancellation, signed/forged/stale/duplicate webhook,
-  wrong amount/currency, webhook retry after DB outage; PayPal sandbox approval,
-  capture and repeated status-page loads. Never mark paid from return query flags.
+- Payment form validation, mobile layout, service dropdown options, and both
+  client-side SDK mount containers. No gateway API call or payment capture is
+  expected from this project.
 - Generated canonical/OG/Twitter/JSON-LD/sitemap and noindex overrides.
 
 ## Verified here and remaining scope

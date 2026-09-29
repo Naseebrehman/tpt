@@ -608,12 +608,23 @@
       if (status) { status.className = 'form-status'; status.textContent = ''; }
       clearFieldErrors(form);
       var data = new FormData(form);
+      /* FormData(form) omits the clicked submit button. The PHP contact handler
+         uses this marker to distinguish a real submission from a page request. */
+      if (form.id === 'contactForm') data.set('contact_submit', '1');
       fetch(form.getAttribute('action') || window.location.href, {
         method: 'POST',
         body: data,
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        credentials: 'same-origin',
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
       })
-        .then(function (res) { return res.json(); })
+        .then(function (res) {
+          return res.text().then(function (body) {
+            var json;
+            try { json = JSON.parse(body); } catch (error) { throw new Error('unexpected response'); }
+            if (!res.ok && json && json.success === undefined) throw new Error('request failed');
+            return json;
+          });
+        })
         .then(function (json) {
           if (json && json.success) {
             onSuccess(json, form);

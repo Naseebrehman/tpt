@@ -11,17 +11,17 @@ function dbAll($sql, $params = array()) { return array(); }
 function dbOne($sql, $params = array()) { return null; }
 require BASE_PATH . '/includes/functions.php';
 require BASE_PATH . '/includes/data.php';
-foreach (array('Router','Ratelimit','Settings','Content','StripeWebhook') as $class) { require BASE_PATH . '/core/' . $class . '.php'; }
+foreach (array('Router','Ratelimit','Settings','Content') as $class) { require BASE_PATH . '/core/' . $class . '.php'; }
 foreach (array('PublicController','AdminController','ApiController') as $class) { require BASE_PATH . '/app/Controllers/' . $class . '.php'; }
 require BASE_PATH . '/includes/Mailer.php';
 require BASE_PATH . '/app/Models/Repository.php';
 $count = 0;
 function check($condition, $message) { global $count; $count++; if (!$condition) { throw new RuntimeException('FAIL: ' . $message); } echo 'PASS: ' . $message . PHP_EOL; }
 $router = require BASE_PATH . '/app/routes.php';
-foreach (array('/', '/about', '/services', '/services/seo', '/work', '/work/example', '/resources', '/resources/example', '/portfolio', '/portfolio/', '/blog/example', '/contact', '/search', '/pay-online', '/pay-status', '/pay/secure/' . str_repeat('a', 32), '/legal/privacy-policy', '/admin', '/admin/login', '/admin/dashboard', '/admin/leads', '/admin/content', '/admin/profile', '/sitemap.xml') as $path) {
+foreach (array('/', '/about', '/services', '/services/seo', '/work', '/work/example', '/resources', '/resources/example', '/portfolio', '/portfolio/', '/blog/example', '/contact', '/search', '/pay-online', '/legal/privacy-policy', '/admin', '/admin/login', '/admin/dashboard', '/admin/leads', '/admin/content', '/admin/profile', '/sitemap.xml') as $path) {
     check(isset($router->resolve('GET', $path)['handler']), 'route ' . $path);
 }
-foreach (array('/api/chat','/api/contact','/api/lead','/api/newsletter','/api/payment','/api/webhooks/stripe') as $path) {
+foreach (array('/api/chat','/api/contact','/api/lead','/api/newsletter') as $path) {
     check(isset($router->resolve('POST', $path)['handler']), 'POST route ' . $path);
     check($router->resolve('GET', $path)['status'] === 405, 'method protection ' . $path);
 }
@@ -41,12 +41,8 @@ check(Settings::validate(array('facebook_url'=>'javascript:alert(1)')) !== '', '
 check(Settings::validate(array('smtp_port'=>array('25'))) !== '', 'array field rejected');
 check(Content::path('/about.php?utm_source=test') === '/about', 'canonical removes tracking and extension');
 check(Content::path('/index.php') === '/', 'canonical home');
-$body = '{"id":"evt_test"}'; $secret = 'test-secret'; $timestamp = 1700000000;
-$sig = 't=' . $timestamp . ',v1=' . hash_hmac('sha256', $timestamp . '.' . $body, $secret);
-check(StripeWebhook::validSignature($body, $sig, $secret, $timestamp), 'valid Stripe signature');
-check(!StripeWebhook::validSignature($body . ' ', $sig, $secret, $timestamp), 'tampered Stripe payload');
-check(!StripeWebhook::validSignature($body, $sig, $secret, $timestamp + 301), 'stale Stripe signature');
-check(!StripeWebhook::validSignature($body, $sig, '', $timestamp), 'unconfigured webhook rejected');
+check($router->resolve('POST', '/api/payment')['status'] === 404, 'legacy payment API removed');
+check($router->resolve('POST', '/api/webhooks/stripe')['status'] === 404, 'Stripe webhook API removed');
 $mailer = new PieMailer(array('from_email'=>'sender@example.test','host'=>'smtp.example.test'));
 check(!$mailer->send("victim@example.test\r\nBcc:attacker@example.test", 'Test', 'Test')['success'], 'SMTP recipient injection rejected');
 check(!$mailer->send('victim@example.test', "Test\r\nBcc:attacker", 'Test')['success'], 'SMTP header injection rejected');
