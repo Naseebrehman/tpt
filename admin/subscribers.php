@@ -13,6 +13,7 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
 <div class="a-toolbar">
     <span class="text-muted"><?= count($subscribers) ?> subscriber<?= count($subscribers) === 1 ? '' : 's' ?> · <?= count(array_filter($subscribers, function ($s) { return (int) $s['is_active'] === 1; })) ?> active</span>
     <span class="spacer"></span>
+    <a class="a-btn primary small" href="subscriber-notify.php"><?= icon('send', 15) ?> Send Notification</a>
     <a class="a-btn small" href="export.php?type=subscribers"><?= icon('download', 15) ?> Export CSV</a>
 </div>
 

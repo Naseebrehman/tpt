@@ -31,6 +31,8 @@ $adminNav = array(
     array('key' => 'team',         'label' => 'Team',          'href' => 'team.php',         'icon' => 'users'),
     array('key' => 'testimonials', 'label' => 'Testimonials',  'href' => 'testimonials.php', 'icon' => 'star'),
     array('key' => 'subscribers',  'label' => 'Subscribers',   'href' => 'subscribers.php',  'icon' => 'send'),
+    array('key' => 'media',        'label' => 'Media Library', 'href' => 'media.php',        'icon' => 'image'),
+    array('key' => 'admins',       'label' => 'Admin Management', 'href' => 'admins.php',    'icon' => 'shield'),
     array('key' => 'settings',     'label' => 'Settings',      'href' => 'settings.php',     'icon' => 'cpu'),
 );
 ?>

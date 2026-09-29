@@ -163,6 +163,9 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
             </div>
             <div class="a-toolbar">
                 <button class="a-btn primary" type="submit"><?= icon('check', 16) ?> Save Post</button>
+                <?php if ($post && $post['status'] === 'published'): ?>
+                    <a class="a-btn" href="subscriber-notify.php?type=blog&id=<?= (int) $post['id'] ?>"><?= icon('send', 15) ?> Notify Subscribers</a>
+                <?php endif; ?>
                 <a class="a-btn" href="blog.php">Cancel</a>
                 <?php if ($post): ?><span class="text-muted td-sub">Reading time auto: <?= (int) $post['reading_time'] ?> min · <?= number_format((int) $post['views']) ?> views</span><?php endif; ?>
             </div>

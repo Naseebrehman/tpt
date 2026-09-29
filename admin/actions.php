@@ -74,8 +74,17 @@ switch ($action) {
             'testimonials' => 'testimonials',
             'resources'    => 'resources',
             'subscribers'  => 'newsletter_subscribers',
+            'admins'       => 'admin_users',
         );
         if (!isset($tables[$entity])) { actionJson(false, 'Unknown entity.'); }
+        if ($entity === 'admins') {
+            if ($id === (int) $_SESSION['admin_id']) { actionJson(false, 'You cannot disable your own admin account.'); }
+            $admin = dbOne('SELECT is_active FROM admin_users WHERE id = ?', array($id));
+            if ($admin && (int) $admin['is_active'] === 1) {
+                $rem = dbOne('SELECT COUNT(*) AS c FROM admin_users WHERE is_active = 1 AND id != ?', array($id));
+                if (!$rem || (int) $rem['c'] < 1) { actionJson(false, 'At least one active administrator must remain.'); }
+            }
+        }
         dbExec('UPDATE ' . $tables[$entity] . ' SET is_active = 1 - is_active WHERE id = ?', array($id));
         actionJson(true, 'Status toggled.');
         break;
@@ -90,8 +99,21 @@ switch ($action) {
             'resources'    => 'resources',
             'subscribers'  => 'newsletter_subscribers',
             'comments'     => 'blog_comments',
+            'admins'       => 'admin_users',
+            'media'        => 'media_library',
         );
         if (!isset($tables[$entity])) { actionJson(false, 'Unknown entity.'); }
+        if ($entity === 'admins') {
+            if ($id === (int) $_SESSION['admin_id']) { actionJson(false, 'You cannot delete your own admin account.'); }
+            $cnt = dbOne('SELECT COUNT(*) AS c FROM admin_users');
+            if ($cnt && (int) $cnt['c'] <= 1) { actionJson(false, 'Cannot delete the only administrator account.'); }
+        }
+        if ($entity === 'media') {
+            $media = dbOne('SELECT file_path FROM media_library WHERE id = ?', array($id));
+            if ($media && !empty($media['file_path'])) {
+                deleteUpload($media['file_path']);
+            }
+        }
         dbExec('DELETE FROM ' . $tables[$entity] . ' WHERE id = ?', array($id));
         if ($entity === 'comments') {
             /* deleting a comment is moderation; nothing else to clean */

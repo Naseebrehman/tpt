@@ -36,6 +36,9 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
             <td>
                 <div class="row-actions">
                     <a class="a-btn small" href="<?= url('blog/' . $post['slug']) ?>" target="_blank" rel="noopener">View</a>
+                    <?php if ($post['status'] === 'published'): ?>
+                        <a class="a-btn small" href="subscriber-notify.php?type=blog&id=<?= (int) $post['id'] ?>" title="Send email notification to subscribers"><?= icon('send', 13) ?> Notify</a>
+                    <?php endif; ?>
                     <a class="a-btn small" href="blog-edit.php?id=<?= (int) $post['id'] ?>">Edit</a>
                     <form method="post" action="actions.php" style="display:inline" onsubmit="return confirm('Delete this post permanently?');">
                         <?= csrfField() ?>

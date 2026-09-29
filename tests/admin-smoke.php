@@ -54,6 +54,8 @@ $expectations = array(
     'portfolio'    => array('Portfolio Manager'),
     'team'         => array('Team Manager'),
     'subscribers'  => array('Newsletter Subscribers'),
+    'admins'       => array('Admin Management'),
+    'media'        => array('Media Library'),
     'comments'     => array('Blog Comments'),
     'content'      => array('Content'),
 );

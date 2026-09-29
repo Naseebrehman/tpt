@@ -25,13 +25,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $user = dbOne('SELECT * FROM admin_users WHERE email = ?', array($email));
             if ($user && password_verify($password, $user['password_hash'])) {
-                dbExec('DELETE FROM admin_lockouts WHERE email = ?', array($email));
-                dbExec('UPDATE admin_users SET last_login = NOW() WHERE id = ?', array((int) $user['id']));
-                session_regenerate_id(true);
-                $_SESSION['admin_id']   = (int) $user['id'];
-                $_SESSION['admin_email'] = $user['email'];
-                header('Location: index.php');
-                exit;
+                if (isset($user['is_active']) && (int) $user['is_active'] === 0) {
+                    $error = 'This admin account has been disabled. Please contact an administrator.';
+                } else {
+                    dbExec('DELETE FROM admin_lockouts WHERE email = ?', array($email));
+                    dbExec('UPDATE admin_users SET last_login = NOW() WHERE id = ?', array((int) $user['id']));
+                    session_regenerate_id(true);
+                    $_SESSION['admin_id']   = (int) $user['id'];
+                    $_SESSION['admin_email'] = $user['email'];
+                    header('Location: index.php');
+                    exit;
+                }
             }
 
             /* failed attempt bookkeeping */

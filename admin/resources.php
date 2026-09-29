@@ -117,6 +117,9 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
                 <td><span class="badge <?= $res['is_active'] ? 'active' : 'inactive' ?>"><?= $res['is_active'] ? 'active' : 'hidden' ?></span></td>
                 <td>
                     <div class="row-actions">
+                        <?php if ($res['is_active']): ?>
+                            <a class="a-btn small" href="subscriber-notify.php?type=resource&id=<?= (int) $res['id'] ?>" title="Send email notification to subscribers"><?= icon('send', 13) ?> Notify</a>
+                        <?php endif; ?>
                         <a class="a-btn small" href="resources.php?edit=<?= (int) $res['id'] ?>">Edit</a>
                         <form method="post" action="actions.php" style="display:inline">
                             <?= csrfField() ?>

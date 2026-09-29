@@ -107,4 +107,20 @@ UPDATE settings SET setting_value = 'Clicks are easy. Growth is engineered. A fu
 UPDATE settings SET setting_value = 'The Pie Technologies — Clicks Are Easy. Growth Is Engineered.' WHERE setting_key = 'meta_title' AND setting_value = 'Digital Marketing Agency That Actually Moves Numbers';
 UPDATE settings SET setting_value = 'A growth agency across five disciplines: Meta Ads, Google Ads, SEO, Local SEO, social media, web and app development, graphic design, AI optimization and analytics — one system, one accountable team.' WHERE setting_key = 'meta_description' AND setting_value LIKE 'The Pie Technologies is a full-service growth agency: Meta Ads, SEO, Social Media Management%%';
 
+-- ----------------------- 9. Admin & Media Upgrade --------------------------
+ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS is_active TINYINT(1) NOT NULL DEFAULT 1;
+
+CREATE TABLE IF NOT EXISTS media_library (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  file_name VARCHAR(255) NOT NULL,
+  original_name VARCHAR(255) NOT NULL,
+  file_path VARCHAR(255) NOT NULL,
+  file_type ENUM('image', 'video', 'document') NOT NULL,
+  mime_type VARCHAR(100) NOT NULL,
+  file_size BIGINT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_media_type (file_type),
+  KEY idx_media_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;

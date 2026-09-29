@@ -17,3 +17,27 @@ function piePaymentServices()
     }
     return $names ?: array('AI Optimization', 'Web Development', 'Digital Marketing', 'Business Consultation', 'G-W-M Services', 'Monthly Marketing Charges', 'Others');
 }
+
+/** Check whether PayPal is enabled by the admin. */
+function pieIsPayPalEnabled()
+{
+    return getSetting('paypal_enabled', '0') === '1';
+}
+
+/** Check whether Stripe is enabled by the admin. */
+function pieIsStripeEnabled()
+{
+    return getSetting('stripe_enabled', '0') === '1';
+}
+
+/** Retrieve admin-configured client-side PayPal SDK / embed code. */
+function piePayPalSdkCode()
+{
+    return getSetting('paypal_sdk_code', '');
+}
+
+/** Retrieve admin-configured client-side Stripe SDK / embed code. */
+function pieStripeSdkCode()
+{
+    return getSetting('stripe_sdk_code', '');
+}
