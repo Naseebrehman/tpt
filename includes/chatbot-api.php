@@ -28,6 +28,51 @@ function chatbotErrorMessage()
 }
 
 /**
+ * Make sure a chat row exists for this session. Anonymous visitors still get a
+ * conversation record (identified by their session id) so the Admin → Alia →
+ * Chats dashboard can show every conversation, not only captured leads.
+ */
+function aliaEnsureChat($sessionId, $name = '', $email = '')
+{
+    if (!DB_OK) {
+        return 0;
+    }
+    $existing = dbOne('SELECT id FROM chatbot_leads WHERE session_id = ?', array($sessionId));
+    if ($existing) {
+        return (int) $existing['id'];
+    }
+    $newId = dbInsert(
+        'INSERT INTO chatbot_leads (session_id, name, email, ip_address) VALUES (?, ?, ?, ?)',
+        array($sessionId, $name, $email, pieClientIp())
+    );
+    return $newId > 0 ? (int) $newId : 0;
+}
+
+/**
+ * Append one turn to the transcript and keep the chat row's summary current
+ * (last message + counter) so the dashboard can list conversations quickly.
+ */
+function aliaLogMessage($sessionId, $role, $content)
+{
+    if (!DB_OK) {
+        return;
+    }
+    $content = mb_substr(trim((string) $content), 0, 8000);
+    if ($content === '') {
+        return;
+    }
+    $role = $role === 'assistant' ? 'assistant' : 'user';
+    dbExec(
+        'INSERT INTO chatbot_messages (session_id, role, content) VALUES (?, ?, ?)',
+        array($sessionId, $role, $content)
+    );
+    dbExec(
+        'UPDATE chatbot_leads SET last_message = ?, message_count = message_count + 1 WHERE session_id = ?',
+        array(mb_substr($content, 0, 1000), $sessionId)
+    );
+}
+
+/**
  * Legacy helper kept for existing callers (admin test action).
  * Routes through the configured provider stack.
  */
@@ -74,6 +119,33 @@ function chatbotCallGemini($apiKey, $payload)
     return json_decode($response, true);
 }
 
+/**
+ * Keep answers short: trim anything well beyond a readable chat bubble at a
+ * sentence boundary so Alia never returns a wall of text.
+ */
+function aliaTrimReply($reply, $limit = 700)
+{
+    $reply = trim((string) $reply);
+    if (mb_strlen($reply) <= $limit) {
+        return $reply;
+    }
+    $cut = mb_substr($reply, 0, $limit);
+    /* Prefer the last sentence end inside the window. */
+    $lastStop = 0;
+    foreach (array('. ', '! ', '? ', ".\n", "!\n", "?\n") as $needle) {
+        $pos = mb_strrpos($cut, $needle);
+        if ($pos !== false && $pos > $lastStop) {
+            $lastStop = $pos + mb_strlen(rtrim($needle));
+        }
+    }
+    if ($lastStop > (int) ($limit * 0.45)) {
+        return rtrim(mb_substr($reply, 0, $lastStop));
+    }
+    /* No sentence boundary: fall back to the last word boundary. */
+    $space = mb_strrpos($cut, ' ');
+    return rtrim($space > 0 ? mb_substr($reply, 0, $space) : $cut) . '…';
+}
+
 function handleChatbotRequest()
 {
     while (ob_get_level() > 0) {
@@ -117,6 +189,11 @@ function handleChatbotRequest()
     }
 
     /* ---------------- store / update the chat lead (category: lead) -------- */
+    /* Every conversation is tracked; personal details are stored only when the
+       visitor actually shares a name + valid email. */
+    if (DB_OK) {
+        aliaEnsureChat($sessionId);
+    }
     if (DB_OK && getSetting('alia_lead_collection', '1') === '1' && $leadName !== '' && filter_var($leadEmail, FILTER_VALIDATE_EMAIL)) {
         $existing = dbOne('SELECT id, name, email FROM chatbot_leads WHERE session_id = ?', array($sessionId));
         if ($existing) {
@@ -153,11 +230,16 @@ function handleChatbotRequest()
             array(mb_substr(sanitize(isset($input['phone']) ? $input['phone'] : ''), 0, 30), mb_substr(sanitize(isset($input['company']) ? $input['company'] : ''), 0, 150), mb_substr(sanitize(isset($input['service']) ? $input['service'] : ''), 0, 100), mb_substr(json_encode($conversation, JSON_UNESCAPED_UNICODE), 0, 15000), $sessionId));
     }
 
+    /* Record the visitor's question as soon as it is accepted. */
+    aliaLogMessage($sessionId, 'user', $message);
+
     /* ------------------------- call the active provider ------------------- */
     $system = getSetting('chatbot_system_prompt', '');
     if (trim($system) === '') {
         $system = chatbotDefaultPrompt();
     }
+    /* Keep answers short and direct, whatever the admin prompt says. */
+    $system .= "\n\nRESPONSE STYLE (always applies): Answer the question directly in 2–4 short sentences (about 60 words maximum) unless the visitor explicitly asks for detail or a step-by-step list. Lead with the answer — no preamble, no restating the question, no filler. Offer the next step in one short sentence when it helps.";
 
     /* Normalise history to simple role/content turns (both legacy + new shape). */
     $turns = array();
@@ -193,5 +275,9 @@ function handleChatbotRequest()
         return;
     }
 
-    echo json_encode(array('success' => true, 'reply' => trim($result['reply'])));
+    $reply = aliaTrimReply(trim($result['reply']));
+    /* Record Alia's answer so the dashboard can replay the whole conversation. */
+    aliaLogMessage($sessionId, 'assistant', $reply);
+
+    echo json_encode(array('success' => true, 'reply' => $reply));
 }

@@ -79,6 +79,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (isset($_POST['notif_delete'])) {
         setFlash(Notifications::removeRecipient((int) (isset($_POST['notif_id']) ? $_POST['notif_id'] : 0)) ? 'ok' : 'err', 'Recipient removed.');
         settingsRedirect('notifications');
+    } elseif (isset($_POST['notif_edit'])) {
+        /* Edit an existing notification email (address + categories). */
+        $id    = (int) (isset($_POST['notif_id']) ? $_POST['notif_id'] : 0);
+        $email = sanitize(isset($_POST['notif_email']) ? $_POST['notif_email'] : '');
+        $cats  = isset($_POST['cats']) && is_array($_POST['cats']) ? $_POST['cats'] : array();
+        list($ok, $message) = Notifications::updateRecipient($id, $email, $cats);
+        setFlash($ok ? 'ok' : 'err', $message);
+        settingsRedirect('notifications');
     } elseif (isset($_POST['notif_toggle'])) {
         $id = (int) (isset($_POST['notif_id']) ? $_POST['notif_id'] : 0);
         $active = isset($_POST['active']) && $_POST['active'] === '1';
@@ -251,6 +259,15 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
             <h3>Payment settings</h3>
             <label class="a-check"><input type="checkbox" name="pay_online_enabled" value="1"<?= getSetting('pay_online_enabled', '1') === '1' ? ' checked' : '' ?>> Online payments enabled — the Pay Online page is available</label>
             <p class="hint">Currency is USD. Sensitive credentials are stored server-side and never returned to public JavaScript or unauthenticated endpoints.</p>
+        </div>
+        <div class="a-card">
+            <h3>Manage payment options</h3>
+            <p class="hint" style="margin-top:-8px">The service list, the PayPal integration and the Stripe integration each have their own section under <strong>Admin → Payments</strong>.</p>
+            <div class="a-toolbar">
+                <a class="a-btn" href="<?= esc(url('admin/payments')) ?>?tab=services"><?= icon('card', 15) ?> Services</a>
+                <a class="a-btn" href="<?= esc(url('admin/payments')) ?>?tab=paypal"><?= icon('loop', 15) ?> PayPal code</a>
+                <a class="a-btn" href="<?= esc(url('admin/payments')) ?>?tab=stripe"><?= icon('card', 15) ?> Stripe code</a>
+            </div>
         </div>
         <div class="a-card">
             <h3>PayPal</h3>
@@ -526,10 +543,17 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
                 <tbody>
                     <?php foreach ($recipients as $recipient): ?>
                     <tr>
-                        <td><?= esc($recipient['email']) ?></td>
+                        <td>
+                            <form method="post" class="a-toolbar" style="gap:8px;flex-wrap:nowrap;margin:0">
+                                <?= csrfField() ?>
+                                <input type="hidden" name="notif_id" value="<?= (int) $recipient['id'] ?>">
+                                <input type="email" name="notif_email" value="<?= esc($recipient['email']) ?>" required aria-label="Email address" style="min-width:170px">
+                                <button class="a-btn" type="submit" name="notif_edit" value="1" style="padding:5px 10px;font-size:.72rem;white-space:nowrap"><?= icon('check', 13) ?> Save</button>
+                            </form>
+                        </td>
                         <td><span class="chip"><?= $recipient['is_active'] ? 'Enabled' : 'Disabled' ?></span></td>
                         <td>
-                            <form method="post" class="a-toolbar" style="gap:8px">
+                            <form method="post" class="a-toolbar" style="gap:8px;margin:0">
                                 <?= csrfField() ?>
                                 <input type="hidden" name="notif_id" value="<?= (int) $recipient['id'] ?>">
                                 <?php foreach (Notifications::categories() as $catKey => $catLabel): ?>
@@ -551,9 +575,24 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
                 </tbody>
             </table>
         </div>
+        <p class="hint" style="margin-top:12px">Edit an address and press Save — the categories are saved with it. Notifications are delivered to every enabled recipient for that category.</p>
         <?php else: ?>
         <p class="hint">No recipients configured yet — notifications go to <strong><?= esc(getSetting('site_email', ADMIN_EMAIL)) ?></strong>.</p>
         <?php endif; ?>
+
+        <div class="a-card" style="margin-top:18px">
+            <h3>Verify delivery</h3>
+            <p class="hint" style="margin-top:-8px">Sends one real notification through the list above so you can confirm the saved addresses receive mail (requires working SMTP settings).</p>
+            <div class="a-toolbar">
+                <select id="notif_test_category" aria-label="Category to test">
+                    <?php foreach (Notifications::categories() as $catKey => $catLabel): ?>
+                    <option value="<?= esc($catKey) ?>"><?= esc($catLabel) ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <button class="a-btn" type="button" data-ajax-action="test_notification" data-fields="notif_test_category" data-result="notifTestResult">Send test notification</button>
+            </div>
+            <div class="inline-test" id="notifTestResult"></div>
+        </div>
     </div>
 </div>
 

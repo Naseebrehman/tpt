@@ -17,12 +17,27 @@
   var successPanel = document.getElementById('paySuccess');
   var failurePanel = document.getElementById('payFailure');
   var continueWrap = document.getElementById('payContinueWrap');
-  var paypalWrap   = document.getElementById('paypalButtonWrap');
-  var stripeWrap   = document.getElementById('stripePaymentWrap');
   var stripePayBtn = document.getElementById('stripePayBtn');
   var retryBtn     = document.getElementById('payRetryBtn');
   var submitBtn    = document.getElementById('paySubmitBtn');
   var statusBox    = form.querySelector('.form-status');
+
+  /* One section per payment method; only the chosen one is ever displayed. */
+  var methodSections = form.querySelectorAll('.pay-method-section');
+
+  function sectionFor(method) {
+    return form.querySelector('.pay-method-section[data-method-section="' + method + '"]');
+  }
+  function setMethod(method) {
+    methodSections.forEach(function (section) {
+      section.hidden = section.getAttribute('data-method-section') !== method;
+    });
+  }
+  form.querySelectorAll('input[name="method"]').forEach(function (radio) {
+    radio.addEventListener('change', function () { if (radio.checked) { setMethod(radio.value); } });
+  });
+  var checkedMethod = form.querySelector('input[name="method"]:checked');
+  if (checkedMethod) { setMethod(checkedMethod.value); }
 
   var state = { busy: false, token: '', method: '', initialized: false, stripe: null, elements: null, paymentElement: null, intentId: '' };
 
@@ -53,7 +68,10 @@
     state.busy = on;
     if (submitBtn) { submitBtn.disabled = on; submitBtn.textContent = on ? 'Processing…' : 'Continue to Payment →'; }
     if (stripePayBtn) { stripePayBtn.disabled = on; }
-    form.querySelectorAll('input,select,textarea').forEach(function (el) { el.disabled = on; });
+    /* IMPORTANT: never disable hidden fields (the CSRF token lives in one).
+       Disabled controls are excluded from FormData, which used to strip the
+       token and make every submission fail as "Session expired". */
+    form.querySelectorAll('input:not([type="hidden"]),select,textarea').forEach(function (el) { el.disabled = on; });
   }
   function showSuccess(data) {
     if (successPanel) {
@@ -93,6 +111,11 @@
 
   function post(extra) {
     var data = new FormData(form);
+    /* Belt and braces: hidden inputs (CSRF token, captcha response) must always
+       reach the server, whatever else the UI has disabled. */
+    form.querySelectorAll('input[type="hidden"]').forEach(function (el) {
+      if (el.name && !data.has(el.name)) { data.append(el.name, el.value); }
+    });
     Object.keys(extra || {}).forEach(function (key) { data.set(key, extra[key]); });
     data.set('captcha_token', captchaToken());
     return fetch(form.getAttribute('action') || window.location.href, {
@@ -140,40 +163,31 @@
     }
 
     var method = form.querySelector('input[name="method"]:checked').value;
-    if (method === 'invoice' || form.getAttribute('data-invoice-fallback') === '1') {
-      /* Invoice request path (kept for setups without providers). */
-      busy(true);
-      setStatus('Submitting your request…');
-      var data = new FormData(form);
-      data.set('pay_submit', '1');
-      fetch(form.getAttribute('action') || window.location.href, {
-        method: 'POST', body: data,
-        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
-      }).then(function (r) { return r.json(); }).then(function (json) {
-        busy(false);
-        if (json && json.success) {
-          if (json.redirect) { window.location.href = json.redirect; return; }
-          setStatus('Request received — check your email for the secure payment link.', 'ok');
-          form.style.display = 'none';
-          return;
-        }
-        setStatus((json && json.message) || 'Could not submit the request.', 'err');
-        if (json && json.errors) showFieldErrors(json.errors);
-      }).catch(function () {
-        busy(false);
-        setStatus('Network error — please try again.', 'err');
-      });
-      return;
-    }
 
     busy(true);
     setStatus('Preparing your payment…');
     post({ payment_action: 'init', method: method }).then(function (json) {
+      if (json && json.success && json.invoice) {
+        /* Request invoice → secure link → email notification. */
+        busy(false);
+        setStatus('Request received — check your email for the secure payment link.', 'ok');
+        form.style.display = 'none';
+        return;
+      }
       if (json && json.success && json.token) {
         state.token = json.token;
         state.method = method;
         state.initialized = true;
         setStatus('');
+        var section = sectionFor(method);
+        if (section && section.getAttribute('data-has-code') === '1') {
+          /* The admin's own integration code is already rendered in this
+             section — the payment record exists, the code takes over. */
+          busy(false);
+          section.hidden = false;
+          setStatus('Your details are saved — complete your payment below.', 'ok');
+          return;
+        }
         if (method === 'paypal') {
           startPayPal();
         } else {
@@ -217,7 +231,7 @@
   }
 
   function startPayPal() {
-    if (paypalWrap) paypalWrap.hidden = false;
+    setMethod('paypal');
     if (continueWrap) continueWrap.hidden = true;
     busy(false);
     setStatus('Click the PayPal button to complete your payment.');
@@ -300,7 +314,7 @@
   }
 
   function startStripe() {
-    if (stripeWrap) stripeWrap.hidden = false;
+    setMethod('stripe');
     if (continueWrap) continueWrap.hidden = true;
     busy(true);
     setStatus('Loading the secure card form…');
@@ -367,8 +381,8 @@
     retryBtn.addEventListener('click', function () {
       if (failurePanel) failurePanel.hidden = true;
       if (form) form.style.display = '';
-      if (paypalWrap) paypalWrap.hidden = true;
-      if (stripeWrap) stripeWrap.hidden = true;
+      var active = form.querySelector('input[name="method"]:checked');
+      if (active) { setMethod(active.value); }
       if (continueWrap) continueWrap.hidden = false;
       state.initialized = false;
       state.token = '';

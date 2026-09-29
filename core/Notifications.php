@@ -49,7 +49,7 @@ class Notifications
      */
     public static function recipients()
     {
-        if (!DB_OK) {
+        if (!DB_OK || !self::tableReady()) {
             return array();
         }
         $rows = dbAll('SELECT * FROM notification_emails ORDER BY id');
@@ -92,12 +92,18 @@ class Notifications
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return array(false, 'Enter a valid email address.');
         }
+        if (!DB_OK) {
+            return array(false, 'The database is not connected. Check your configuration.');
+        }
+        if (!self::tableReady()) {
+            return array(false, 'The notification email table is missing and could not be created. Run: php bin/cli.php migrate');
+        }
         $known = array_keys(self::categories());
         $cats  = array_values(array_intersect($known, array_map('trim', $categories)));
         if (!$cats) {
             $cats = $known;
         }
-        $existing = DB_OK ? dbOne('SELECT id FROM notification_emails WHERE email = ?', array($email)) : null;
+        $existing = dbOne('SELECT id FROM notification_emails WHERE email = ?', array($email));
         if ($existing) {
             return array(false, 'That email is already on the notification list.');
         }
@@ -105,7 +111,81 @@ class Notifications
             'INSERT INTO notification_emails (email, is_active, categories) VALUES (?, ?, ?)',
             array($email, $active ? 1 : 0, implode(',', $cats))
         ) >= 0;
-        return array($ok, $ok ? 'Recipient added.' : 'Could not save the recipient.');
+        return array($ok, $ok ? 'Recipient added.' : 'Could not save the recipient. Please try again.');
+    }
+
+    /**
+     * Edit a recipient: change the address and (optionally) its categories.
+     * Returns array(ok, message).
+     */
+    public static function updateRecipient($id, $email, ?array $categories = null)
+    {
+        $id    = (int) $id;
+        $email = strtolower(trim((string) $email));
+        if ($id <= 0) {
+            return array(false, 'Unknown recipient.');
+        }
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return array(false, 'Enter a valid email address.');
+        }
+        if (!DB_OK) {
+            return array(false, 'The database is not connected. Check your configuration.');
+        }
+        if (!self::tableReady()) {
+            return array(false, 'The notification email table is missing and could not be created. Run: php bin/cli.php migrate');
+        }
+        $clash = dbOne('SELECT id FROM notification_emails WHERE email = ? AND id <> ?', array($email, $id));
+        if ($clash) {
+            return array(false, 'Another recipient already uses that email address.');
+        }
+        if ($categories === null) {
+            $ok = dbExec('UPDATE notification_emails SET email = ? WHERE id = ?', array($email, $id)) >= 0;
+            return array($ok, $ok ? 'Recipient updated.' : 'Could not update the recipient.');
+        }
+        $known = array_keys(self::categories());
+        $cats  = array_values(array_intersect($known, array_map('trim', $categories)));
+        if (!$cats) {
+            return array(false, 'Pick at least one category.');
+        }
+        $ok = dbExec(
+            'UPDATE notification_emails SET email = ?, categories = ? WHERE id = ?',
+            array($email, implode(',', $cats), $id)
+        ) >= 0;
+        return array($ok, $ok ? 'Recipient updated.' : 'Could not update the recipient.');
+    }
+
+    /**
+     * Make sure the recipient table exists before reading or writing it.
+     * Installations created from database.sql (instead of the CLI installer)
+     * never ran migration 002, which is why adding a recipient used to fail.
+     */
+    private static function tableReady()
+    {
+        static $ready = null;
+        if ($ready !== null) {
+            return $ready;
+        }
+        $ready = true;
+        $row = dbOne(
+            "SELECT COUNT(*) AS c FROM information_schema.TABLES
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'notification_emails'"
+        );
+        if (!$row || (int) $row['c'] === 0) {
+            dbExec("CREATE TABLE IF NOT EXISTS notification_emails (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                email VARCHAR(150) NOT NULL,
+                is_active TINYINT(1) NOT NULL DEFAULT 1,
+                categories VARCHAR(255) NOT NULL DEFAULT 'contact,payment,lead,chatbot,system,security',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_notification_email (email)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+            $row = dbOne(
+                "SELECT COUNT(*) AS c FROM information_schema.TABLES
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'notification_emails'"
+            );
+            $ready = (bool) ($row && (int) $row['c'] > 0);
+        }
+        return $ready;
     }
 
     /** Remove a recipient by id. */

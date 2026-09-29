@@ -257,12 +257,22 @@ class AIProviders
                 'ignore_errors' => true,
             ),
         ));
-        $response = @file_get_contents($url, false, $context);
+        /* fopen() + stream_get_meta_data() is used instead of
+           file_get_contents() so the status code does not depend on the
+           magic $http_response_header variable (deprecated in PHP 8.5). */
+        $handle = @fopen($url, 'rb', false, $context);
+        if ($handle === false) {
+            return array('http' => 0, 'body' => '', 'error' => 'connection failed');
+        }
+        $response = stream_get_contents($handle);
+        $meta     = stream_get_meta_data($handle);
+        fclose($handle);
         if ($response === false) {
             return array('http' => 0, 'body' => '', 'error' => 'connection failed');
         }
         $status = 0;
-        if (isset($http_response_header[0]) && preg_match('/\s(\d{3})\s/', $http_response_header[0] . ' ', $m)) {
+        $wrapperData = isset($meta['wrapper_data']) && is_array($meta['wrapper_data']) ? $meta['wrapper_data'] : array();
+        if (isset($wrapperData[0]) && preg_match('/\s(\d{3})\s/', (string) $wrapperData[0] . ' ', $m)) {
             $status = (int) $m[1];
         }
         return array('http' => $status, 'body' => (string) $response, 'error' => '');

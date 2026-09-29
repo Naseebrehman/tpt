@@ -14,7 +14,10 @@ class SampleContent
         if (!isset($empty[$table])) {
             // Do not replace drafts, hidden records, or a filter with zero matches.
             $count = DB_OK ? dbOne('SELECT COUNT(*) AS total FROM ' . $table) : null;
-            $empty[$table] = !DB_OK || ($count !== null && (int) $count['total'] === 0);
+            /* Defensive: a driver/driver-shim that returns an unexpected row
+               shape must never raise a warning here. */
+            $total = (is_array($count) && isset($count['total'])) ? (int) $count['total'] : -1;
+            $empty[$table] = !DB_OK || ($total === 0);
         }
         return $empty[$table];
     }

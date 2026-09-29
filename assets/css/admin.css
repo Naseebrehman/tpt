@@ -219,3 +219,29 @@ input,select,textarea{font:inherit}
 .pw-wrap{position:relative}
 .pw-wrap input{padding-right:74px}
 .pw-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:.74rem;color:var(--violet-soft);padding:5px 8px}
+
+/* =====================================================================
+   Admin → Alia → Chats — conversation transcript
+   ===================================================================== */
+.chat-transcript{
+  display:grid;gap:12px;max-height:min(60vh,520px);overflow-y:auto;
+  padding:18px;border:1px solid var(--line);border-radius:14px;background:var(--bg);
+}
+.chat-line{max-width:82%;padding:11px 15px;border-radius:14px;font-size:.86rem;line-height:1.6}
+.chat-line.user{
+  justify-self:end;background:rgba(124,58,237,.16);border:1px solid rgba(124,58,237,.42);
+  border-bottom-right-radius:4px;
+}
+.chat-line.assistant{
+  justify-self:start;background:var(--panel);border:1px solid var(--line);
+  border-bottom-left-radius:4px;
+}
+.chat-line-head{display:flex;gap:10px;align-items:baseline;justify-content:space-between;margin-bottom:5px}
+.chat-line-who{font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--violet-soft)}
+.chat-line.assistant .chat-line-who{color:var(--muted)}
+.chat-line-time{font-size:.67rem;color:var(--muted-2);white-space:nowrap}
+.chat-line-body{color:var(--text);overflow-wrap:anywhere;white-space:pre-wrap}
+@media (max-width:640px){
+  .chat-transcript{padding:12px;max-height:none}
+  .chat-line{max-width:100%}
+}

@@ -17,16 +17,13 @@ $activeNav = 'pay';
 $paymentsEnabled = getSetting('pay_online_enabled', '1') === '1';
 $providers       = $paymentsEnabled ? piePaymentProviders() : array();
 
-/* Billing categories for this form (Task 3). */
-$payServices = array(
-    'AI Optimization',
-    'Web Development',
-    'Digital Marketing',
-    'Business Consultation',
-    'G-W-M Services',
-    'Monthly Marketing Charges',
-    'Others',
-);
+/* Billing categories for this form — managed in Admin → Payments → Services. */
+$payServices = piePaymentServices();
+
+/* Payment methods offered: each keeps its own section, only the selected one
+   is shown. Custom SDK/integration code entered in Admin → Payments is
+   rendered server-side inside the matching section. */
+$payMethods = $paymentsEnabled ? piePaymentMethods() : array();
 
 /* ------------------------------------------------------------------
    JSON payment actions (Task 4/5) — posted from assets/js/payment.js
@@ -98,8 +95,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['payment_action']) && 
         if ($input['errors']) {
             payJson(false, reset($input['errors']), array('errors' => $input['errors']), 422);
         }
-        $providersNow = piePaymentProviders();
-        if ($input['method'] !== 'invoice' && !isset($providersNow[$input['method']])) {
+        /* Offered = enabled by the admin AND (custom SDK code OR working credentials). */
+        $methodsNow = piePaymentMethods();
+        if (!isset($methodsNow[$input['method']])) {
             payJson(false, 'That payment method is not available right now.', array('errors' => array('method' => 'This payment method is currently unavailable.')), 422);
         }
 
@@ -349,7 +347,7 @@ require_once __DIR__ . '/includes/header.php';
                       data-pay-form
                       data-paypal-client-id="<?= esc(piePayPalClientId()) ?>"
                       data-paypal-mode="<?= esc(getSetting('paypal_mode', 'sandbox')) ?>"
-                      data-invoice-fallback="<?= empty($providers) ? '1' : '0' ?>">
+                      data-invoice-fallback="<?= isset($payMethods['invoice']) && count($payMethods) === 1 ? '1' : '0' ?>">
                     <?= csrfField() ?>
                     <input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px" placeholder="Leave this empty">
 
@@ -382,30 +380,50 @@ require_once __DIR__ . '/includes/header.php';
                         <div class="field full">
                             <fieldset class="pay-methods" style="border:none;padding:0;margin:0">
                                 <legend class="eyebrow" style="margin-bottom:12px">Payment Method <span class="req">*</span></legend>
+                                <?php $firstMethod = true; foreach ($payMethods as $methodKey => $method): ?>
                                 <label class="pay-method">
-                                    <input type="radio" name="method" value="paypal"<?= isset($providers['paypal']) ? ' checked' : '' ?><?= isset($providers['paypal']) ? '' : ' disabled' ?>>
+                                    <input type="radio" name="method" value="<?= esc($methodKey) ?>"<?= $firstMethod ? ' checked' : '' ?>>
                                     <span>
-                                        <strong><?= icon('loop', 16) ?> PayPal</strong>
-                                        <small>Pay with your PayPal account or a card through PayPal.</small>
+                                        <strong><?= icon($method['icon'], 16) ?> <?= esc($method['label']) ?></strong>
+                                        <small><?= esc($method['note']) ?></small>
                                     </span>
                                 </label>
-                                <label class="pay-method">
-                                    <input type="radio" name="method" value="stripe"<?= !isset($providers['paypal']) && isset($providers['stripe']) ? ' checked' : '' ?><?= isset($providers['stripe']) ? '' : ' disabled' ?>>
-                                    <span>
-                                        <strong><?= icon('card', 16) ?> Credit/Debit Card — Stripe</strong>
-                                        <small>Secure card payment powered by Stripe.</small>
-                                    </span>
-                                </label>
-                                <?php if (empty($providers)): ?>
-                                <label class="pay-method">
-                                    <input type="radio" name="method" value="invoice" checked>
-                                    <span>
-                                        <strong><?= icon('mail', 16) ?> Request an invoice</strong>
-                                        <small>Online payments are being configured — we&rsquo;ll email you a secure link.</small>
-                                    </span>
-                                </label>
+                                <?php $firstMethod = false; endforeach; ?>
+                                <?php if (!$payMethods): ?>
+                                <p class="text-muted" style="font-size:.86rem">No payment methods are configured yet — please email us and we&rsquo;ll send a secure link.</p>
                                 <?php endif; ?>
                             </fieldset>
+
+                            <!-- One section per method; the selected one is shown
+                                 (the first is visible by default so the page
+                                 still works without JavaScript). -->
+                            <div class="pay-method-sections">
+                                <?php $firstMethod = true; foreach ($payMethods as $methodKey => $method): ?>
+                                <section class="pay-method-section" data-method-section="<?= esc($methodKey) ?>" data-has-code="<?= trim($method['code']) !== '' ? '1' : '0' ?>"<?= $firstMethod ? '' : ' hidden' ?>>
+                                    <?php $firstMethod = false; ?>
+                                    <p class="eyebrow" style="margin-bottom:12px"><?= esc($methodKey === 'invoice' ? 'How it works' : 'Complete with ' . $method['label']) ?></p>
+
+                                    <?php if ($methodKey === 'invoice'): ?>
+                                    <div class="pay-section-note">
+                                        <p><?= esc($method['note']) ?></p>
+                                        <p class="text-muted" style="font-size:.82rem">You&rsquo;ll get an email with a secure payment link the moment you submit the form.</p>
+                                    </div>
+                                    <?php elseif (trim($method['code']) !== ''): ?>
+                                    <!-- Admin-managed <?= esc($method['label']) ?> integration code (Admin → Payments). -->
+                                    <div class="pay-sdk-box">
+                                        <?= $method['code'] /* admin-authored SDK/integration code */ ?>
+                                    </div>
+                                    <?php elseif ($methodKey === 'paypal'): ?>
+                                    <div id="paypalButtons" class="paypal-buttons"></div>
+                                    <?php elseif ($methodKey === 'stripe'): ?>
+                                    <div id="stripePaymentElement" class="stripe-element"></div>
+                                    <button class="btn btn-primary btn-lg btn-block btn-magnetic" type="button" id="stripePayBtn" style="margin-top:14px">
+                                        Pay Securely <?= icon('lock', 16) ?>
+                                    </button>
+                                    <?php endif; ?>
+                                </section>
+                                <?php endforeach; ?>
+                            </div>
                         </div>
 
                         <div class="field full">
@@ -421,26 +439,11 @@ require_once __DIR__ . '/includes/header.php';
                         </div>
                         <?php endif; ?>
 
-                        <!-- PayPal Buttons mount here (Task 4) -->
-                        <div class="full" id="paypalButtonWrap" hidden>
-                            <p class="eyebrow" style="margin-bottom:12px">Complete with PayPal</p>
-                            <div id="paypalButtons" class="paypal-buttons"></div>
-                        </div>
-
-                        <!-- Stripe Elements mount here (Task 5) -->
-                        <div class="full" id="stripePaymentWrap" hidden>
-                            <p class="eyebrow" style="margin-bottom:12px">Card details</p>
-                            <div id="stripePaymentElement" class="stripe-element"></div>
-                            <button class="btn btn-primary btn-lg btn-block btn-magnetic" type="button" id="stripePayBtn" style="margin-top:14px">
-                                Pay Securely <?= icon('lock', 16) ?>
-                            </button>
-                        </div>
-
                         <div class="full" id="payContinueWrap">
-                            <button class="btn btn-primary btn-lg btn-block btn-magnetic" type="submit" id="paySubmitBtn">
+                            <button class="btn btn-primary btn-lg btn-block btn-magnetic" type="submit" id="paySubmitBtn" name="pay_submit" value="1">
                                 Continue to Payment <?= icon('arrow-r', 18) ?>
                             </button>
-                            <p class="text-muted" style="font-size:.78rem;text-align:center;margin-top:10px"><?= icon('lock', 13) ?> 256-bit encrypted. Card details are entered directly on Stripe&rsquo;s secure form — never on this site.</p>
+                            <p class="text-muted" style="font-size:.78rem;text-align:center;margin-top:10px"><?= icon('lock', 13) ?> 256-bit encrypted. Card details are entered directly on the secure payment form — never stored on this site.</p>
                         </div>
                     </div>
                     <div class="form-status" role="status" aria-live="polite"></div>
