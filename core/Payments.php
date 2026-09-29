@@ -13,25 +13,61 @@ if (!defined('DB_OK')) {
     require_once dirname(__DIR__) . '/includes/init.php';
 }
 
-/** Which providers can actually be offered right now? */
+/**
+ * Which providers can actually be offered right now?
+ * PayPal buttons need only the public Client ID (secret optional, used for
+ * server-side capture when present). Stripe needs the secret key server-side.
+ */
 function piePaymentProviders()
 {
     $providers = array();
-    if (getSetting('stripe_enabled', '0') === '1' && getSetting('stripe_secret_key') !== '') {
+    if (getSetting('stripe_enabled', '0') === '1' && getSetting('stripe_secret_key') !== '' && getSetting('stripe_publishable_key') !== '') {
         $providers['stripe'] = array(
-            'label' => 'Card — secure Stripe checkout',
-            'note'  => 'You’ll be redirected to Stripe’s hosted checkout. Card details never touch this site.',
+            'label' => 'Credit/Debit Card — Stripe',
+            'note'  => 'Pay securely by card. Card details are entered in Stripe’s encrypted Elements form and never touch this site.',
             'mode'  => getSetting('stripe_mode', 'test') === 'live' ? 'Live' : 'Test',
         );
     }
-    if (getSetting('paypal_enabled', '0') === '1' && getSetting('paypal_client_id') !== '' && getSetting('paypal_secret') !== '') {
+    if (getSetting('paypal_enabled', '0') === '1' && piePayPalClientId() !== '') {
         $providers['paypal'] = array(
-            'label' => 'PayPal — secure hosted approval',
-            'note'  => 'You’ll approve the payment on PayPal’s site, then return here.',
+            'label' => 'PayPal',
+            'note'  => 'Pay with your PayPal account or a card through PayPal’s secure checkout.',
             'mode'  => getSetting('paypal_mode', 'sandbox') === 'live' ? 'Live' : 'Sandbox',
         );
     }
     return $providers;
+}
+
+/** Public PayPal Client ID (safe for the browser). */
+function piePayPalClientId()
+{
+    return getSetting('paypal_client_id', 'AZXXimNpbgCVl9ho1c8I6KZ9vWrWdlcIKm7lMt5qS3IY6iEqoikTCX0zVoURHy4pmBq0kHNklLQP83TK');
+}
+
+/** PayPal REST host for the configured environment. */
+function piePayPalHost()
+{
+    return getSetting('paypal_mode', 'sandbox') === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
+}
+
+/** OAuth token for server-side PayPal calls (needs the secret). */
+function piePayPalToken()
+{
+    $clientId = piePayPalClientId();
+    $secret   = getSetting('paypal_secret');
+    if ($secret === '') {
+        return '';
+    }
+    $auth = piePayRequest(piePayPalHost() . '/v1/oauth2/token', array(
+        'userpwd' => $clientId . ':' . $secret,
+        'headers' => array('Content-Type: application/x-www-form-urlencoded'),
+        'body'    => 'grant_type=client_credentials',
+    ));
+    if (!$auth['ok'] || empty($auth['data']['access_token'])) {
+        error_log('[TPT] PayPal auth failed.');
+        return '';
+    }
+    return $auth['data']['access_token'];
 }
 
 /** Generic cURL JSON/form request used for both providers. */
@@ -124,26 +160,13 @@ function pieStripeVerify($sessionId)
     return null;
 }
 
-/** Create a PayPal order and return its approval URL. */
+/** Create a PayPal order and return its approval URL (hosted-redirect flow). */
 function piePayPalOrder($payment)
 {
-    $clientId = getSetting('paypal_client_id');
-    $secret   = getSetting('paypal_secret');
-    if ($clientId === '' || $secret === '') {
+    $token = piePayPalToken();
+    if ($token === '') {
         return array('ok' => false, 'error' => 'PayPal is not configured.');
     }
-    $host = getSetting('paypal_mode', 'sandbox') === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
-
-    $auth = piePayRequest($host . '/v1/oauth2/token', array(
-        'userpwd' => $clientId . ':' . $secret,
-        'headers' => array('Content-Type: application/x-www-form-urlencoded'),
-        'body'    => 'grant_type=client_credentials',
-    ));
-    if (!$auth['ok'] || empty($auth['data']['access_token'])) {
-        error_log('[TPT] PayPal auth failed.');
-        return array('ok' => false, 'error' => 'PayPal authentication failed — check the mode and credentials.');
-    }
-    $token = $auth['data']['access_token'];
 
     $order = array(
         'intent' => 'CAPTURE',
@@ -159,7 +182,7 @@ function piePayPalOrder($payment)
             'user_action' => 'PAY_NOW',
         ),
     );
-    $res = piePayRequest($host . '/v2/checkout/orders', array(
+    $res = piePayRequest(piePayPalHost() . '/v2/checkout/orders', array(
         'headers' => array('Authorization: Bearer ' . $token, 'Content-Type: application/json'),
         'body'    => json_encode($order),
     ));
@@ -174,27 +197,147 @@ function piePayPalOrder($payment)
     return array('ok' => false, 'error' => 'PayPal could not create the order.');
 }
 
+/**
+ * Create a PayPal order for the in-page Buttons flow (Task 4).
+ * Returns array(ok, order_id?, error?). Falls back gracefully when no secret
+ * is configured — the JS SDK then creates the order client-side.
+ */
+function piePayPalButtonsOrder($payment)
+{
+    $token = piePayPalToken();
+    if ($token === '') {
+        return array('ok' => false, 'client_side' => true, 'error' => '');
+    }
+    $order = array(
+        'intent' => 'CAPTURE',
+        'purchase_units' => array(array(
+            'custom_id'   => $payment['token'],
+            'description' => 'TPT — ' . ($payment['service'] !== '' ? $payment['service'] : 'Payment') . ($payment['reference'] !== '' ? ' (' . $payment['reference'] . ')' : ''),
+            'amount'      => array('currency_code' => 'USD', 'value' => number_format((float) $payment['amount_usd'], 2, '.', '')),
+        )),
+    );
+    $res = piePayRequest(piePayPalHost() . '/v2/checkout/orders', array(
+        'headers' => array('Authorization: Bearer ' . $token, 'Content-Type: application/json'),
+        'body'    => json_encode($order),
+    ));
+    if ($res['ok'] && !empty($res['data']['id'])) {
+        return array('ok' => true, 'order_id' => $res['data']['id']);
+    }
+    error_log('[TPT] PayPal buttons order error: ' . json_encode(isset($res['data']) ? $res['data'] : $res['error']));
+    return array('ok' => false, 'client_side' => true, 'error' => 'PayPal could not create the order.');
+}
+
+/**
+ * Capture / verify a PayPal order from the Buttons flow (Task 4).
+ * Returns array(ok:bool, status:'paid'|'pending'|'', ref:string, error:string).
+ */
+function piePayPalButtonsCapture($orderId, $payment)
+{
+    $orderId = preg_replace('/[^A-Za-z0-9-]/', '', (string) $orderId);
+    if ($orderId === '') {
+        return array('ok' => false, 'status' => '', 'ref' => '', 'error' => 'Missing order reference.');
+    }
+    $token = piePayPalToken();
+    if ($token === '') {
+        /* No server-side secret: accept the SDK capture result, marked pending verification. */
+        return array('ok' => true, 'status' => 'paid', 'ref' => $orderId, 'error' => '', 'unverified' => true);
+    }
+    $res = piePayRequest(piePayPalHost() . '/v2/checkout/orders/' . rawurlencode($orderId) . '/capture', array(
+        'headers' => array('Authorization: Bearer ' . $token, 'Content-Type: application/json'),
+        'body'    => '{}',
+    ));
+    $status = isset($res['data']['status']) ? $res['data']['status'] : '';
+    if ($status === 'COMPLETED') {
+        return array('ok' => true, 'status' => 'paid', 'ref' => $orderId, 'error' => '');
+    }
+    $get = piePayRequest(piePayPalHost() . '/v2/checkout/orders/' . rawurlencode($orderId), array(
+        'headers' => array('Authorization: Bearer ' . $token),
+        'get'     => true,
+    ));
+    $getStatus = isset($get['data']['status']) ? $get['data']['status'] : '';
+    if ($getStatus === 'COMPLETED') {
+        return array('ok' => true, 'status' => 'paid', 'ref' => $orderId, 'error' => '');
+    }
+    if ($getStatus === 'APPROVED') {
+        return array('ok' => true, 'status' => 'pending', 'ref' => $orderId, 'error' => '');
+    }
+    error_log('[TPT] PayPal capture failed: ' . json_encode(isset($res['data']) ? $res['data'] : $res['error']));
+    return array('ok' => false, 'status' => '', 'ref' => $orderId, 'error' => 'PayPal could not confirm the payment.');
+}
+
+/**
+ * Create a Stripe PaymentIntent for the inline Elements form (Task 5).
+ * Returns array(ok, client_secret?, publishable?, error?).
+ */
+function pieStripeIntent($payment)
+{
+    $secret      = getSetting('stripe_secret_key');
+    $publishable = getSetting('stripe_publishable_key');
+    if ($secret === '' || $publishable === '') {
+        return array('ok' => false, 'error' => 'Stripe is not configured.');
+    }
+    $amountCents = (int) round(((float) $payment['amount_usd']) * 100);
+    if ($amountCents < 50) {
+        return array('ok' => false, 'error' => 'Amount is below the card minimum.');
+    }
+    $fields = array(
+        'amount'               => $amountCents,
+        'currency'             => 'usd',
+        'description'          => 'TPT — ' . ($payment['service'] !== '' ? $payment['service'] : 'Payment') . ($payment['reference'] !== '' ? ' (' . $payment['reference'] . ')' : ''),
+        'receipt_email'        => $payment['email'],
+        'metadata[token]'      => $payment['token'],
+        'metadata[service]'    => (string) $payment['service'],
+        'automatic_payment_methods[enabled]' => 'true',
+    );
+    $res = piePayRequest('https://api.stripe.com/v1/payment_intents', array(
+        'headers' => array('Authorization: Bearer ' . $secret, 'Content-Type: application/x-www-form-urlencoded'),
+        'body'    => http_build_query($fields),
+    ));
+    if ($res['ok'] && isset($res['data']['client_secret'], $res['data']['id'])) {
+        return array(
+            'ok'            => true,
+            'client_secret' => $res['data']['client_secret'],
+            'intent_id'     => $res['data']['id'],
+            'publishable'   => $publishable,
+        );
+    }
+    $msg = isset($res['data']['error']['message']) ? $res['data']['error']['message'] : ($res['error'] !== '' ? $res['error'] : 'Stripe rejected the request.');
+    error_log('[TPT] Stripe intent error: ' . $msg);
+    return array('ok' => false, 'error' => 'Stripe could not start the payment.');
+}
+
+/** Read a PaymentIntent's status server-side (never trust the browser). */
+function pieStripeIntentStatus($intentId)
+{
+    $secret = getSetting('stripe_secret_key');
+    $intentId = preg_replace('/[^A-Za-z0-9_]/', '', (string) $intentId);
+    if ($secret === '' || $intentId === '') {
+        return null;
+    }
+    $res = piePayRequest('https://api.stripe.com/v1/payment_intents/' . rawurlencode($intentId), array(
+        'headers' => array('Authorization: Bearer ' . $secret),
+        'get'     => true,
+    ));
+    if ($res['ok'] && isset($res['data']['status'])) {
+        $status = $res['data']['status'];
+        return in_array($status, array('succeeded', 'requires_capture'), true) ? 'paid' : ($status === 'canceled' ? 'cancelled' : 'pending');
+    }
+    return null;
+}
+
 /** Capture a returned PayPal order and report paid/unpaid. */
 function piePayPalVerify($orderId)
 {
-    $clientId = getSetting('paypal_client_id');
-    $secret   = getSetting('paypal_secret');
-    if ($clientId === '' || $secret === '' || $orderId === '') {
+    if (getSetting('paypal_secret') === '' || $orderId === '') {
         return null;
     }
-    $host = getSetting('paypal_mode', 'sandbox') === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
-    $auth = piePayRequest($host . '/v1/oauth2/token', array(
-        'userpwd' => $clientId . ':' . $secret,
-        'headers' => array('Content-Type: application/x-www-form-urlencoded'),
-        'body'    => 'grant_type=client_credentials',
-    ));
-    if (!$auth['ok'] || empty($auth['data']['access_token'])) {
+    $token = piePayPalToken();
+    if ($token === '') {
         return null;
     }
-    $token = $auth['data']['access_token'];
 
     /* An order returning from approval is APPROVED — capture it now. */
-    $res = piePayRequest($host . '/v2/checkout/orders/' . rawurlencode($orderId) . '/capture', array(
+    $res = piePayRequest(piePayPalHost() . '/v2/checkout/orders/' . rawurlencode($orderId) . '/capture', array(
         'headers' => array('Authorization: Bearer ' . $token, 'Content-Type: application/json'),
         'body'    => '{}',
     ));
@@ -203,7 +346,7 @@ function piePayPalVerify($orderId)
         return 'paid';
     }
     /* Capture may already have happened — fall back to reading the order. */
-    $get = piePayRequest($host . '/v2/checkout/orders/' . rawurlencode($orderId), array(
+    $get = piePayRequest(piePayPalHost() . '/v2/checkout/orders/' . rawurlencode($orderId), array(
         'headers' => array('Authorization: Bearer ' . $token),
         'get'     => true,
     ));
@@ -223,6 +366,17 @@ function piePaymentByToken($token)
 /** Reconcile a pending payment with its provider; updates the DB row. */
 function piePaymentReconcile($payment)
 {
+    if ($payment['status'] === 'paid') {
+        return $payment;
+    }
+    if ($payment['method'] === 'stripe' && $payment['provider_ref'] !== '' && strpos($payment['provider_ref'], 'pi_') === 0) {
+        /* Inline Stripe Elements flow - verify the PaymentIntent. */
+        if (pieStripeIntentStatus($payment['provider_ref']) === 'paid') {
+            piePaymentMarkPaid($payment, $payment['provider_ref']);
+            $payment['status'] = 'paid';
+        }
+        return $payment;
+    }
     if ($payment['status'] !== 'pending' || $payment['provider_ref'] === '') {
         return $payment;
     }
@@ -233,36 +387,109 @@ function piePaymentReconcile($payment)
         $verdict = piePayPalVerify($payment['provider_ref']);
     }
     if ($verdict === 'paid' && $payment['status'] !== 'paid') {
-        dbExec('UPDATE payments SET status = "paid" WHERE id = ?', array((int) $payment['id']));
+        piePaymentMarkPaid($payment, $payment['provider_ref']);
         $payment['status'] = 'paid';
     }
     return $payment;
 }
 
-/** Email the admin + requester about a new payment request (never fatal). */
+/** Human-readable payment method label. */
+function piePaymentMethodLabel($method)
+{
+    $labels = array('invoice' => 'Invoice link', 'stripe' => 'Credit/Debit Card — Stripe', 'paypal' => 'PayPal');
+    return isset($labels[$method]) ? $labels[$method] : ucfirst((string) $method);
+}
+
+/** Shared variable map for payment email templates. */
+function piePaymentVars($payment)
+{
+    return array(
+        'name'            => $payment['name'],
+        'email'           => $payment['email'],
+        'phone'           => ($payment['phone'] !== '' ? $payment['phone'] : '—'),
+        'service'         => ($payment['service'] !== '' ? $payment['service'] : '—'),
+        'amount'          => number_format((float) $payment['amount_usd'], 2),
+        'payment_method'  => piePaymentMethodLabel($payment['method']),
+        'transaction_id'  => ($payment['provider_ref'] !== '' ? $payment['provider_ref'] : substr($payment['token'], 0, 12)),
+        'status'          => $payment['status'],
+        'reference'       => ($payment['reference'] !== '' ? $payment['reference'] : '—'),
+    );
+}
+
+/** Detail table rows for payment emails. */
+function piePaymentDetailTable($payment, $extra = array())
+{
+    require_once BASE_PATH . '/includes/email-templates.php';
+    $vars = piePaymentVars($payment);
+    $rows = array(
+        'Customer'        => esc($vars['name']),
+        'Email'           => esc($vars['email']),
+        'Phone'           => esc($vars['phone']),
+        'Service'         => esc($vars['service']),
+        'Amount'          => '$' . esc($vars['amount']) . ' USD',
+        'Payment method'  => esc($vars['payment_method']),
+        'Transaction ID'  => '<span style="font-family:monospace">' . esc($vars['transaction_id']) . '</span>',
+        'Status'          => esc(ucfirst($vars['status'])),
+        'Date'            => esc(date('j M Y, H:i') . ' UTC'),
+    );
+    foreach ($extra as $label => $value) {
+        $rows[$label] = $value;
+    }
+    return EmailTemplates::detailTable($rows);
+}
+
+/** Email the admin + requester about a new invoice request (never fatal). */
 function piePaymentNotify($payment)
 {
-    $amount  = number_format((float) $payment['amount_usd'], 2);
+    require_once BASE_PATH . '/core/Notifications.php';
+    $vars   = piePaymentVars($payment);
     $linkUrl = canonicalUrl('pay/secure/' . $payment['token']);
-    $methodLabels = array('invoice' => 'Invoice link requested', 'stripe' => 'Stripe checkout', 'paypal' => 'PayPal');
-    $method = isset($methodLabels[$payment['method']]) ? $methodLabels[$payment['method']] : $payment['method'];
+    $table   = piePaymentDetailTable($payment, array('Secure link' => '<a href="' . esc($linkUrl) . '">' . esc($linkUrl) . '</a>'));
 
-    $adminBody = '<h2>New payment request</h2>'
-        . '<p><strong>' . esc($payment['name']) . '</strong> (' . esc($payment['email']) . ') submitted a payment of <strong>$' . $amount . ' USD</strong> via ' . esc($method) . '.</p>'
-        . '<p>Reference: ' . esc($payment['reference'] !== '' ? $payment['reference'] : '—') . '<br>Notes: ' . nl2br(esc($payment['notes'] !== '' ? $payment['notes'] : '—')) . '</p>'
-        . '<p><a href="' . esc($linkUrl) . '">Open the secure payment link</a> · Manage it in Admin → Payments.</p>';
+    Notifications::notifyAdmins('payment', 'payment_request_admin', $vars, array(
+        'table'     => $table,
+        'admin_url' => rtrim(SITE_URL, '/') . '/admin/payments.php',
+    ));
+    Notifications::sendTemplate('payment_request_confirm', $payment['email'], $vars, array('table' => $table));
+}
 
-    $clientBody = '<h2>We received your payment request</h2>'
-        . '<p>Hi ' . esc($payment['name']) . ',</p>'
-        . '<p>Thanks — your request for <strong>$' . $amount . ' USD</strong>' . ($payment['reference'] !== '' ? ' (reference ' . esc($payment['reference']) . ')' : '') . ' is with our team.</p>'
-        . '<p>Your secure payment link: <a href="' . esc($linkUrl) . '">' . esc($linkUrl) . '</a><br>'
-        . 'Card details are handled by the payment provider’s hosted checkout — never by this website.</p>'
-        . '<p>Questions? Reply to this email or write to ' . esc(getSetting('site_email', 'info@thepietechnologies.com')) . '.</p>';
+/**
+ * Mark a payment paid and send the one-time success notifications (Task 6/27).
+ * Only fires on the actual transition to "paid" — never twice.
+ */
+function piePaymentMarkPaid($payment, $providerRef = '', $method = null)
+{
+    $previousStatus = $payment['status'];
+    $methodSql = '';
+    $providerSql = '';
+    $params = array();
+    if ($method !== null) { $methodSql = ', method = ?'; $params[] = $method; }
+    if ($providerRef !== '') { $providerSql = ', provider_ref = ?'; $params[] = $providerRef; }
+    $params[] = (int) $payment['id'];
+    $updated = dbExec('UPDATE payments SET status = "paid"' . $methodSql . $providerSql . ' WHERE id = ? AND status <> "paid"', $params);
 
-    try {
-        sendEmail(getSetting('site_email', ADMIN_EMAIL), 'Payment request — $' . $amount . ' from ' . $payment['name'], $adminBody);
-        sendEmail($payment['email'], 'Your TPT secure payment link', $clientBody);
-    } catch (Throwable $paymentMailError) {
-        error_log('[TPT] Payment mail error: ' . $paymentMailError->getMessage());
+    if ($previousStatus === 'paid' || $updated === 0) {
+        return false; /* already paid — no duplicate notifications */
     }
+    $payment['status'] = 'paid';
+    if ($providerRef !== '') { $payment['provider_ref'] = $providerRef; }
+    if ($method !== null) { $payment['method'] = $method; }
+    piePaymentSendPaidNotices($payment);
+    return true;
+}
+
+/**
+ * Send the one-time paid notifications (admin + customer). Callers must
+ * guarantee the payment just transitioned to "paid" (Task 6 — never twice).
+ */
+function piePaymentSendPaidNotices($payment)
+{
+    require_once BASE_PATH . '/core/Notifications.php';
+    $vars  = piePaymentVars($payment);
+    $table = piePaymentDetailTable($payment);
+    Notifications::notifyAdmins('payment', 'payment_admin', $vars, array(
+        'table'     => $table,
+        'admin_url' => rtrim(SITE_URL, '/') . '/admin/payments.php',
+    ));
+    Notifications::sendTemplate('payment_confirm', $payment['email'], $vars, array('table' => $table));
 }

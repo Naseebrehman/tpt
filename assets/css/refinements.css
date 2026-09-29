@@ -143,3 +143,130 @@ body:has(.chatbot-window.open) .back-to-top{visibility:hidden}
 /* Leave room for the floating Alia button beside the legal links. */
 .footer-compact .footer-bottom{padding-right:76px}
 body:has(.whatsapp-float) .footer-compact .footer-bottom{padding-left:56px}
+
+/* =====================================================================
+   Testimonials — responsive fixes (Task 1)
+   Cards always fit the viewport, long text wraps, navigation stays usable.
+   ===================================================================== */
+.testimonial-shell{max-width:100%;min-width:0}
+.testimonial-swiper{overflow:hidden;max-width:100%}
+.testimonial-swiper .swiper-slide{height:auto;max-width:100%;min-width:0}
+.testimonial-card{max-width:100%;min-width:0;overflow:hidden}
+.testimonial-quote{overflow-wrap:anywhere;word-break:break-word;min-width:0}
+.testimonial-who{flex-wrap:wrap;min-width:0}
+.testimonial-who>span{min-width:0;overflow-wrap:anywhere}
+.testimonial-who img,.testimonial-who .avatar-fallback{flex:none}
+/* Pagination: visually slim dots with comfortable touch targets. */
+.swiper-pagination-custom{flex-wrap:wrap;gap:8px;margin-top:22px;justify-content:center}
+.swiper-pagination-custom button{
+  width:38px;height:28px;position:relative;background:transparent;border:0;padding:0;cursor:pointer;flex:none;
+}
+.swiper-pagination-custom button::after{
+  content:"";position:absolute;left:0;right:0;top:12px;height:4px;border-radius:4px;background:#26262f;transition:background .3s,width .3s;
+}
+.swiper-pagination-custom button.active{width:56px}
+.swiper-pagination-custom button.active::after{background:var(--violet)}
+.swiper-pagination-custom button:focus-visible{outline:2px solid var(--violet-soft);outline-offset:2px;border-radius:6px}
+/* CDN-fallback stack: never cut cards off when Swiper is unavailable. */
+.testimonial-swiper.swiper-fallback .swiper-wrapper{display:grid;gap:22px}
+@media (max-width:640px){
+  .testimonial-card{padding:22px 18px;gap:16px;border-radius:18px}
+  .testimonial-quote{font-size:clamp(1.02rem,4.6vw,1.25rem);line-height:1.5}
+  .testimonial-who{gap:11px}
+  .testimonial-who img,.testimonial-who .avatar-fallback{width:42px;height:42px}
+  .testimonial-who strong{font-size:.9rem}
+  .testimonial-who span{font-size:.75rem}
+  .google-badge{margin-bottom:20px;font-size:.72rem;padding:8px 13px;flex-wrap:wrap}
+}
+
+/* =====================================================================
+   Blog & article mobile spacing (Task 2)
+   ===================================================================== */
+@media (max-width:640px){
+  :root{--gutter:20px}
+  .blog-toolbar{flex-direction:column;align-items:stretch;gap:14px;margin-bottom:28px}
+  .blog-toolbar .filter-tabs{margin-bottom:0;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;max-width:100%;padding-bottom:6px;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+  .blog-toolbar .filter-tabs .filter-tab{flex:none}
+  .search-box{max-width:100%;min-width:0;width:100%}
+  .blog-card-body{padding:18px}
+  .blog-card h3{font-size:1.05rem;overflow-wrap:anywhere}
+  .blog-meta{flex-wrap:wrap;gap:6px 12px}
+  .blog-cat{top:10px;left:10px;font-size:.62rem;padding:5px 10px;max-width:calc(100% - 20px);overflow-wrap:anywhere}
+  .pagination{flex-wrap:wrap;justify-content:center}
+}
+.blog-card h3 a{overflow-wrap:anywhere}
+.blog-card img{max-width:100%}
+.post-header h1,.post-title{overflow-wrap:anywhere}
+.post-meta-row{flex-wrap:wrap;gap:10px 16px}
+.post-featured{aspect-ratio:16/9}
+.post-featured img{max-width:100%}
+.post-body{overflow-wrap:break-word}
+.post-body img{max-width:100%;height:auto}
+.post-body iframe,.post-body video{max-width:100%}
+.post-body pre{overflow-x:auto;max-width:100%;padding:16px;border-radius:12px;background:#101014;border:1px solid var(--line)}
+.post-body table{display:block;overflow-x:auto;max-width:100%;border-collapse:collapse}
+.post-body td,.post-body th{padding:8px 12px;border:1px solid var(--line)}
+.post-body p,.post-body li,.post-body h2,.post-body h3{overflow-wrap:anywhere}
+@media (max-width:640px){.post-body{padding-block:30px}}
+
+/* =====================================================================
+   Forms — validation, phone input, CAPTCHA, payment UI (Tasks 3–5, 19–20)
+   ===================================================================== */
+.field-msg{display:block;color:#f87171;font-size:.78rem;margin-top:7px;overflow-wrap:anywhere}
+.field [aria-invalid="true"],.field input[aria-invalid="true"],.field select[aria-invalid="true"],.field textarea[aria-invalid="true"]{border-color:rgba(248,113,113,.7)}
+.form-grid>*,.contact-panel,.contact-side,.info-card{min-width:0}
+
+/* intl-tel-input: full-width, dark, mobile-friendly */
+.iti{width:100%}
+.iti .iti__flag-container{background:transparent}
+.iti__selected-flag{background:rgba(255,255,255,.05);border-radius:10px 0 0 10px;padding:0 8px 0 10px}
+.iti__country-list{background:#15151c;border:1px solid var(--line);color:#eeeef4;max-height:260px}
+.iti__country:hover,.iti__country.iti__highlight{background:rgba(124,58,237,.22)}
+.iti__dial-code{color:#9a9aa7}
+.iti__search input{background:#0c0c12;color:#fff;border-color:var(--line)}
+.iti input[type=tel]{width:100%;padding-left:14px}
+.iti--separate-dial-code .iti__selected-dial-code{color:#c9c9d4;font-size:.9rem}
+
+/* CAPTCHA widget */
+.captcha-field{display:flex;justify-content:flex-start;max-width:100%;overflow:hidden}
+.captcha-field iframe{max-width:100%}
+
+/* Payment page (Task 3/27) */
+.pay-panel .pay-terms{display:flex;gap:10px;align-items:flex-start;text-transform:none;letter-spacing:0;font-size:.86rem;color:var(--muted);line-height:1.6;margin:0}
+.pay-panel .pay-terms input{width:18px;height:18px;flex:none;margin-top:2px;accent-color:var(--violet)}
+.pay-panel .pay-terms a{color:var(--violet-soft);text-decoration:underline}
+.pay-methods .pay-method:has(input:disabled){opacity:.45;cursor:not-allowed}
+.pay-result{
+  text-align:center;padding:34px 22px;border:1px solid rgba(52,211,153,.4);border-radius:18px;
+  background:rgba(52,211,153,.07);margin-top:6px;
+}
+.pay-result.error{border-color:rgba(248,113,113,.4);background:rgba(248,113,113,.07)}
+.pay-result .tick{display:inline-flex;width:64px;height:64px;border-radius:50%;align-items:center;justify-content:center;background:rgba(52,211,153,.15);color:#34d399;margin-bottom:12px}
+.pay-result.error .tick{background:rgba(248,113,113,.15);color:#f87171}
+.pay-result h3{font-size:1.45rem;margin-bottom:10px;letter-spacing:-.02em}
+.pay-result p{max-width:460px;margin:0 auto 18px;line-height:1.7}
+.pay-result .btn{margin:4px}
+.pay-summary{display:grid;gap:10px;max-width:440px;margin:20px auto 24px;text-align:left}
+.pay-summary>div{display:flex;justify-content:space-between;gap:16px;border-bottom:1px solid var(--line);padding-bottom:10px;flex-wrap:wrap}
+.pay-summary dt{color:var(--muted-2);font-size:.8rem;text-transform:uppercase;letter-spacing:.08em}
+.pay-summary dd{margin:0;color:#fff;font-size:.92rem;overflow-wrap:anywhere;text-align:right}
+.pay-summary dd.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.82rem}
+
+/* Stripe Element + PayPal buttons containers */
+.stripe-element{min-height:48px;border-radius:12px}
+.paypal-buttons{max-width:420px;min-width:min(100%,260px);margin-inline:auto}
+#paypalButtonWrap,#stripePaymentWrap{border:1px solid var(--line);border-radius:16px;padding:18px;background:rgba(255,255,255,.02)}
+#stripePaymentWrap .btn-block{width:100%}
+@media (max-width:640px){
+  .pay-result{padding:26px 16px}
+  .pay-summary dd{text-align:left}
+  .pay-summary>div{flex-direction:column;gap:2px}
+}
+
+/* =====================================================================
+   Global overflow guards (Task 23)
+   ===================================================================== */
+img{max-width:100%}
+.form-grid input,.form-grid select,.form-grid textarea{max-width:100%}
+blockquote,pre,table{max-width:100%}
+.iti,.captcha-field,.paypal-buttons,.stripe-element{max-width:100%}

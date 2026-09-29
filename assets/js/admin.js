@@ -96,6 +96,15 @@
 
   /* ------------------------------ tabs ----------------------------------- */
   var tabs = document.querySelectorAll('.a-tab');
+  function syncSaveBar() {
+    /* The main "Save All" bar belongs to the settings form only — hide it on
+       tabs (notifications/templates) that use their own forms. */
+    var bar = document.querySelector('.settings-save-bar');
+    if (!bar) return;
+    var activePanel = document.querySelector('.a-tabpanel.active');
+    var inForm = activePanel && activePanel.closest && activePanel.closest('#settingsForm');
+    bar.style.display = inForm ? '' : 'none';
+  }
   tabs.forEach(function (tab) {
     tab.addEventListener('click', function (e) {
       e.preventDefault();
@@ -105,9 +114,11 @@
       document.querySelectorAll('.a-tabpanel').forEach(function (panel) {
         panel.classList.toggle('active', panel.getAttribute('data-panel') === target);
       });
+      syncSaveBar();
       if (history.replaceState) history.replaceState(null, '', '#' + target);
     });
   });
+  syncSaveBar();
   if (location.hash) {
     var hashTab = document.querySelector('.a-tab[data-tab="' + location.hash.slice(1) + '"]');
     if (hashTab) hashTab.click();

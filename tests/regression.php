@@ -65,7 +65,7 @@ check(count($s) === 2 && $s[0] === 'SET NAMES utf8mb4' && $s[1] === 'CREATE TABL
 $s = Installer::splitSql("INSERT INTO t VALUES ('a;b', \"c;d\", `e;f`); SELECT 1;");
 check(count($s) === 2 && strpos($s[0], 'a;b') !== false, 'splitSql keeps semicolons inside quotes/identifiers');
 $s = Installer::splitSql("INSERT INTO t VALUES ('it''s', 'back\\\\slash');");
-check(count($s) === 1 && strpos($s[0], 'it''s') !== false, 'splitSql handles doubled quotes and escapes');
+check(count($s) === 1 && strpos($s[0], "it''s") !== false, 'splitSql handles doubled quotes and escapes');
 $s = Installer::splitSql("-- comment ; with semicolon\nSELECT 1; # hash comment\nSELECT 2;");
 check(count($s) === 2, 'splitSql strips -- and # comments');
 $s = Installer::splitSql("/* ordinary ; comment */ SELECT 1; /*!40101 SET @old=1 */;");
@@ -92,6 +92,12 @@ foreach (array('notification_status', 'chatbot_leads', 'payment_events') as $mus
     if (strpos((string) file_get_contents(BASE_PATH . '/database/schema-mysql.sql'), $must) === false) { $bad++; }
 }
 check($bad === 0, 'fresh schema includes former migration-001 additions');
+foreach (array('notification_emails', 'email_templates', 'phone VARCHAR(30)', 'service VARCHAR(100)') as $must) {
+    if (strpos((string) file_get_contents(BASE_PATH . '/database/schema-mysql.sql'), $must) === false) { $bad++; }
+}
+check($bad === 0, 'fresh schema includes notification/template tables and payment details');
+check(is_file(BASE_PATH . '/database/migrations/002_notifications.php'), 'migration 002 exists for existing installations');
+check(strpos((string) file_get_contents(BASE_PATH . '/database/migrations/002_notifications.php'), 'notification_emails') !== false, 'migration 002 creates the notification tables');
 check(strpos((string) file_get_contents(BASE_PATH . '/database.sql'), 'Admin@123') !== false, 'phpMyAdmin dump documents its default password');
 
 $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(BASE_PATH));

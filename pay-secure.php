@@ -92,6 +92,16 @@ require_once __DIR__ . '/includes/header.php';
                 <div style="display:flex;justify-content:space-between;gap:16px;border-bottom:1px solid var(--line);padding-bottom:12px">
                     <span class="text-muted">Receipt email</span><span><?= esc($payment['email']) ?></span>
                 </div>
+                <?php if (!empty($payment['phone'])): ?>
+                <div style="display:flex;justify-content:space-between;gap:16px;border-bottom:1px solid var(--line);padding-bottom:12px">
+                    <span class="text-muted">Phone</span><span><?= esc($payment['phone']) ?></span>
+                </div>
+                <?php endif; ?>
+                <?php if (!empty($payment['service'])): ?>
+                <div style="display:flex;justify-content:space-between;gap:16px;border-bottom:1px solid var(--line);padding-bottom:12px">
+                    <span class="text-muted">Service</span><span><?= esc($payment['service']) ?></span>
+                </div>
+                <?php endif; ?>
                 <?php if ($payment['reference'] !== ''): ?>
                 <div style="display:flex;justify-content:space-between;gap:16px;border-bottom:1px solid var(--line);padding-bottom:12px">
                     <span class="text-muted">Invoice / reference</span><span class="mono"><?= esc($payment['reference']) ?></span>
@@ -106,8 +116,21 @@ require_once __DIR__ . '/includes/header.php';
         <?php if ($payment['status'] === 'paid'): ?>
         <div class="chart-card" style="margin-top:18px;text-align:center;border-color:rgba(52,211,153,.4)" data-aos="fade-up">
             <span style="color:#34d399;display:inline-flex;margin-bottom:10px"><?= icon('check', 40) ?></span>
-            <h2 style="font-size:1.4rem;margin-bottom:8px">Payment received — thank you.</h2>
-            <p class="text-muted">A receipt is on its way to <?= esc($payment['email']) ?>. If anything looks off, reply to that email and a human will sort it.</p>
+            <h2 class="pay-state-title" style="font-size:1.4rem;margin-bottom:8px">Payment Successful</h2>
+            <p class="text-muted">Thank you, <?= esc($payment['name']) ?> — we received <strong style="color:#fff">$<?= esc(number_format((float) $payment['amount_usd'], 2)) ?></strong><?php if (!empty($payment['service'])): ?> for <?= esc($payment['service']) ?><?php endif; ?>. A receipt is on its way to <?= esc($payment['email']) ?>. If anything looks off, reply to that email and a human will sort it.</p>
+            <?php if ($payment['provider_ref'] !== ''): ?>
+            <p class="text-muted" style="font-size:.85rem;margin-top:8px">Transaction ID: <span class="mono"><?= esc($payment['provider_ref']) ?></span> · Method: <?= esc(piePaymentMethodLabel($payment['method'])) ?> · <?= esc(formatDate($payment['created_at'])) ?></p>
+            <?php endif; ?>
+        </div>
+        <?php elseif (isset($_GET['paid'])): ?>
+        <div class="chart-card" style="margin-top:18px;text-align:center" data-aos="fade-up">
+            <h2 class="pay-state-title" style="font-size:1.4rem;margin-bottom:8px">Finalizing your payment…</h2>
+            <p class="text-muted">We&rsquo;re confirming the transaction with the provider. This page updates automatically — refresh in a moment if it doesn&rsquo;t.</p>
+        </div>
+        <?php elseif ($payment['status'] === 'failed'): ?>
+        <div class="chart-card" style="margin-top:18px;text-align:center;border-color:rgba(248,113,113,.4)" data-aos="fade-up">
+            <h2 class="pay-state-title" style="font-size:1.4rem;margin-bottom:8px">Payment Could Not Be Completed</h2>
+            <p class="text-muted">No charge was made. You can try again below — if it keeps failing, reply to your confirmation email and we&rsquo;ll help personally.</p>
         </div>
         <?php elseif (isset($_GET['cancelled'])): ?>
         <div class="chart-card" style="margin-top:18px" data-aos="fade-up">

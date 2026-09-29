@@ -20,7 +20,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $allowed = array('requested', 'pending', 'paid', 'failed', 'cancelled');
             $status  = sanitize($_POST['status']);
             if (in_array($status, $allowed, true)) {
-                dbExec('UPDATE payments SET status = ? WHERE id = ?', array($status, $paymentId));
+                if ($status === 'paid' && $row['status'] !== 'paid') {
+                    /* Fires the one-time paid notifications (Task 6). */
+                    piePaymentMarkPaid($row);
+                } else {
+                    dbExec('UPDATE payments SET status = ? WHERE id = ?', array($status, $paymentId));
+                }
                 setFlash('ok', 'Status updated to “' . $status . '”.');
             }
         } elseif ($action === 'recheck' && $row['status'] === 'pending' && $row['provider_ref'] !== '') {
@@ -88,10 +93,10 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
         <?php foreach ($payments as $payRow): ?>
         <tr>
             <td class="td-sub"><?= esc(formatDate($payRow['created_at'], 'j M Y, H:i')) ?></td>
-            <td class="td-main"><?= esc($payRow['name']) ?><br><span class="td-sub"><?= esc($payRow['email']) ?></span></td>
+            <td class="td-main"><?= esc($payRow['name']) ?><br><span class="td-sub"><?= esc($payRow['email']) ?><?php if (!empty($payRow['phone'])): ?> · <?= esc($payRow['phone']) ?><?php endif; ?><?php if (!empty($payRow['service'])): ?><br><?= esc($payRow['service']) ?><?php endif; ?></span></td>
             <td class="mono" style="font-size:.78rem"><?= esc($payRow['reference'] !== '' ? $payRow['reference'] : '—') ?></td>
             <td style="text-align:right"><strong>$<?= esc(number_format((float) $payRow['amount_usd'], 2)) ?></strong></td>
-            <td><?= esc(ucfirst($payRow['method'])) ?></td>
+            <td><?= esc(piePaymentMethodLabel($payRow['method'])) ?></td>
             <td><span class="badge <?= $payRow['status'] === 'paid' ? 'active' : ($payRow['status'] === 'pending' || $payRow['status'] === 'requested' ? '' : 'inactive') ?>"><?= esc(ucfirst($payRow['status'])) ?></span></td>
             <td>
                 <div class="row-actions">

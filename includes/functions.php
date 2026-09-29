@@ -13,10 +13,13 @@ if (!defined('DB_OK')) {
    Settings
    =========================================================================== */
 
-/** All settings rows, cached per request. */
-function settingsCache()
+/** All settings rows, cached per request. Pass true to force a reload. */
+function settingsCache($reset = false)
 {
     static $cache = null;
+    if ($reset) {
+        $cache = null;
+    }
     if ($cache !== null) {
         return $cache;
     }

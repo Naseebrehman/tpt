@@ -66,17 +66,18 @@ $pageLibs = isset($pageLibs) && is_array($pageLibs) ? $pageLibs : array();
 <!-- ============================ Alia chat assistant ======================== -->
 <?php if (getSetting('alia_enabled', '1') === '1'): ?>
 <div class="chatbot" id="chatbot">
-    <button class="chatbot-fab" id="chatbotFab" aria-label="Ask Alia" aria-expanded="false">
+    <?php $chatbotName = getSetting('chatbot_name', 'Alia'); ?>
+    <button class="chatbot-fab" id="chatbotFab" aria-label="Ask <?= esc($chatbotName) ?>" aria-expanded="false">
         <img class="alia-portrait" src="<?= asset('assets/images/alia-portrait.jpg') ?>" alt="" width="56" height="56">
         <span class="chatbot-pulse" aria-hidden="true"></span>
     </button>
 
-    <div class="chatbot-window" id="chatbotWindow" role="dialog" aria-label="Alia chat" aria-hidden="true">
+    <div class="chatbot-window" id="chatbotWindow" role="dialog" aria-label="<?= esc($chatbotName) ?> chat" aria-hidden="true">
         <div class="chatbot-head">
             <div class="chatbot-id">
                 <span class="chatbot-avatar"><img class="alia-portrait" src="<?= asset('assets/images/alia-portrait.jpg') ?>" alt="" width="38" height="38"></span>
                 <span class="chatbot-title">
-                    <strong>Alia</strong>
+                    <strong><?= esc($chatbotName) ?></strong>
                     <small><i class="online-dot"></i> TPT growth assistant — ask me anything</small>
                 </span>
             </div>
@@ -84,7 +85,7 @@ $pageLibs = isset($pageLibs) && is_array($pageLibs) ? $pageLibs : array();
         </div>
         <div class="chatbot-messages" id="chatbotMessages" aria-live="polite"></div>
         <div class="chatbot-input">
-            <input type="text" id="chatbotInput" placeholder="Ask Alia about services, pricing, process…" autocomplete="off" aria-label="Message">
+            <input type="text" id="chatbotInput" placeholder="Ask <?= esc($chatbotName) ?> about services, pricing, process…" autocomplete="off" aria-label="Message">
             <button id="chatbotSend" aria-label="Send message"><?= icon('send', 18) ?></button>
         </div>
         <div class="chatbot-disclaim">
@@ -96,7 +97,16 @@ $pageLibs = isset($pageLibs) && is_array($pageLibs) ? $pageLibs : array();
 <?php endif; ?>
 
 <script>
-window.PIE = <?= json_encode(array('base' => BASE_URL, 'api' => asset('api/chat'), 'csrf' => generateCSRF(), 'fallback' => getSetting('alia_fallback', "I don't want to guess. You can speak with the TPT team here."), 'leadCollection' => getSetting('alia_lead_collection', '1') === '1', 'welcome' => getSetting('alia_welcome', "Hi, I'm Alia. How can I help you today?")), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+window.PIE = <?= json_encode(array(
+    'base' => BASE_URL,
+    'api' => asset('api/chat'),
+    'csrf' => generateCSRF(),
+    'fallback' => getSetting('alia_fallback', "I don't want to guess. You can speak with the TPT team here."),
+    'error' => getSetting('alia_error', 'I’m having trouble connecting right now. Please try again in a moment.'),
+    'name' => getSetting('chatbot_name', 'Alia'),
+    'leadCollection' => getSetting('alia_lead_collection', '1') === '1',
+    'welcome' => getSetting('alia_welcome', "Hi, I'm Alia. How can I help you today?"),
+), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 </script>
 <script src="https://unpkg.com/aos@2.3.4/dist/aos.js" defer></script>
 <?php if (!empty($pageLibs['typed'])): ?><script src="https://cdn.jsdelivr.net/npm/typed.js@2.1.0/dist/typed.umd.js" defer></script><?php endif; ?>
@@ -104,7 +114,12 @@ window.PIE = <?= json_encode(array('base' => BASE_URL, 'api' => asset('api/chat'
 <?php if (!empty($pageLibs['swiper'])): ?><script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js" defer></script><?php endif; ?>
 <?php if (!empty($pageLibs['chart'])): ?><script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script><?php endif; ?>
 <?php if (!empty($pageLibs['sortable'])): ?><script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js" defer></script><?php endif; ?>
+<?php if (!empty($pageLibs['phone'])): ?>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/css/intlTelInput.min.css">
+<script src="https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/intlTelInput.min.js" defer></script>
+<?php endif; ?>
 <script src="<?= asset('assets/js/main.js') ?>?v=<?= (int) filemtime(BASE_PATH . '/assets/js/main.js') ?>" defer></script>
+<?php if (!empty($pageLibs['payment'])): ?><script src="<?= asset('assets/js/payment.js') ?>?v=<?= (int) filemtime(BASE_PATH . '/assets/js/payment.js') ?>" defer></script><?php endif; ?>
 <?php if (getSetting('alia_enabled', '1') === '1'): ?>
 <script src="<?= asset('assets/js/chatbot.js') ?>?v=<?= (int) filemtime(BASE_PATH . '/assets/js/chatbot.js') ?>" defer></script>
 <?php endif; ?>

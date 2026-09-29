@@ -10,13 +10,22 @@ class Settings
         foreach (array('smtp_from_email', 'smtp_reply_to', 'site_email') as $key) {
             if (!empty($input[$key]) && !filter_var($input[$key], FILTER_VALIDATE_EMAIL)) { return 'Invalid email: ' . $key; }
         }
-        foreach (array('smtp_encryption' => array('tls','ssl','none'), 'paypal_mode' => array('sandbox','live'), 'stripe_mode' => array('test','live'), 'brand_font' => array('default','system')) as $key => $allowed) {
+        foreach (array('smtp_encryption' => array('tls','ssl','none'), 'paypal_mode' => array('sandbox','live'), 'stripe_mode' => array('test','live'), 'brand_font' => array('default','system'),
+            'ai_provider1_type' => array('gemini','openai'), 'ai_provider2_type' => array('gemini','openai'),
+            'ai_active_provider' => array('1','2'), 'captcha_provider' => array('turnstile','hcaptcha','recaptcha')) as $key => $allowed) {
             if (isset($input[$key]) && !in_array($input[$key], $allowed, true)) { return 'Invalid option: ' . $key; }
         }
-        foreach (array('smtp_port' => array(1,65535), 'gemini_temperature' => array(0,2), 'gemini_max_tokens' => array(64,8192)) as $key => $range) {
+        foreach (array('smtp_port' => array(1,65535), 'gemini_temperature' => array(0,2), 'gemini_max_tokens' => array(64,8192),
+            'chatbot_temperature' => array(0,2), 'chatbot_max_tokens' => array(32,8192)) as $key => $range) {
             if (isset($input[$key]) && (!is_numeric($input[$key]) || $input[$key] < $range[0] || $input[$key] > $range[1])) { return 'Invalid range: ' . $key; }
         }
         if (!empty($input['gemini_model']) && !preg_match('/^[a-zA-Z0-9._-]{1,100}$/D', $input['gemini_model'])) { return 'Invalid Gemini model name.'; }
+        foreach (array('ai_provider1_model', 'ai_provider2_model') as $key) {
+            if (!empty($input[$key]) && !preg_match('/^[a-zA-Z0-9._\/:-]{1,120}$/D', $input[$key])) { return 'Invalid AI model name: ' . $key; }
+        }
+        foreach (array('ai_provider1_base_url', 'ai_provider2_base_url') as $key) {
+            if (!empty($input[$key]) && (!filter_var($input[$key], FILTER_VALIDATE_URL) || !in_array(parse_url($input[$key], PHP_URL_SCHEME), array('https','http'), true))) { return 'Invalid API base URL: ' . $key; }
+        }
         foreach (array('instagram_url','facebook_url','linkedin_url','tiktok_url','twitter_url','youtube_url') as $key) {
             if (!empty($input[$key]) && (!filter_var($input[$key], FILTER_VALIDATE_URL) || !in_array(parse_url($input[$key], PHP_URL_SCHEME), array('https','http'), true))) { return 'Invalid social URL.'; }
         }

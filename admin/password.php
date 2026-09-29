@@ -22,6 +22,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             setFlash('err', 'The confirmation does not match.');
         } else {
             dbExec('UPDATE admin_users SET password_hash = ? WHERE id = ?', array(password_hash($new, PASSWORD_BCRYPT), (int) $adminUser['id']));
+            /* Security notification for an important account change (Task 9). */
+            try {
+                require_once BASE_PATH . '/core/Notifications.php';
+                Notifications::notifyAdmins('security', 'system', array(
+                    'subject' => 'Admin password changed',
+                    'message' => 'The dashboard password for ' . $adminUser['email'] . ' was changed on ' . date('j M Y, H:i') . ' UTC (IP ' . pieClientIp() . '). If this wasn’t you, reset it immediately.',
+                ), array('table' => ''));
+            } catch (Throwable $securityMailError) {
+                error_log('[TPT] Security notification failed: ' . $securityMailError->getMessage());
+            }
             setFlash('ok', 'Password changed. Use it from your next login.');
             header('Location: password.php');
             exit;

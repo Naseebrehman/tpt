@@ -8,6 +8,7 @@
  */
 require_once __DIR__ . '/includes/init.php';
 require_once __DIR__ . '/includes/email-templates.php';
+require_once BASE_PATH . '/core/Captcha.php';
 
 /* ------------------------------ unsubscribe ------------------------------ */
 if (isset($_GET['unsubscribe'])) {
@@ -41,6 +42,16 @@ if (!validateCSRF()) {
 
 $name  = sanitize(isset($_POST['name']) ? $_POST['name'] : '');
 $email = sanitize(isset($_POST['email']) ? $_POST['email'] : '');
+
+if (!Ratelimit::allow('newsletter:' . pieClientIp(), 5, 600)) {
+    echo json_encode(array('success' => false, 'message' => 'Too many attempts — please try again in a few minutes.'));
+    exit;
+}
+
+if (!Captcha::verify(Captcha::tokenFromRequest(), pieClientIp())) {
+    echo json_encode(array('success' => false, 'message' => 'Please complete the security check and try again.', 'errors' => array('captcha' => 'CAPTCHA verification failed.')));
+    exit;
+}
 
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     echo json_encode(array('success' => false, 'message' => 'Please enter a valid email address.'));
