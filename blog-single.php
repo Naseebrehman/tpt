@@ -1,40 +1,17 @@
 <?php
+/**
+ * The Pie Technologies — single blog post
+ * Mobile-first article layout; the comments section has been replaced by the
+ * newsletter subscription (comments were removed from the public site).
+ */
 require_once __DIR__ . '/includes/init.php';
 require_once BASE_PATH . '/core/Captcha.php';
 
 $slug = isset($_GET['slug']) ? sanitize($_GET['slug']) : '';
 $post = $slug !== '' ? getPostBySlug($slug) : null;
 
-/* ------------------------- comment submission (PRG) ------------------------ */
 if (!$post && isset($_GET['id'])) {
     $post = getPostById((int) $_GET['id']);
-}
-
-if ($post && (int) $post['id'] < 0 && $_SERVER['REQUEST_METHOD'] === 'POST') { http_response_code(422); exit('Comments are not available on sample previews.'); }
-
-if ($post && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['comment_submit'])) {
-    if (!validateCSRF()) {
-        setFlash('err', 'Security token expired — please try again.');
-    } else {
-        $cName    = sanitize(isset($_POST['name']) ? $_POST['name'] : '');
-        $cEmail   = sanitize(isset($_POST['email']) ? $_POST['email'] : '');
-        $cComment = sanitizeMultiline(isset($_POST['comment']) ? $_POST['comment'] : '');
-        if (!Ratelimit::allow('comment:' . pieClientIp(), 5, 600)) {
-            setFlash('err', 'Too many comments in a short time — please try again in a few minutes.');
-        } elseif (!Captcha::verify(Captcha::tokenFromRequest(), pieClientIp())) {
-            setFlash('err', 'Please complete the security check and try again.');
-        } elseif ($cName === '' || !filter_var($cEmail, FILTER_VALIDATE_EMAIL) || mb_strlen($cComment) < 4) {
-            setFlash('err', 'Please add your name, a valid email and a comment.');
-        } else {
-            dbInsert(
-                'INSERT INTO blog_comments (post_id, name, email, comment, status) VALUES (?, ?, ?, ?, "pending")',
-                array((int) $post['id'], $cName, $cEmail, $cComment)
-            );
-            setFlash('ok', 'Thanks! Your comment is waiting for moderation.');
-        }
-    }
-    header('Location: ' . url('blog/' . $post['slug']) . '#comments');
-    exit;
 }
 
 if (!$post) {
@@ -53,8 +30,6 @@ $activeNav = 'blog';
 $ogImage   = $post['featured_image'] !== '' ? $post['featured_image'] : 'assets/images/og-image.jpg';
 
 $related  = array_slice(getRecentPosts(4, (int) $post['id']), 0, 3);
-$comments = getApprovedComments((int) $post['id']);
-$flash    = getFlash();
 $shareUrl = canonicalUrl('blog/' . $post['slug']);
 
 $jsonLd = json_encode(array(
@@ -92,15 +67,17 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </header>
 
-    <div class="post-body">
-        <?= $post['content'] /* stored as trusted admin-authored HTML */ ?>
+    <div class="container">
+        <div class="post-body">
+            <?= $post['content'] /* stored as trusted admin-authored HTML */ ?>
 
-        <div class="share-row">
-            <span class="label">Share</span>
-            <a class="share-btn" target="_blank" rel="noopener noreferrer" href="https://twitter.com/intent/tweet?url=<?= rawurlencode($shareUrl) ?>&text=<?= rawurlencode($post['title']) ?>" aria-label="Share on X"><?= icon('twitter', 16) ?></a>
-            <a class="share-btn" target="_blank" rel="noopener noreferrer" href="https://www.facebook.com/sharer/sharer.php?u=<?= rawurlencode($shareUrl) ?>" aria-label="Share on Facebook"><?= icon('facebook', 16) ?></a>
-            <a class="share-btn" target="_blank" rel="noopener noreferrer" href="https://www.linkedin.com/shareArticle?mini=true&url=<?= rawurlencode($shareUrl) ?>&title=<?= rawurlencode($post['title']) ?>" aria-label="Share on LinkedIn"><?= icon('linkedin', 16) ?></a>
-            <a class="share-btn" target="_blank" rel="noopener noreferrer" href="https://wa.me/?text=<?= rawurlencode($post['title'] . ' ' . $shareUrl) ?>" aria-label="Share on WhatsApp"><?= icon('whatsapp', 16) ?></a>
+            <div class="share-row">
+                <span class="label">Share</span>
+                <a class="share-btn" target="_blank" rel="noopener noreferrer" href="https://twitter.com/intent/tweet?url=<?= rawurlencode($shareUrl) ?>&text=<?= rawurlencode($post['title']) ?>" aria-label="Share on X"><?= icon('twitter', 16) ?></a>
+                <a class="share-btn" target="_blank" rel="noopener noreferrer" href="https://www.facebook.com/sharer/sharer.php?u=<?= rawurlencode($shareUrl) ?>" aria-label="Share on Facebook"><?= icon('facebook', 16) ?></a>
+                <a class="share-btn" target="_blank" rel="noopener noreferrer" href="https://www.linkedin.com/shareArticle?mini=true&url=<?= rawurlencode($shareUrl) ?>&title=<?= rawurlencode($post['title']) ?>" aria-label="Share on LinkedIn"><?= icon('linkedin', 16) ?></a>
+                <a class="share-btn" target="_blank" rel="noopener noreferrer" href="https://wa.me/?text=<?= rawurlencode($post['title'] . ' ' . $shareUrl) ?>" aria-label="Share on WhatsApp"><?= icon('whatsapp', 16) ?></a>
+            </div>
         </div>
     </div>
 </article>
@@ -131,54 +108,40 @@ require_once __DIR__ . '/includes/header.php';
 </section>
 <?php endif; ?>
 
-<section class="comments" id="comments">
-    <h2 style="font-size:clamp(1.4rem,2.6vw,2rem);margin-bottom:8px">Comments (<?= count($comments) ?>)</h2>
-    <?php if ($flash): ?>
-    <div class="form-status <?= $flash['type'] === 'ok' ? 'ok' : 'err' ?> show" style="margin:16px 0"><?= esc($flash['message']) ?></div>
-    <?php endif; ?>
-
-    <?php foreach ($comments as $comment): ?>
-    <div class="comment">
-        <div class="comment-head">
-            <span class="comment-avatar"><?= esc(strtoupper(substr($comment['name'], 0, 1))) ?></span>
-            <span>
-                <strong><?= esc($comment['name']) ?></strong>
-                <span><?= esc(formatDate($comment['created_at'], 'j M Y, H:i')) ?></span>
-            </span>
+<!-- ============================ NEWSLETTER ============================== -->
+<section class="section post-newsletter" id="newsletter">
+    <div class="container">
+        <div class="newsletter-box" data-aos="fade-up">
+            <div class="newsletter-copy">
+                <p class="eyebrow">The Growth Letter</p>
+                <h2>Get the playbooks before they hit the Journal.</h2>
+                <p>One or two emails a month: live campaign teardowns, new blueprints and templates, zero spam. Unsubscribe in one click, always.</p>
+                <ul class="newsletter-points">
+                    <li><?= icon('check', 15) ?> Teardowns of real campaigns we run</li>
+                    <li><?= icon('check', 15) ?> New blueprints and templates first</li>
+                    <li><?= icon('check', 15) ?> No spam, one-click unsubscribe</li>
+                </ul>
+            </div>
+            <form class="newsletter-panel" data-ajax="newsletter" action="<?= url('newsletter.php', false) ?>" method="post" novalidate>
+                <?= csrfField() ?>
+                <h3>Subscribe free</h3>
+                <div class="field">
+                    <label for="postNlName">Name <span class="text-muted">(optional)</span></label>
+                    <input id="postNlName" type="text" name="name" placeholder="Your name" autocomplete="name" maxlength="150">
+                </div>
+                <div class="field">
+                    <label for="postNlEmail">Email <span class="req">*</span></label>
+                    <input id="postNlEmail" type="email" name="email" placeholder="you@company.com" required autocomplete="email" maxlength="150">
+                </div>
+                <?php if (Captcha::enabled()): ?>
+                <div class="field"><?= Captcha::field() ?></div>
+                <?php endif; ?>
+                <button class="btn btn-primary btn-block" type="submit">Subscribe Free <?= icon('send', 16) ?></button>
+                <p class="newsletter-fine">We never share your address. Unsubscribe anytime in one click.</p>
+                <div class="form-status" role="status" aria-live="polite"></div>
+            </form>
         </div>
-        <p><?= nl2br(esc($comment['comment'])) ?></p>
     </div>
-    <?php endforeach; ?>
-
-    <?php if ((int) $post['id'] < 0): ?>
-    <p class="sample-notice">Comments are disabled on this sample preview.</p>
-    <?php else: ?>
-    <form method="post" action="<?= url('blog/' . $post['slug']) ?>#comments" class="contact-panel" style="margin-top:34px">
-        <?= csrfField() ?>
-        <h2 style="font-size:1.3rem">Leave a comment</h2>
-        <p class="sub">Your email stays private. Comments are moderated before publishing.</p>
-        <div class="form-grid">
-            <div class="field">
-                <label for="cName">Name <span class="req">*</span></label>
-                <input id="cName" name="name" type="text" required maxlength="150" autocomplete="name">
-            </div>
-            <div class="field">
-                <label for="cEmail">Email <span class="req">*</span></label>
-                <input id="cEmail" name="email" type="email" required maxlength="150" autocomplete="email">
-            </div>
-            <div class="field full">
-                <label for="cComment">Comment <span class="req">*</span></label>
-                <textarea id="cComment" name="comment" required maxlength="2000"></textarea>
-            </div>
-            <?php if (Captcha::enabled()): ?>
-            <div class="field full"><?= Captcha::field() ?></div>
-            <?php endif; ?>
-            <div class="full">
-                <button class="btn btn-primary" type="submit" name="comment_submit" value="1">Post Comment</button>
-            </div>
-        </div>
-    </form>
-    <?php endif; ?>
 </section>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

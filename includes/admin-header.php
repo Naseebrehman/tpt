@@ -6,6 +6,13 @@
  */
 requireAdmin();
 
+/* Admin screens reachable as /admin/page.php bypass the front controller, so
+   the schema self-check runs here as well: tables added by later migrations
+   (notification emails, chat transcripts, payment services) are created
+   quietly instead of producing SQL errors in the dashboard. */
+require_once BASE_PATH . '/core/Schema.php';
+Schema::ensure();
+
 $adminPage  = isset($adminPage) ? $adminPage : 'dashboard';
 $adminTitle = isset($adminTitle) ? $adminTitle : 'Dashboard';
 $adminUser  = currentAdmin();
@@ -13,12 +20,12 @@ $flash      = getFlash();
 
 $adminNav = array(
     array('key' => 'leads', 'label' => 'Alia Leads', 'href' => 'leads.php', 'icon' => 'users'),
+    array('key' => 'chats', 'label' => 'Alia Chats', 'href' => 'chats.php', 'icon' => 'chat'),
     array('key' => 'content', 'label' => 'Content & SEO', 'href' => 'content.php', 'icon' => 'edit'),
     array('key' => 'dashboard',    'label' => 'Dashboard',     'href' => 'index.php',        'icon' => 'grid'),
     array('key' => 'submissions',  'label' => 'Submissions',   'href' => 'submissions.php',  'icon' => 'mail'),
     array('key' => 'payments',     'label' => 'Payments',      'href' => 'payments.php',     'icon' => 'card'),
     array('key' => 'blog',         'label' => 'Blog',          'href' => 'blog.php',         'icon' => 'edit'),
-    array('key' => 'comments',     'label' => 'Comments',      'href' => 'comments.php',     'icon' => 'chat'),
     array('key' => 'resources',    'label' => 'Resources',     'href' => 'resources.php',    'icon' => 'download'),
     array('key' => 'portfolio',    'label' => 'Portfolio',     'href' => 'portfolio.php',    'icon' => 'layers'),
     array('key' => 'team',         'label' => 'Team',          'href' => 'team.php',         'icon' => 'users'),

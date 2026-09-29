@@ -38,6 +38,95 @@ function piePaymentProviders()
     return $providers;
 }
 
+/**
+ * Services offered in the Pay Online dropdown — managed in
+ * Admin → Payments → Services. Falls back to the built-in list when the
+ * table has not been created yet (before migration 003).
+ *
+ * @return array<int,string> active service names, in admin order
+ */
+function piePaymentServices()
+{
+    $tableExists = dbOne(
+        "SELECT COUNT(*) AS c FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'payment_services'"
+    );
+    $names = array();
+    if ($tableExists && (int) $tableExists['c'] > 0) {
+        foreach (dbAll('SELECT name FROM payment_services WHERE is_active = 1 ORDER BY sort_order ASC, id ASC') as $row) {
+            $names[] = (string) $row['name'];
+        }
+    }
+    if (!$names) {
+        /* Pre-migration fallback: the list the form has always offered. */
+        $names = array(
+            'AI Optimization', 'Web Development', 'Digital Marketing', 'Business Consultation',
+            'G-W-M Services', 'Monthly Marketing Charges', 'Others',
+        );
+    }
+    return $names;
+}
+
+/**
+ * Payment methods to offer on the Pay Online page, in display order.
+ *
+ * A method is offered when the admin enabled it in Admin → Payments and it has
+ * either custom SDK/integration code or working provider credentials. The
+ * built-in "Request an invoice" option is the third method and is always
+ * available unless the admin turns it off.
+ *
+ * @return array<string,array{key:string,label:string,icon:string,note:string,code:string,builtin:bool}>
+ */
+function piePaymentMethods()
+{
+    $methods = array();
+
+    if (getSetting('paypal_enabled', '0') === '1') {
+        $methods['paypal'] = array(
+            'key'     => 'paypal',
+            'label'   => 'PayPal',
+            'icon'    => 'loop',
+            'note'    => 'Pay with your PayPal account or a card through PayPal.',
+            'code'    => (string) getSetting('paypal_sdk_code', ''),
+            'builtin' => piePayPalClientId() !== '',
+        );
+    }
+    if (getSetting('stripe_enabled', '0') === '1') {
+        $methods['stripe'] = array(
+            'key'     => 'stripe',
+            'label'   => 'Credit/Debit Card — Stripe',
+            'icon'    => 'card',
+            'note'    => 'Secure card payment powered by Stripe.',
+            'code'    => (string) getSetting('stripe_sdk_code', ''),
+            'builtin' => getSetting('stripe_secret_key') !== '' && getSetting('stripe_publishable_key') !== '',
+        );
+    }
+    if (getSetting('invoice_enabled', '1') === '1') {
+        $methods['invoice'] = array(
+            'key'     => 'invoice',
+            'label'   => 'Request an invoice',
+            'icon'    => 'mail',
+            'note'    => getSetting('invoice_note', 'Request a secure payment link by email. We send an invoice you can pay online in a couple of taps.'),
+            'code'    => '',
+            'builtin' => true,
+        );
+    }
+
+    /* A method with neither custom code nor a usable integration is dropped. */
+    foreach ($methods as $key => $method) {
+        if ($method['code'] === '' && !$method['builtin']) {
+            unset($methods[$key]);
+        }
+    }
+    return $methods;
+}
+
+/** True when the method is paid through the admin's own integration code. */
+function pieMethodUsesCustomCode($method)
+{
+    $methods = piePaymentMethods();
+    return isset($methods[$method]) && trim($methods[$method]['code']) !== '';
+}
+
 /** Public PayPal Client ID (safe for the browser). */
 function piePayPalClientId()
 {

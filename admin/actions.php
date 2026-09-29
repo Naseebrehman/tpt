@@ -128,6 +128,35 @@ switch ($action) {
         actionJson($sent, $sent ? 'Test email sent to ' . $to . '.' : ('Sending failed: ' . ($GLOBALS['pieMailError'] ?? 'Check SMTP settings.')));
         break;
 
+    case 'test_notification':
+        /* Send a real notification through the configured recipient list, so
+           the admin can confirm the saved addresses actually receive mail. */
+        require_once BASE_PATH . '/core/Notifications.php';
+        $category = isset($_POST['notif_test_category']) ? sanitize($_POST['notif_test_category'])
+            : (isset($_POST['category']) ? sanitize($_POST['category']) : 'contact');
+        if (!isset(Notifications::categories()[$category])) { actionJson(false, 'Unknown notification category.'); }
+        if (!Notifications::categoryEnabled($category)) {
+            actionJson(false, 'The “' . $category . '” category is switched off — enable it first.');
+        }
+        $to = Notifications::recipientsFor($category);
+        $sent = Notifications::notifyAdmins($category, 'system', array(
+            'name'    => getSetting('site_name', SITE_NAME),
+            'message' => 'This is a test notification from your ' . getSetting('site_name', SITE_NAME)
+                . ' dashboard, sent on ' . date('j M Y, H:i') . ' UTC.',
+            'subject' => 'Test notification — ' . getSetting('site_name', SITE_NAME),
+        ), array('table' => EmailTemplates::detailTable(array(
+            'Category' => ucfirst($category),
+            'Recipients' => esc(implode(', ', $to)),
+            'Sent at' => esc(date('j M Y, H:i') . ' UTC'),
+        ))));
+        actionJson(
+            $sent,
+            $sent
+                ? 'Test notification sent to ' . implode(', ', $to) . '.'
+                : 'Sending failed: ' . (isset($GLOBALS['pieMailError']) ? $GLOBALS['pieMailError'] : 'check your SMTP settings under Settings → Email / SMTP.')
+        );
+        break;
+
     case 'test_ai':
         /* Test one AI provider slot through the shared provider layer (Task 14). */
         require_once BASE_PATH . '/core/AIProviders.php';

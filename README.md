@@ -81,7 +81,7 @@ blocked from web requests by the included `.htaccess`.
 | `/portfolio.php` | Filterable case-study grid (JS filter, no reload) |
 | `/portfolio/case-study.php?slug=…` | Case study detail (clean URL `/portfolio/<slug>`) with Chart.js results graph |
 | `/resources.php` | Guides + templates (tracked downloads), blog extract, video library, newsletter signup |
-| `/blog.php`, `/blog-single.php` | Category filter, search, pagination (9/page); article page with share, related posts, moderated comments |
+| `/blog.php`, `/blog-single.php` | Category filter, search, pagination (9/page); mobile-first article page with share, related posts and a newsletter subscription section |
 | `/about.php` | Story, mission/vision/values, team from DB, stats |
 | `/contact.php` | Validated AJAX form → DB + admin email + branded client auto-reply + animated success state |
 | `/sitemap.php`, `/robots.txt`, `/404.php`, `/maintenance.php`, `/privacy-policy.php`, `/terms.php` | Utility pages |
@@ -92,8 +92,12 @@ chart, service bar chart, recent table, quick links, system status), `submission
 (filters, bulk actions, CSV export, detail modal with notes + status), `blog.php` +
 `blog-edit.php` (TinyMCE, uploads, SEO fields, auto slug + reading time), `resources.php`,
 `portfolio.php` + `portfolio-edit.php` (Sortable.js reorder, stats/chart JSON editors),
-`team.php` (drag-and-drop order), `testimonials.php`, `subscribers.php`, `comments.php`,
-`settings.php` (SMTP / Gemini / Site / Social / Maintenance tabs with live test buttons),
+`team.php` (drag-and-drop order), `testimonials.php`, `subscribers.php`,
+`chats.php` (Alia conversations: full transcript, status, edit, delete),
+`payments.php` (Payment Requests · Services · PayPal · Stripe tabs — the Pay Online
+service list and each gateway's own SDK/integration code are managed here),
+`settings.php` (SMTP / AI providers / notifications / email templates / Site / Social /
+Maintenance tabs with live test buttons),
 `password.php`, `actions.php` (AJAX router), `export.php` (CSV).
 
 ### Alia
