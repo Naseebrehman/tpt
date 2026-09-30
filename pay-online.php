@@ -2,7 +2,12 @@
 /** Customer-owned payment page. The site intentionally performs no gateway
  * requests, captures, verification, or payment persistence: the page renders
  * only the custom PayPal / Stripe code saved by the administrator in
- * Admin → Payments, verbatim and exactly once on load. */
+ * Admin → Payments, verbatim and exactly once on load.
+ *
+ * The only values substituted into that code are the admin-controlled
+ * integration points — PayPal Client ID, the shared Terms & Conditions URL and
+ * the shared Services list (see core/Payments.php). Everything else is echoed
+ * exactly as the administrator saved it. */
 require_once __DIR__ . '/includes/init.php';
 require_once __DIR__ . '/includes/payments.php';
 
@@ -18,10 +23,16 @@ $stripeSdkCode = pieStripeSdkCode();
 /* Render a provider block only when it is enabled AND has saved code.
  * Both enabled → both complete code blocks render; both disabled (or no
  * code saved) → the unavailable message. The saved code is echoed exactly
- * as stored — never escaped, sanitised or rewritten. */
+ * as stored — never escaped, sanitised or rewritten — apart from the
+ * documented {{PLACEHOLDER}} integration points. */
 $paypalBlock = $paypalEnabled && $paypalSdkCode !== '';
 $stripeBlock = $stripeEnabled && $stripeSdkCode !== '';
 $anyBlock    = ($paypalBlock || $stripeBlock);
+
+/* Providers actually rendered, so the shared bridge only wires what exists. */
+$renderedProviders = array();
+if ($paypalBlock) { $renderedProviders[] = 'paypal'; }
+if ($stripeBlock) { $renderedProviders[] = 'stripe'; }
 
 require_once __DIR__ . '/includes/header.php';
 ?>
@@ -40,13 +51,20 @@ require_once __DIR__ . '/includes/header.php';
         <p class="sub">Your payment provider handles all payment communication. This site does not store or process payment details.</p>
 
         <?php if ($anyBlock): ?>
+          <?php
+          /* One shared bridge, emitted before the first payment block so the
+             PayPal SDK is intercepted before it loads. It publishes the shared
+             Services list, applies the shared Terms URL and makes sure PayPal
+             never requests a shipping address. */
+          echo piePaymentBridge($renderedProviders);
+          ?>
           <?php if ($paypalBlock): ?>
             <!-- Administrator's complete PayPal implementation — rendered verbatim, executed once. -->
-            <div class="pay-custom-code" id="paypal-payment-code"><?= $paypalSdkCode ?></div>
+            <div class="pay-custom-code" id="paypal-payment-code" data-payment-provider="paypal"><?= pieRenderPaymentCode($paypalSdkCode, 'paypal') ?></div>
           <?php endif; ?>
           <?php if ($stripeBlock): ?>
             <!-- Administrator's complete Stripe implementation — rendered verbatim, executed once. -->
-            <div class="pay-custom-code" id="stripe-payment-code"><?= $stripeSdkCode ?></div>
+            <div class="pay-custom-code" id="stripe-payment-code" data-payment-provider="stripe"><?= pieRenderPaymentCode($stripeSdkCode, 'stripe') ?></div>
           <?php endif; ?>
         <?php else: ?>
           <div class="form-status show" style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:#fca5a5;padding:18px 20px;border-radius:12px;margin:20px 0;">

@@ -97,6 +97,32 @@ WHERE NOT EXISTS (SELECT 1 FROM blog_posts WHERE slug = 'local-seo-what-moves-ma
 -- except where they still equal the old shipped defaults.
 INSERT INTO settings (setting_key, setting_value) SELECT 'alia_enabled', '1' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'alia_enabled');
 
+-- Payment integration: one PayPal Client ID and one shared Terms & Conditions
+-- URL. Both are consumed by the saved PayPal/Stripe code through placeholders,
+-- so the administrator never edits the payment code to change them.
+INSERT INTO settings (setting_key, setting_value) SELECT 'paypal_client_id', '' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'paypal_client_id');
+INSERT INTO settings (setting_key, setting_value) SELECT 'terms_url', '' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'terms_url');
+
+-- The existing Services system is the single source of truth for both payment
+-- forms; created here only when an older dump is missing it.
+CREATE TABLE IF NOT EXISTS payment_services (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(150) NOT NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_payment_service (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO payment_services (name, sort_order, is_active) VALUES
+('AI Optimization', 1, 1),
+('Web Development', 2, 1),
+('Digital Marketing', 3, 1),
+('Business Consultation', 4, 1),
+('G-W-M Services', 5, 1),
+('Monthly Marketing Charges', 6, 1),
+('Others', 7, 1);
+
 UPDATE settings SET setting_value = '+1 (213) 257 8242' WHERE setting_key = 'site_phone' AND setting_value = '+92 300 0000000';
 UPDATE settings SET setting_value = 'info@thepietechnologies.com' WHERE setting_key = 'site_email' AND setting_value = 'hello@thepietechnologies.com';
 UPDATE settings SET setting_value = 'info@thepietechnologies.com' WHERE setting_key = 'smtp_from_email' AND setting_value = 'hello@thepietechnologies.com';

@@ -102,9 +102,19 @@ credentials in a public web form. A hosting operator with CLI access is required
   SPF/DKIM/DMARC and check spam folders. Admin sees the SMTP failure stage/response.
 - **Payments:** the Pay Online page renders the admin's saved custom payment
   code — the complete PayPal and/or Stripe HTML, CSS and JavaScript pasted in
-  Admin → Payments — stored and output byte-for-byte, once, on load. This
-  project does not include gateway credentials, provider API routes, or payment
-  processing. Services remain editable in Admin → Payments.
+  Admin → Payments — stored and output byte-for-byte, once, on load. Three
+  admin values are substituted into that code through `{{PLACEHOLDERS}}` and
+  nothing else is rewritten: the PayPal Client ID (`{{PAYPAL_CLIENT_ID}}`, also
+  applied to any `paypal.com/sdk/js` URL), the ONE shared Terms & Conditions URL
+  (`{{TERMS_URL}}`, used by both gateways) and the service list from the
+  existing Services system (`{{SERVICES_OPTIONS}}`). PayPal orders are created
+  with `shipping_preference: 'NO_SHIPPING'` — this is a digital/service
+  payment, so no shipping address, field or charge exists. PayPal and Stripe may
+  be enabled together; the dashboard flags duplicate element ids and the two
+  blocks are wrapped in unique containers. This project does not include
+  gateway credentials (a PayPal Client ID is public by design; no secret is ever
+  stored), provider API routes, or payment processing. Services remain editable
+  in Admin → Payments and are the single source of truth for both dropdowns.
 
 ## API compatibility
 
@@ -140,15 +150,25 @@ rather than letting arbitrary X-Forwarded-For bypass limits.
   new leads/settings/content screens and migrations run twice without data loss.
 - Contact/newsletter/chat success, invalid input, invalid CSRF, throttling,
   database outage, SMTP accepted/rejected credentials, no secrets in public HTML.
-- Payment page states: admin custom code rendered verbatim when a provider is
-  enabled, the unavailable message when both are disabled, and no built-in
-  payment form. No gateway API call or payment capture is expected from this
-  project.
+- Payment page states for all four toggle combinations: PayPal only, Stripe
+  only, both, and the unavailable message when both are disabled. Saved code is
+  rendered verbatim apart from the documented placeholders, with no built-in
+  payment form. Changing the PayPal Client ID, the shared Terms URL or the
+  Services list (add / remove / reorder / hide) must be reflected on the public
+  page without editing the saved code, and both forms must load together with no
+  duplicate-id or JavaScript conflicts. No gateway API call or payment capture is
+  expected from this project, and no shipping address is ever requested.
 - Generated canonical/OG/Twitter/JSON-LD/sitemap and noindex overrides.
 
 ## Verified here and remaining scope
 
-`tests/regression.php`: 66 passing route/security/helper/PHP syntax checks under
+`tests/payments.php`: dependency-free checks for the payment integration layer —
+the existing Services system as the single source of truth, placeholder-only
+substitution of the PayPal Client ID / shared Terms URL / Services list,
+duplicate-id detection between the two implementations, PayPal shipping disabled,
+lossless textarea escaping and MEDIUMTEXT storage of complete implementations.
+
+`tests/regression.php`: 78 passing route/security/helper/PHP syntax checks under
 PHP 8.5 WebAssembly (development tooling outside the repository). JavaScript
 syntax check passes. Sixteen public template smoke renders and five admin template renders passed
 using an isolated fixture that simulated DB-unavailable mode and a fixture admin

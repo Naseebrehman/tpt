@@ -122,5 +122,7 @@ INSERT IGNORE INTO settings (setting_key, setting_value) VALUES
 ('twitter_url', 'https://x.com/thepietechnologies'),
 ('youtube_url', 'https://youtube.com/@thepietechnologies'),
 ('maintenance_mode', '0'),
-('maintenance_ip', '');
+('maintenance_ip', ''),
+('paypal_client_id', ''),
+('terms_url', ''),
 TPT_SEED_SQL;

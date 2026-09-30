@@ -190,7 +190,12 @@ check(!$result['ok'] && $result['error'] === 'model', 'invalid model name reject
 /* --------------------- provider integration removal ------------------- */
 check(function_exists('piePaymentServices'), 'admin-managed payment service list remains available');
 check(!function_exists('piePaymentProviders') && !function_exists('piePayPalOrder') && !function_exists('pieStripeCheckout'), 'gateway backend helpers are removed');
-check(!function_exists('piePayPalClientId') && !function_exists('pieStripeIntent'), 'gateway credential and intent helpers are removed');
+check(!function_exists('pieStripeIntent'), 'gateway intent helper is removed');
+/* The PayPal Client ID is a public, client-side value the dashboard feeds into
+   the saved PayPal code through {{PAYPAL_CLIENT_ID}} — it is not a server-side
+   credential and no secret is ever stored. */
+check(function_exists('piePayPalClientId') && piePayPalClientId() === '', 'PayPal Client ID is an admin setting with no default value');
+check(!function_exists('piePayPalSecret') && !function_exists('pieStripeSecretKey'), 'no gateway secret helper exists');
 
 /* -------------------------------- done ---------------------------------- */
 echo "\n$count checks passed.\n";

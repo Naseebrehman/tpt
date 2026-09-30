@@ -9,12 +9,21 @@
  *  sanitised, escaped, rewritten or restructured — and the public Pay Online
  *  page renders it verbatim. Gateways are independently enabled/disabled.
  *  No gateway API calls or secret keys exist anywhere in this project.
+ *
+ *  Two dashboard values feed that code without the administrator ever editing
+ *  it, and the service dropdown comes from the EXISTING Services system below
+ *  (there is no second Services manager):
+ *
+ *      paypal_client_id   PayPal Client ID        → {{PAYPAL_CLIENT_ID}}
+ *      terms_url          Terms & Conditions URL  → {{TERMS_URL}} (shared)
+ *      payment_services   Services               → {{SERVICES_OPTIONS}}
  * ---------------------------------------------------------------------------
  */
 
 require_once dirname(__DIR__) . '/includes/init.php';
 require_once BASE_PATH . '/includes/payments.php';
 require_once BASE_PATH . '/core/Schema.php';
+require_once BASE_PATH . '/core/PaymentTemplates.php';
 Schema::ensure();
 requireAdmin();
 
@@ -38,6 +47,22 @@ function paymentCodeFromRequest($field)
     return (isset($_POST[$field]) && is_string($_POST[$field])) ? $_POST[$field] : '';
 }
 
+/** Upsert one settings row (the payment settings live in the shared table). */
+function savePaymentSetting($key, $value)
+{
+    return dbExec(
+        'INSERT INTO settings (setting_key, setting_value) VALUES (?, ?)
+         ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)',
+        array($key, $value)
+    );
+}
+
+/** Strip control characters only — nothing else touches a stored URL/id. */
+function paymentCleanValue($value)
+{
+    return trim((string) preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', (string) $value));
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     /* A paste larger than PHP's post_max_size arrives as an empty $_POST.
        Explain the cause instead of silently wiping the stored code. */
@@ -54,16 +79,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $paymentAction = isset($_POST['payment_action']) ? trim($_POST['payment_action']) : '';
 
     /* -----------------------------------------------------------------------
+       Shared payment settings — ONE Terms & Conditions URL for BOTH gateways
+       ----------------------------------------------------------------------- */
+    if ($paymentAction === 'save_shared') {
+        $termsUrl = paymentCleanValue(isset($_POST['terms_url']) ? $_POST['terms_url'] : '');
+        if ($termsUrl !== '' && !preg_match('#^(https?://|/)#i', $termsUrl)) {
+            setFlash('err', 'Enter a full Terms & Conditions URL (https://…) or a site path starting with /.');
+        } elseif (savePaymentSetting('terms_url', $termsUrl) < 0) {
+            setFlash('err', 'Could not save the shared payment settings.');
+        } else {
+            settingsCache(true);
+            setFlash('ok', 'Shared settings saved — the PayPal and Stripe forms now both use this Terms & Conditions URL.');
+        }
+        paymentServicesRedirect();
+    }
+
+    /* -----------------------------------------------------------------------
        Custom Payment Code & Status Management (PayPal & Stripe)
        ----------------------------------------------------------------------- */
     if ($paymentAction === 'save_paypal' || $paymentAction === 'save_all_gateways') {
-        $paypalEnabled = !empty($_POST['paypal_enabled']) ? '1' : '0';
-        $paypalCode    = paymentCodeFromRequest('paypal_sdk_code');
+        $paypalEnabled  = !empty($_POST['paypal_enabled']) ? '1' : '0';
+        $paypalCode     = paymentCodeFromRequest('paypal_sdk_code');
+        $paypalClientId = paymentCleanValue(isset($_POST['paypal_client_id']) ? $_POST['paypal_client_id'] : '');
+
+        /* Validate the Client ID before anything is written, so a typo can
+           never overwrite the saved implementation. */
+        if ($paypalClientId !== '' && !pieIsValidPayPalClientId($paypalClientId)) {
+            setFlash('err', 'The PayPal Client ID may only contain letters, numbers, hyphens and underscores (at least 8 characters). Nothing was changed.');
+            paymentServicesRedirect();
+        }
 
         dbExec(
             'INSERT INTO settings (setting_key, setting_value) VALUES (?, ?)
              ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)',
             array('paypal_enabled', $paypalEnabled)
+        );
+        dbExec(
+            'INSERT INTO settings (setting_key, setting_value) VALUES (?, ?)
+             ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)',
+            array('paypal_client_id', $paypalClientId)
         );
         dbExec(
             'INSERT INTO settings (setting_key, setting_value) VALUES (?, ?)
@@ -164,6 +218,14 @@ $paypalEnabled  = (getSetting('paypal_enabled', '0') === '1');
 $stripeEnabled  = (getSetting('stripe_enabled', '0') === '1');
 $paypalSdkCode  = getSetting('paypal_sdk_code', '');
 $stripeSdkCode  = getSetting('stripe_sdk_code', '');
+$paypalClientId = piePayPalClientId();
+$termsUrl       = getSetting('terms_url', '');
+$idConflicts    = piePaymentIdConflicts(array('paypal' => $paypalSdkCode, 'stripe' => $stripeSdkCode));
+$unlinkedSelects = array_merge(
+    array_map(function ($id) { return 'PayPal → ' . $id; }, piePaymentUnlinkedSelects($paypalSdkCode)),
+    array_map(function ($id) { return 'Stripe → ' . $id; }, piePaymentUnlinkedSelects($stripeSdkCode))
+);
+$serverPostMax  = (string) ini_get('post_max_size');
 
 require_once dirname(__DIR__) . '/includes/admin-header.php';
 ?>
@@ -182,6 +244,27 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
     </div>
 </div>
 
+<!-- ==================== Shared Payment Settings ==================== -->
+<div class="a-card">
+    <h3><?= icon('lock', 18) ?> Shared Payment Settings</h3>
+    <p class="hint">These values are shared by <strong>both</strong> the PayPal and the Stripe form. There is only one setting of each — change it here and every payment form follows. Your saved payment code never has to be edited to use them.</p>
+
+    <form method="post">
+        <?= csrfField() ?>
+        <input type="hidden" name="payment_action" value="save_shared">
+
+        <div class="a-field">
+            <label for="terms_url">Terms &amp; Conditions URL <span style="color:var(--muted)">(shared by PayPal + Stripe)</span></label>
+            <input id="terms_url" name="terms_url" type="text" value="<?= esc($termsUrl) ?>" placeholder="https://yourdomain.com/terms">
+            <div class="hint">Used by both payment forms through the <code>{{TERMS_URL}}</code> placeholder. Leave empty to link this site's own Terms page (<?= esc(rtrim(SITE_URL, '/') . url('terms')) ?>).</div>
+        </div>
+
+        <div class="a-toolbar">
+            <button class="a-btn primary" type="submit"><?= icon('check', 16) ?> Save Shared Settings</button>
+        </div>
+    </form>
+</div>
+
 <!-- ======================== PayPal Section ======================== -->
 <div class="a-card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
@@ -189,6 +272,10 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
         <span class="badge <?= $paypalEnabled ? 'active' : 'inactive' ?>"><?= $paypalEnabled ? 'Enabled' : 'Disabled' ?></span>
     </div>
     <p class="hint">Paste your <strong>complete</strong> self-contained PayPal page/component code: <code>&lt;style&gt;</code> blocks, HTML, <code>&lt;form&gt;</code>s, input fields, the PayPal SDK <code>&lt;script&gt;</code>, buttons, validation and any other frontend code. Everything is kept exactly as provided and executes once when the Pay Online page loads.</p>
+
+    <?php if ($paypalEnabled && $paypalClientId === ''): ?>
+        <p class="hint" style="color:#fca5a5">PayPal is enabled but no Client ID is saved. The PayPal SDK cannot start without it — add it below.</p>
+    <?php endif; ?>
 
     <form method="post">
         <?= csrfField() ?>
@@ -201,15 +288,21 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
         </label>
 
         <div class="a-field">
+            <label for="paypal_client_id">PayPal Client ID</label>
+            <input id="paypal_client_id" name="paypal_client_id" type="text" value="<?= esc($paypalClientId) ?>" placeholder="AxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxX" autocomplete="off" spellcheck="false">
+            <div class="hint">The PayPal SDK is loaded with <code>?client-id=</code> from this field. Use <code>{{PAYPAL_CLIENT_ID}}</code> (or <code>{{PAYPAL_SDK_URL}}</code>) inside your code and you never have to touch the code again to change the ID. Letters, numbers, hyphens and underscores only — the PayPal <strong>Secret</strong> is never stored or exposed here.</div>
+        </div>
+
+        <div class="a-field">
             <label for="paypal_sdk_code">PayPal payment code (HTML / CSS / JavaScript)</label>
             <textarea id="paypal_sdk_code" name="paypal_sdk_code" class="mono a-code-editor" readonly spellcheck="false" autocapitalize="off" autocorrect="off" placeholder="<!-- Paste your complete PayPal implementation here -->
 <style> ... your styles ... </style>
 <div id=&quot;paypal-button-container&quot;></div>
-<script src=&quot;https://www.paypal.com/sdk/js?client-id=YOUR_CLIENT_ID&amp;currency=USD&quot;></script>
+<script src=&quot;https://www.paypal.com/sdk/js?client-id={{PAYPAL_CLIENT_ID}}&amp;currency=USD&quot;></script>
 <script>
   paypal.Buttons({ /* createOrder, onApprove, ... */ }).render(&quot;#paypal-button-container&quot;);
 </script>"><?= esc($paypalSdkCode) ?></textarea>
-            <div class="hint">Read-only until you click <strong>Edit Code</strong>. The code is saved and served byte-for-byte — script tags, styles and all — with no escaping or rewriting.</div>
+            <div class="hint">Read-only until you click <strong>Edit Code</strong>. The code is saved and served byte-for-byte — script tags, styles, newlines, quotes and all — with no escaping or rewriting and no character limit. This server accepts posts up to <strong><?= esc($serverPostMax !== '' ? $serverPostMax : 'the PHP default') ?></strong>.</div>
         </div>
 
         <div class="a-toolbar">
@@ -254,7 +347,7 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
 <script>
   const stripe = Stripe(&quot;YOUR_PUBLISHABLE_KEY&quot;); /* Elements, forms, validation ... */
 </script>"><?= esc($stripeSdkCode) ?></textarea>
-            <div class="hint">Read-only until you click <strong>Edit Code</strong>. The code is saved and served byte-for-byte — script tags, styles and all — with no escaping or rewriting.</div>
+            <div class="hint">Read-only until you click <strong>Edit Code</strong>. The code is saved and served byte-for-byte — script tags, styles, newlines, quotes and all — with no escaping or rewriting and no character limit. This server accepts posts up to <strong><?= esc($serverPostMax !== '' ? $serverPostMax : 'the PHP default') ?></strong>.</div>
         </div>
 
         <div class="a-toolbar">
@@ -272,10 +365,29 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
     </form>
 </div>
 
+<?php if ($idConflicts): ?>
+<!-- Duplicate IDs would make PayPal and Stripe target each other's elements. -->
+<div class="a-card">
+    <h3><?= icon('shield', 18) ?> Duplicate element IDs found</h3>
+    <p class="hint">PayPal and Stripe can both run on the same Pay Online page, so every HTML <code>id</code> must be unique across the two code boxes. These ids appear more than once and should be prefixed (for example <code>paypal-</code> in the PayPal code and <code>stripe-</code> in the Stripe code):</p>
+    <p class="hint" style="margin-top:10px"><?php foreach ($idConflicts as $conflictId): ?><code style="display:inline-block;margin:0 8px 6px 0"><?= esc($conflictId) ?></code><?php endforeach; ?></p>
+    <p class="hint">Third-party containers that a SDK requires (such as <code>paypal-button-container</code> or the Stripe Elements mount point) keep their id — only the shared ids need renaming.</p>
+</div>
+<?php endif; ?>
+
+<?php if ($unlinkedSelects): ?>
+<!-- A service dropdown that is not connected to the Services system. -->
+<div class="a-card">
+    <h3><?= icon('filter', 18) ?> Service dropdown not connected</h3>
+    <p class="hint">These dropdowns do not read the Services system, so changes in Admin &rarr; Payments &rarr; Services would not appear in them. Add <code>{{SERVICES_OPTIONS}}</code> inside the <code>&lt;select&gt;</code>, or add <code>data-tpt-services</code> to it, and the shared bridge fills it from the same list:</p>
+    <p class="hint" style="margin-top:10px"><?php foreach ($unlinkedSelects as $unlinked): ?><code style="display:inline-block;margin:0 8px 6px 0"><?= esc($unlinked) ?></code><?php endforeach; ?></p>
+</div>
+<?php endif; ?>
+
 <!-- ======================== Form Services Section ======================== -->
 <div class="a-card">
     <h2>Payment Form Services</h2>
-    <p class="hint">Manage the services shown in the Pay Online service dropdown menu.</p>
+    <p class="hint">Manage the services shown in the Pay Online service dropdown menu. This is the single Services system used by <strong>both</strong> the PayPal and the Stripe form — add, edit, reorder or hide a service here and both dropdowns follow automatically.</p>
     <form method="post" class="a-grid cols-2" style="align-items:end">
         <?= csrfField() ?>
         <input type="hidden" name="service_action" value="add">
@@ -350,20 +462,101 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
                 </tbody>
             </table>
         </div>
+        <p class="hint" style="margin-top:12px">Active services appear in this order inside both payment forms, through the <code>{{SERVICES_OPTIONS}}</code> placeholder.</p>
     <?php endif; ?>
 </div>
 
+<!-- ==================== Starter implementations ==================== -->
+<div class="a-card">
+    <h3><?= icon('edit', 18) ?> Ready-to-paste implementations</h3>
+    <p class="hint">Complete PayPal and Stripe forms that are already wired to the settings above. Copy one into the matching code box and press <strong>Save Code</strong> — or use them as a reference while writing your own. They use unique ids (<code>paypal-*</code> / <code>stripe-*</code>) so both can run on the same page, read the service list from the Services system, link the shared Terms &amp; Conditions URL, and never request a shipping address.</p>
+
+    <div class="a-field">
+        <label for="paypal_starter_code">PayPal starter code</label>
+        <textarea id="paypal_starter_code" class="mono a-code-editor" readonly spellcheck="false" style="min-height:280px"><?= esc(piePayPalStarterCode()) ?></textarea>
+        <div class="a-toolbar" style="margin-top:10px;">
+            <button class="a-btn" type="button" data-copy-code="paypal_starter_code"><?= icon('copy', 15) ?> Copy PayPal code</button>
+        </div>
+    </div>
+
+    <div class="a-field">
+        <label for="stripe_starter_code">Stripe starter code</label>
+        <textarea id="stripe_starter_code" class="mono a-code-editor" readonly spellcheck="false" style="min-height:280px"><?= esc(pieStripeStarterCode()) ?></textarea>
+        <div class="a-toolbar" style="margin-top:10px;">
+            <button class="a-btn" type="button" data-copy-code="stripe_starter_code"><?= icon('copy', 15) ?> Copy Stripe code</button>
+        </div>
+    </div>
+</div>
+
+<div class="a-card">
+    <h3>Integration points</h3>
+    <p class="hint">Only these placeholders are replaced when the Pay Online page renders your code — the rest of your implementation is untouched.</p>
+    <div class="a-table-wrap">
+        <table class="a-table">
+            <thead><tr><th>Placeholder</th><th>Replaced with</th></tr></thead>
+            <tbody>
+                <tr><td><code>{{PAYPAL_CLIENT_ID}}</code></td><td>The PayPal Client ID saved above (also applied to any <code>paypal.com/sdk/js</code> URL in your code).</td></tr>
+                <tr><td><code>{{PAYPAL_SDK_URL}}</code></td><td>The full PayPal SDK URL built from that Client ID.</td></tr>
+                <tr><td><code>{{TERMS_URL}}</code></td><td>The shared Terms &amp; Conditions URL — the same value in the PayPal and Stripe forms.</td></tr>
+                <tr><td><code>{{SERVICES_OPTIONS}}</code></td><td>The <code>&lt;option&gt;</code> list from the Services system, in the order you set.</td></tr>
+                <tr><td><code>{{SERVICES_JSON}}</code></td><td>The same list as JSON, for dropdowns built in JavaScript.</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <p class="hint" style="margin-top:12px">Elements marked <code>data-tpt-services</code> (empty selects) and <code>data-tpt-terms</code> (links) are also filled from the same settings when the page loads, so a custom implementation can use them without the placeholders.</p>
+</div>
+
 <script>
-/* Edit Code — unlock the saved-code editor so the admin can paste/modify. */
+/* Edit Code — unlock the saved-code editor so the admin can paste/modify.
+   The same button locks it again. No character limit is applied anywhere. */
 (function () {
     document.querySelectorAll('[data-edit-code]').forEach(function (button) {
         button.addEventListener('click', function () {
             var editor = document.getElementById(button.getAttribute('data-edit-code'));
             if (!editor) { return; }
+            var editing = editor.getAttribute('data-editing') === '1';
+            if (editing) {
+                editor.readOnly = true;
+                editor.setAttribute('readonly', 'readonly');
+                editor.removeAttribute('data-editing');
+                button.textContent = 'Edit Code';
+                return;
+            }
+            editor.readOnly = false;
             editor.removeAttribute('readonly');
+            editor.setAttribute('data-editing', '1');
+            button.textContent = 'Lock Code';
             editor.focus();
             try { editor.setSelectionRange(editor.value.length, editor.value.length); } catch (err) {}
-            button.textContent = 'Editing…';
+        });
+    });
+
+    /* Copy a starter implementation to the clipboard. */
+    document.querySelectorAll('[data-copy-code]').forEach(function (button) {
+        button.addEventListener('click', function () {
+            var source = document.getElementById(button.getAttribute('data-copy-code'));
+            if (!source) { return; }
+            var text = typeof source.value === 'string' ? source.value : source.textContent;
+            var original = button.textContent;
+            var confirmCopy = function () {
+                button.textContent = 'Copied';
+                window.setTimeout(function () { button.textContent = original; }, 1600);
+            };
+            var fallbackCopy = function () {
+                var wasReadOnly = source.readOnly;
+                source.readOnly = false;
+                source.removeAttribute('readonly');
+                source.select();
+                try { document.execCommand('copy'); } catch (err) {}
+                source.readOnly = wasReadOnly;
+                if (wasReadOnly) { source.setAttribute('readonly', 'readonly'); }
+                confirmCopy();
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(confirmCopy, fallbackCopy);
+            } else {
+                fallbackCopy();
+            }
         });
     });
 })();
