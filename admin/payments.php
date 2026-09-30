@@ -3,8 +3,12 @@
  * ---------------------------------------------------------------------------
  *  The Pie Technologies — Payment Management
  * ---------------------------------------------------------------------------
- *  Manage client-side payment SDK codes (PayPal & Stripe) and service options.
- *  Gateways can be independently enabled/disabled or configured with custom SDK code.
+ *  Admin-controlled custom payment code. Paste the COMPLETE PayPal and Stripe
+ *  frontend implementations (HTML, CSS, JavaScript, SDK script tags, buttons,
+ *  forms, validation). Each code block is stored exactly as provided — never
+ *  sanitised, escaped, rewritten or restructured — and the public Pay Online
+ *  page renders it verbatim. Gateways are independently enabled/disabled.
+ *  No gateway API calls or secret keys exist anywhere in this project.
  * ---------------------------------------------------------------------------
  */
 
@@ -28,7 +32,20 @@ function paymentServicesRedirect()
     exit;
 }
 
+/** Raw payment code from the request — stored byte-for-byte, never rewritten. */
+function paymentCodeFromRequest($field)
+{
+    return (isset($_POST[$field]) && is_string($_POST[$field])) ? $_POST[$field] : '';
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    /* A paste larger than PHP's post_max_size arrives as an empty $_POST.
+       Explain the cause instead of silently wiping the stored code. */
+    if (empty($_POST) && (int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) {
+        setFlash('err', 'The submitted payment code is larger than this server allows (PHP post_max_size). Ask your host to raise that limit, then try again — nothing was changed.');
+        paymentServicesRedirect();
+    }
+
     if (!validateCSRF()) {
         setFlash('err', 'Security token expired — refresh and try again.');
         paymentServicesRedirect();
@@ -37,11 +54,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $paymentAction = isset($_POST['payment_action']) ? trim($_POST['payment_action']) : '';
 
     /* -----------------------------------------------------------------------
-       Gateway SDK Code & Status Management (PayPal & Stripe)
+       Custom Payment Code & Status Management (PayPal & Stripe)
        ----------------------------------------------------------------------- */
     if ($paymentAction === 'save_paypal' || $paymentAction === 'save_all_gateways') {
         $paypalEnabled = !empty($_POST['paypal_enabled']) ? '1' : '0';
-        $paypalCode    = isset($_POST['paypal_sdk_code']) ? (string) $_POST['paypal_sdk_code'] : '';
+        $paypalCode    = paymentCodeFromRequest('paypal_sdk_code');
 
         dbExec(
             'INSERT INTO settings (setting_key, setting_value) VALUES (?, ?)
@@ -55,14 +72,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         );
         settingsCache(true);
         if ($paymentAction === 'save_paypal') {
-            setFlash('ok', 'PayPal settings and SDK code saved successfully.');
+            setFlash('ok', 'PayPal payment code saved — stored exactly as provided.');
             paymentServicesRedirect();
         }
     }
 
     if ($paymentAction === 'save_stripe' || $paymentAction === 'save_all_gateways') {
         $stripeEnabled = !empty($_POST['stripe_enabled']) ? '1' : '0';
-        $stripeCode    = isset($_POST['stripe_sdk_code']) ? (string) $_POST['stripe_sdk_code'] : '';
+        $stripeCode    = paymentCodeFromRequest('stripe_sdk_code');
 
         dbExec(
             'INSERT INTO settings (setting_key, setting_value) VALUES (?, ?)
@@ -76,9 +93,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         );
         settingsCache(true);
         if ($paymentAction === 'save_stripe') {
-            setFlash('ok', 'Stripe settings and SDK code saved successfully.');
+            setFlash('ok', 'Stripe payment code saved — stored exactly as provided.');
             paymentServicesRedirect();
         }
+    }
+
+    if ($paymentAction === 'clear_paypal') {
+        dbExec('DELETE FROM settings WHERE setting_key = ?', array('paypal_sdk_code'));
+        settingsCache(true);
+        setFlash('ok', 'PayPal payment code cleared.');
+        paymentServicesRedirect();
+    }
+
+    if ($paymentAction === 'clear_stripe') {
+        dbExec('DELETE FROM settings WHERE setting_key = ?', array('stripe_sdk_code'));
+        settingsCache(true);
+        setFlash('ok', 'Stripe payment code cleared.');
+        paymentServicesRedirect();
     }
 
     if ($paymentAction === 'save_all_gateways') {
@@ -141,8 +172,8 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
 <div class="a-card">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
         <div>
-            <h2>Payment Gateways &amp; SDK Management</h2>
-            <p class="hint">Enable or disable payment methods for the public Pay Online page and supply your own client-side SDK integration code for each provider.</p>
+            <h2>Payment Gateways &amp; Custom Code</h2>
+            <p class="hint">Paste your complete PayPal and Stripe implementations — HTML, CSS, JavaScript, SDK script tags, buttons, forms and validation. Saved code is stored exactly as you provide it and rendered verbatim on the Pay Online page. This site never makes gateway API calls and holds no secret keys.</p>
         </div>
         <div style="display:flex;gap:10px;align-items:center;">
             <span>PayPal: <span class="badge <?= $paypalEnabled ? 'active' : 'inactive' ?>"><?= $paypalEnabled ? 'Enabled' : 'Disabled' ?></span></span>
@@ -151,82 +182,94 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
     </div>
 </div>
 
-<div class="a-grid cols-2" style="align-items:start;">
-    <!-- ======================== PayPal Section ======================== -->
-    <div class="a-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-            <h3><?= icon('card', 18) ?> PayPal Integration</h3>
-            <span class="badge <?= $paypalEnabled ? 'active' : 'inactive' ?>"><?= $paypalEnabled ? 'Enabled' : 'Disabled' ?></span>
-        </div>
-        <p class="hint">Add your client-side PayPal JavaScript SDK script and button rendering code. When enabled, this code will be embedded on the Pay Online page.</p>
+<!-- ======================== PayPal Section ======================== -->
+<div class="a-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <h3><?= icon('card', 18) ?> PayPal — Payment Code</h3>
+        <span class="badge <?= $paypalEnabled ? 'active' : 'inactive' ?>"><?= $paypalEnabled ? 'Enabled' : 'Disabled' ?></span>
+    </div>
+    <p class="hint">Paste your <strong>complete</strong> self-contained PayPal page/component code: <code>&lt;style&gt;</code> blocks, HTML, <code>&lt;form&gt;</code>s, input fields, the PayPal SDK <code>&lt;script&gt;</code>, buttons, validation and any other frontend code. Everything is kept exactly as provided and executes once when the Pay Online page loads.</p>
 
-        <form method="post">
-            <?= csrfField() ?>
-            <input type="hidden" name="payment_action" value="save_paypal">
+    <form method="post">
+        <?= csrfField() ?>
+        <input type="hidden" name="payment_action" value="save_paypal">
 
-            <div class="a-field">
-                <label class="a-check">
-                    <input type="checkbox" name="paypal_enabled" value="1" <?= $paypalEnabled ? 'checked' : '' ?>>
-                    <span><strong>Enable PayPal</strong> as an active payment method on Pay Online</span>
-                </label>
-            </div>
+        <label class="a-switch">
+            <input type="checkbox" name="paypal_enabled" value="1" <?= $paypalEnabled ? 'checked' : '' ?>>
+            <span class="track" aria-hidden="true"></span>
+            <span><strong>Enable / Disable</strong> — when enabled, your saved PayPal code is rendered on the Pay Online page.</span>
+        </label>
 
-            <div class="a-field">
-                <label for="paypal_sdk_code">PayPal SDK / Integration Code</label>
-                <textarea id="paypal_sdk_code" name="paypal_sdk_code" class="mono" style="min-height:180px;font-size:0.83rem;line-height:1.5;" placeholder="<!-- Paste your PayPal SDK code here -->
-<script src=&quot;https://www.paypal.com/sdk/js?client-id=YOUR_CLIENT_ID&amp;currency=USD&quot;></script>
+        <div class="a-field">
+            <label for="paypal_sdk_code">PayPal payment code (HTML / CSS / JavaScript)</label>
+            <textarea id="paypal_sdk_code" name="paypal_sdk_code" class="mono a-code-editor" readonly spellcheck="false" autocapitalize="off" autocorrect="off" placeholder="<!-- Paste your complete PayPal implementation here -->
+<style> ... your styles ... </style>
 <div id=&quot;paypal-button-container&quot;></div>
+<script src=&quot;https://www.paypal.com/sdk/js?client-id=YOUR_CLIENT_ID&amp;currency=USD&quot;></script>
 <script>
-  paypal.Buttons({
-    createOrder: function(data, actions) { ... },
-    onApprove: function(data, actions) { ... }
-  }).render('#paypal-button-container');
+  paypal.Buttons({ /* createOrder, onApprove, ... */ }).render(&quot;#paypal-button-container&quot;);
 </script>"><?= esc($paypalSdkCode) ?></textarea>
-                <div class="hint">Paste your own PayPal JS SDK script tag and initialization code. The dashboard stores and renders your code without any backend API call.</div>
-            </div>
-
-            <div class="a-toolbar">
-                <button class="a-btn primary" type="submit"><?= icon('check', 16) ?> Save PayPal Settings</button>
-            </div>
-        </form>
-    </div>
-
-    <!-- ======================== Stripe Section ======================== -->
-    <div class="a-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-            <h3><?= icon('card', 18) ?> Stripe Integration</h3>
-            <span class="badge <?= $stripeEnabled ? 'active' : 'inactive' ?>"><?= $stripeEnabled ? 'Enabled' : 'Disabled' ?></span>
+            <div class="hint">Read-only until you click <strong>Edit Code</strong>. The code is saved and served byte-for-byte — script tags, styles and all — with no escaping or rewriting.</div>
         </div>
-        <p class="hint">Add your client-side Stripe.js SDK script and Elements rendering code. When enabled, this code will be embedded on the Pay Online page.</p>
 
-        <form method="post">
-            <?= csrfField() ?>
-            <input type="hidden" name="payment_action" value="save_stripe">
+        <div class="a-toolbar">
+            <button class="a-btn primary" type="submit"><?= icon('check', 16) ?> Save Code</button>
+            <button class="a-btn" type="button" data-edit-code="paypal_sdk_code"><?= icon('edit', 15) ?> Edit Code</button>
+        </div>
+    </form>
 
-            <div class="a-field">
-                <label class="a-check">
-                    <input type="checkbox" name="stripe_enabled" value="1" <?= $stripeEnabled ? 'checked' : '' ?>>
-                    <span><strong>Enable Stripe</strong> as an active payment method on Pay Online</span>
-                </label>
-            </div>
+    <form method="post" data-confirm="Delete the saved PayPal payment code? The Pay Online page will stop rendering PayPal until new code is saved.">
+        <?= csrfField() ?>
+        <input type="hidden" name="payment_action" value="clear_paypal">
+        <div class="a-toolbar" style="margin-top:12px;">
+            <button class="a-btn danger" type="submit"><?= icon('trash', 15) ?> Clear / Delete Code</button>
+        </div>
+    </form>
+</div>
 
-            <div class="a-field">
-                <label for="stripe_sdk_code">Stripe SDK / Integration Code</label>
-                <textarea id="stripe_sdk_code" name="stripe_sdk_code" class="mono" style="min-height:180px;font-size:0.83rem;line-height:1.5;" placeholder="<!-- Paste your Stripe SDK code here -->
-<script src=&quot;https://js.stripe.com/v3/&quot;></script>
-<div id=&quot;stripe-payment-container&quot;></div>
-<script>
-  const stripe = Stripe('YOUR_PUBLISHABLE_KEY');
-  // Initialize Stripe Elements or Payment Request button here
-</script>"><?= esc($stripeSdkCode) ?></textarea>
-                <div class="hint">Paste your own Stripe.js SDK script tag and initialization code. The dashboard stores and renders your code without any backend API call.</div>
-            </div>
-
-            <div class="a-toolbar">
-                <button class="a-btn primary" type="submit"><?= icon('check', 16) ?> Save Stripe Settings</button>
-            </div>
-        </form>
+<!-- ======================== Stripe Section ======================== -->
+<div class="a-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <h3><?= icon('card', 18) ?> Stripe — Payment Code</h3>
+        <span class="badge <?= $stripeEnabled ? 'active' : 'inactive' ?>"><?= $stripeEnabled ? 'Enabled' : 'Disabled' ?></span>
     </div>
+    <p class="hint">Paste your <strong>complete</strong> self-contained Stripe page/component code: <code>&lt;style&gt;</code> blocks, HTML, <code>&lt;form&gt;</code>s, input fields, the Stripe SDK <code>&lt;script&gt;</code>, Elements, buttons, validation and any other frontend code. Everything is kept exactly as provided and executes once when the Pay Online page loads.</p>
+
+    <form method="post">
+        <?= csrfField() ?>
+        <input type="hidden" name="payment_action" value="save_stripe">
+
+        <label class="a-switch">
+            <input type="checkbox" name="stripe_enabled" value="1" <?= $stripeEnabled ? 'checked' : '' ?>>
+            <span class="track" aria-hidden="true"></span>
+            <span><strong>Enable / Disable</strong> — when enabled, your saved Stripe code is rendered on the Pay Online page.</span>
+        </label>
+
+        <div class="a-field">
+            <label for="stripe_sdk_code">Stripe payment code (HTML / CSS / JavaScript)</label>
+            <textarea id="stripe_sdk_code" name="stripe_sdk_code" class="mono a-code-editor" readonly spellcheck="false" autocapitalize="off" autocorrect="off" placeholder="<!-- Paste your complete Stripe implementation here -->
+<style> ... your styles ... </style>
+<div id=&quot;stripe-payment-container&quot;></div>
+<script src=&quot;https://js.stripe.com/v3/&quot;></script>
+<script>
+  const stripe = Stripe(&quot;YOUR_PUBLISHABLE_KEY&quot;); /* Elements, forms, validation ... */
+</script>"><?= esc($stripeSdkCode) ?></textarea>
+            <div class="hint">Read-only until you click <strong>Edit Code</strong>. The code is saved and served byte-for-byte — script tags, styles and all — with no escaping or rewriting.</div>
+        </div>
+
+        <div class="a-toolbar">
+            <button class="a-btn primary" type="submit"><?= icon('check', 16) ?> Save Code</button>
+            <button class="a-btn" type="button" data-edit-code="stripe_sdk_code"><?= icon('edit', 15) ?> Edit Code</button>
+        </div>
+    </form>
+
+    <form method="post" data-confirm="Delete the saved Stripe payment code? The Pay Online page will stop rendering Stripe until new code is saved.">
+        <?= csrfField() ?>
+        <input type="hidden" name="payment_action" value="clear_stripe">
+        <div class="a-toolbar" style="margin-top:12px;">
+            <button class="a-btn danger" type="submit"><?= icon('trash', 15) ?> Clear / Delete Code</button>
+        </div>
+    </form>
 </div>
 
 <!-- ======================== Form Services Section ======================== -->
@@ -310,4 +353,19 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
     <?php endif; ?>
 </div>
 
+<script>
+/* Edit Code — unlock the saved-code editor so the admin can paste/modify. */
+(function () {
+    document.querySelectorAll('[data-edit-code]').forEach(function (button) {
+        button.addEventListener('click', function () {
+            var editor = document.getElementById(button.getAttribute('data-edit-code'));
+            if (!editor) { return; }
+            editor.removeAttribute('readonly');
+            editor.focus();
+            try { editor.setSelectionRange(editor.value.length, editor.value.length); } catch (err) {}
+            button.textContent = 'Editing…';
+        });
+    });
+})();
+</script>
 <?php require_once dirname(__DIR__) . '/includes/admin-footer.php'; ?>

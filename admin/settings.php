@@ -255,9 +255,9 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
     <div class="a-tabpanel" data-panel="payments">
         <div class="a-card">
             <h3>Payment page</h3>
-            <p class="hint">The Pay Online page contains the payment form and separate PayPal and Stripe containers. Provider SDKs are customer-owned browser code; this site stores no gateway credentials and makes no provider API calls.</p>
+            <p class="hint">The Pay Online page renders the custom PayPal and Stripe payment code you save in Admin &rarr; Payments — your complete HTML, CSS and JavaScript, stored and displayed exactly as provided. This site stores no gateway credentials and makes no provider API calls.</p>
             <div class="a-toolbar">
-                <a class="a-btn" href="<?= esc(url('admin/payments')) ?>"><?= icon('card', 15) ?> Manage service dropdown</a>
+                <a class="a-btn" href="<?= esc(url('admin/payments')) ?>"><?= icon('card', 15) ?> Manage payment code</a>
                 <a class="a-btn" href="<?= esc(url('pay-online')) ?>" target="_blank" rel="noopener">Preview Pay Online</a>
             </div>
         </div>

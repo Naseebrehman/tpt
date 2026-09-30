@@ -20,8 +20,8 @@ reimport the legacy SQL seeds into production. New installs can use
 The existing frontend, assets and dashboard remain. Clean URLs now have a
 compatibility router (`front.php`, `app/routes.php`); contact handling has a
 controller/repository boundary; working SMTP, Gemini and uploads live in `core/`
-with legacy include wrappers. Payment services remain admin-managed; gateway code is owner-supplied. Branding, Alia controls/leads, content/SEO
-overrides and dependency-free regression tests were added. Gateway processing is intentionally left to owner-managed SDK code.
+with legacy include wrappers. Payment services remain admin-managed; the complete custom gateway code is pasted by the site owner in Admin → Payments. Branding, Alia controls/leads, content/SEO
+overrides and dependency-free regression tests were added. Gateway processing is intentionally left to owner-managed frontend code.
 See [the audit](docs/AUDIT.md) and deployment guide for limitations and pending
 staging checks. This is an incremental upgrade, not a claim that every legacy
 page has been rewritten into MVC or every requested CMS feature is complete.
@@ -94,7 +94,7 @@ chart, service bar chart, recent table, quick links, system status), `submission
 `portfolio.php` + `portfolio-edit.php` (Sortable.js reorder, stats/chart JSON editors),
 `team.php` (drag-and-drop order), `testimonials.php`, `subscribers.php`,
 `chats.php` (Alia conversations: full transcript, status, edit, delete),
-`payments.php` (admin-managed Pay Online service dropdown; provider SDK code is kept in the site owner's client-side page code),
+`payments.php` (paste the complete custom PayPal/Stripe payment implementation — HTML/CSS/JS — with enable/disable toggle, Save/Edit/Clear controls; rendered verbatim on Pay Online),
 `settings.php` (SMTP / AI providers / notifications / email templates / Site / Social /
 Maintenance tabs with live test buttons),
 `password.php`, `actions.php` (AJAX router), `export.php` (CSV).
