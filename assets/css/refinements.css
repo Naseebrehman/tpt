@@ -239,26 +239,8 @@ body:has(.whatsapp-float) .footer-compact .footer-bottom{padding-left:56px}
 .captcha-field{display:flex;justify-content:flex-start;max-width:100%;overflow:hidden}
 .captcha-field iframe{max-width:100%}
 
-/* Payment page (Task 3/27) */
-.pay-panel .pay-terms{display:flex;gap:10px;align-items:flex-start;text-transform:none;letter-spacing:0;font-size:.86rem;color:var(--muted);line-height:1.6;margin:0}
-.pay-panel .pay-terms input{width:18px;height:18px;flex:none;margin-top:2px;accent-color:var(--violet)}
-.pay-panel .pay-terms a{color:var(--violet-soft);text-decoration:underline}
-.pay-methods .pay-method:has(input:disabled){opacity:.45;cursor:not-allowed}
-.pay-result{
-  text-align:center;padding:34px 22px;border:1px solid rgba(52,211,153,.4);border-radius:18px;
-  background:rgba(52,211,153,.07);margin-top:6px;
-}
-.pay-result.error{border-color:rgba(248,113,113,.4);background:rgba(248,113,113,.07)}
-.pay-result .tick{display:inline-flex;width:64px;height:64px;border-radius:50%;align-items:center;justify-content:center;background:rgba(52,211,153,.15);color:#34d399;margin-bottom:12px}
-.pay-result.error .tick{background:rgba(248,113,113,.15);color:#f87171}
-.pay-result h3{font-size:1.45rem;margin-bottom:10px;letter-spacing:-.02em}
-.pay-result p{max-width:460px;margin:0 auto 18px;line-height:1.7}
-.pay-result .btn{margin:4px}
-.pay-summary{display:grid;gap:10px;max-width:440px;margin:20px auto 24px;text-align:left}
-.pay-summary>div{display:flex;justify-content:space-between;gap:16px;border-bottom:1px solid var(--line);padding-bottom:10px;flex-wrap:wrap}
-.pay-summary dt{color:var(--muted-2);font-size:.8rem;text-transform:uppercase;letter-spacing:.08em}
-.pay-summary dd{margin:0;color:#fff;font-size:.92rem;overflow-wrap:anywhere;text-align:right}
-.pay-summary dd.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.82rem}
+/* Payment page — styles for the removed built-in form are gone; only the
+   layout grid and the admin-code container below remain. */
 
 /* =====================================================================
    Global overflow guards (Task 23)
@@ -314,15 +296,11 @@ blockquote,pre,table{max-width:100%}
   .newsletter-panel{border-radius:16px}
 }
 
-/* Pay Online: predictable form widths and independent SDK mount points. */
+/* Pay Online: predictable layout and containers for the admin's custom code. */
 .payment-layout{grid-template-columns:minmax(0,1.25fr) minmax(240px,.75fr)}
-.payment-form,.payment-form .form-grid,.payment-form .field{min-width:0}
-.payment-sdk-slot{padding:18px;border:1px solid var(--line-strong);border-radius:14px;background:var(--surface-2)}
-.payment-sdk-slot[hidden]{display:none!important}
-.payment-sdk-slot h3{font-size:1rem;margin:0 0 12px}
-.payment-sdk-container{width:100%;min-height:44px;max-width:100%}
-.payment-sdk-hint{margin:10px 0 0;color:var(--muted-2);font-size:.78rem;line-height:1.5}
-@media(max-width:720px){.payment-layout{grid-template-columns:minmax(0,1fr)}.payment-sdk-slot{padding:15px}}
+.pay-custom-code{min-width:0;max-width:100%}
+.pay-custom-code + .pay-custom-code{margin-top:28px}
+@media(max-width:720px){.payment-layout{grid-template-columns:minmax(0,1fr)}}
 
 /* Keep Alia above the sticky navigation and inside narrow safe areas. */
 .chatbot{z-index:1200;right:max(18px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom))}

@@ -687,19 +687,8 @@
 .goal-chip.active{border-color:var(--violet);background:rgba(124,58,237,.16);color:#fff}
 
 /* ------------------------------ pay online ------------------------------- */
-.pay-methods{display:grid;gap:12px}
-.pay-method{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--line);border-radius:14px;padding:15px 16px;cursor:pointer;transition:border-color .2s var(--ease),background .2s var(--ease)}
-.pay-method:hover{border-color:rgba(124,58,237,.45)}
-.pay-method input{margin-top:4px;accent-color:var(--violet);flex:none}
-.pay-method:has(input:checked){border-color:var(--violet);background:rgba(124,58,237,.08)}
-.pay-method strong{display:flex;align-items:center;gap:8px;font-size:.95rem;color:#fff;font-weight:600}
-.pay-method strong .icon{color:var(--violet-soft);flex:none}
-.pay-method small{display:block;color:var(--muted);font-size:.8rem;line-height:1.55;margin-top:5px}
-.pay-status-badge{display:inline-flex;align-items:center;gap:8px;padding:7px 15px;border-radius:999px;font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;font-weight:600}
-.pay-status-badge.requested{background:rgba(124,58,237,.14);border:1px solid rgba(124,58,237,.4);color:var(--violet-soft)}
-.pay-status-badge.pending{background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.35);color:#fbbf24}
-.pay-status-badge.paid{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.4);color:#34d399}
-.pay-status-badge.failed,.pay-status-badge.cancelled{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.35);color:#f87171}
+/* Built-in payment form / method chooser / status badges removed — the Pay
+   Online page now renders the admin's saved custom payment code only. */
 
 /* Keep image shading local to the caption; the photograph above stays clear. */
 .work-body,.pf-body,.why-copy{background:linear-gradient(180deg,transparent,rgba(24,25,30,.88) 26px,rgba(24,25,30,.94))}

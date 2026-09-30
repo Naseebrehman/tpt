@@ -100,11 +100,11 @@ credentials in a public web form. A hosting operator with CLI access is required
   Configured SMTP failures no longer silently fall back to PHP mail. Success means
   the SMTP server accepted the message, not guaranteed inbox delivery; configure
   SPF/DKIM/DMARC and check spam folders. Admin sees the SMTP failure stage/response.
-- **Payments:** the Pay Online page provides the form, service dropdown, and
-  separate PayPal and Stripe client-side mount containers. This project does not
-  include gateway credentials, provider API routes, or payment processing. Add
-  and maintain your own SDK code in the corresponding page containers. Services
-  remain editable in Admin → Payments.
+- **Payments:** the Pay Online page renders the admin's saved custom payment
+  code — the complete PayPal and/or Stripe HTML, CSS and JavaScript pasted in
+  Admin → Payments — stored and output byte-for-byte, once, on load. This
+  project does not include gateway credentials, provider API routes, or payment
+  processing. Services remain editable in Admin → Payments.
 
 ## API compatibility
 
@@ -140,9 +140,10 @@ rather than letting arbitrary X-Forwarded-For bypass limits.
   new leads/settings/content screens and migrations run twice without data loss.
 - Contact/newsletter/chat success, invalid input, invalid CSRF, throttling,
   database outage, SMTP accepted/rejected credentials, no secrets in public HTML.
-- Payment form validation, mobile layout, service dropdown options, and both
-  client-side SDK mount containers. No gateway API call or payment capture is
-  expected from this project.
+- Payment page states: admin custom code rendered verbatim when a provider is
+  enabled, the unavailable message when both are disabled, and no built-in
+  payment form. No gateway API call or payment capture is expected from this
+  project.
 - Generated canonical/OG/Twitter/JSON-LD/sitemap and noindex overrides.
 
 ## Verified here and remaining scope
