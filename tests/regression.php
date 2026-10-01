@@ -43,6 +43,34 @@ check(Content::path('/about.php?utm_source=test') === '/about', 'canonical remov
 check(Content::path('/index.php') === '/', 'canonical home');
 check($router->resolve('POST', '/api/payment')['status'] === 404, 'legacy payment API removed');
 check($router->resolve('POST', '/api/webhooks/stripe')['status'] === 404, 'Stripe webhook API removed');
+check(isset($router->resolve('POST', '/paypal-api')['handler']), 'server-side PayPal endpoint routed');
+check($router->resolve('GET', '/paypal-api')['status'] === 405, 'the PayPal endpoint refuses GET');
+
+/* Short "Start a project" popup: opt-in per page, same contact endpoint. */
+$quick = (string) file_get_contents(BASE_PATH . '/includes/quick-contact.php');
+check(strpos($quick, "url('contact')") !== false || strpos($quick, 'url(\'contact\')') !== false, 'the popup form posts to the same contact endpoint');
+check(strpos($quick, 'csrfField()') !== false && strpos($quick, 'website_url') !== false, 'the popup form keeps the CSRF token and honeypot');
+check(strpos($quick, 'name="contact_submit"') !== false, 'the popup form carries the contact_submit marker');
+check(strpos($quick, 'name="message"') !== false && strpos($quick, 'name="service"') !== false, 'the popup form asks for the service and the message');
+check(substr_count($quick, '<textarea') === 1 && substr_count($quick, '<select') === 1, 'the popup form stays short (one message box, one service list)');
+$footerSource = (string) file_get_contents(BASE_PATH . '/includes/footer.php');
+check(strpos($footerSource, '$contactModalEnabled') !== false, 'the popup form is rendered only when a page asks for it');
+$hostPages = array();
+foreach (glob(BASE_PATH . '/*.php') as $pageFile) {
+    $source = (string) file_get_contents($pageFile);
+    if (strpos($source, '$contactModalEnabled = true') !== false) { $hostPages[] = basename($pageFile); }
+}
+check($hostPages === array('index.php'), 'exactly one public page offers the popup (found: ' . implode(', ', $hostPages) . ')');
+$triggerPages = array();
+foreach (glob(BASE_PATH . '/*.php') as $pageFile) {
+    if (strpos((string) file_get_contents($pageFile), 'data-contact-modal') !== false) { $triggerPages[] = basename($pageFile); }
+}
+sort($triggerPages);
+check($triggerPages === array('index.php'), 'popup triggers are used on the home page only (found: ' . implode(', ', $triggerPages) . ')');
+$contactSource = (string) file_get_contents(BASE_PATH . '/contact.php');
+check(strpos($contactSource, 'id="contactForm"') !== false, 'the Contact Us page keeps the full form');
+check(strpos($contactSource, 'id="formSuccess"') !== false, 'the Contact Us page keeps its success block');
+check(strpos($contactSource, 'data-contact-modal') === false, 'the Contact Us page itself does not open the popup');
 $mailer = new PieMailer(array('from_email'=>'sender@example.test','host'=>'smtp.example.test'));
 check(!$mailer->send("victim@example.test\r\nBcc:attacker@example.test", 'Test', 'Test')['success'], 'SMTP recipient injection rejected');
 check(!$mailer->send('victim@example.test', "Test\r\nBcc:attacker", 'Test')['success'], 'SMTP header injection rejected');

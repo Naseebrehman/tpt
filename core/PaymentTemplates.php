@@ -39,27 +39,25 @@ function piePayPalStarterCode()
 
      All ids are prefixed with `paypal-` so PayPal and Stripe never collide.
      Shipping is disabled: digital / service payment, no address requested.
+     No Terms checkbox: one small legal line replaces it.
      ========================================================================== -->
 <style>
   /* Scoped to .paypal-pay-* so nothing else on the page is affected. */
-  .paypal-pay-form{display:grid;gap:18px;max-width:560px}
-  .paypal-pay-form .paypal-pay-check{display:flex;gap:10px;align-items:flex-start;font-size:.88rem;color:var(--muted);text-transform:none;letter-spacing:0;font-weight:400}
-  .paypal-pay-form .paypal-pay-check input{width:18px;height:18px;margin-top:2px;flex:none;accent-color:var(--violet)}
-  .paypal-pay-form .paypal-pay-check a{color:var(--violet-soft)}
+  .paypal-pay-form{display:grid;gap:18px;max-width:100%}
+  /* Full-width panel: name across the top, service + amount side by side. */
+  @media (min-width:901px){
+    .paypal-pay-form .field.full{grid-column:auto}
+    .paypal-pay-form .field:first-of-type{grid-column:1/-1}
+    .paypal-pay-form .full{grid-column:1/-1}
+  }
   .paypal-pay-buttons{min-height:52px;margin-bottom:14px}
   .paypal-pay-buttons iframe{max-width:100%}
-  @media (max-width:720px){.paypal-pay-form{max-width:100%}}
 </style>
 
 <form id="paypal-payment-form" class="paypal-pay-form form-grid" novalidate>
   <div class="field full">
-    <label for="paypal-name">Full name <span class="req">*</span></label>
-    <input id="paypal-name" name="name" type="text" maxlength="150" autocomplete="name" placeholder="John Smith" required>
-    <span class="error-msg"></span>
-  </div>
-  <div class="field full">
-    <label for="paypal-email">Email address <span class="req">*</span></label>
-    <input id="paypal-email" name="email" type="email" maxlength="150" autocomplete="email" placeholder="john@example.com" required>
+    <label for="paypal-name">Name / Business name <span class="req">*</span></label>
+    <input id="paypal-name" name="name" type="text" maxlength="150" autocomplete="name" placeholder="John Smith / Acme Inc." required>
     <span class="error-msg"></span>
   </div>
   <div class="field full">
@@ -73,17 +71,6 @@ function piePayPalStarterCode()
   <div class="field full">
     <label for="paypal-amount">Amount (USD) <span class="req">*</span></label>
     <input id="paypal-amount" name="amount" type="number" min="1" step="0.01" inputmode="decimal" placeholder="500.00" required>
-    <span class="error-msg"></span>
-  </div>
-  <div class="field full">
-    <label for="paypal-notes">Project notes</label>
-    <textarea id="paypal-notes" name="notes" rows="3" maxlength="1000" placeholder="Anything the team should know (optional)"></textarea>
-  </div>
-  <div class="field full">
-    <label class="paypal-pay-check" for="paypal-terms">
-      <input type="checkbox" id="paypal-terms" name="terms" required>
-      <span>I have read and accept the <a href="{{TERMS_URL}}" data-tpt-terms target="_blank" rel="noopener">Terms &amp; Conditions</a>.</span>
-    </label>
     <span class="error-msg"></span>
   </div>
   <div class="full">
@@ -124,24 +111,18 @@ function piePayPalStarterCode()
   function validate() {
     clearErrors();
     var firstInvalid = null;
-    ['paypal-name', 'paypal-email', 'paypal-service', 'paypal-amount'].forEach(function (id) {
+    ['paypal-name', 'paypal-service', 'paypal-amount'].forEach(function (id) {
       var input = document.getElementById(id);
       if (!input) { return; }
       var value = (input.value || '').trim();
       var message = '';
       if (!value) { message = 'This field is required.'; }
-      else if (id === 'paypal-email' && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value)) { message = 'Enter a valid email address.'; }
       else if (id === 'paypal-amount' && !(parseFloat(value) > 0)) { message = 'Enter an amount greater than zero.'; }
       if (message) {
         markError(input, message);
         if (!firstInvalid) { firstInvalid = input; }
       }
     });
-    var terms = document.getElementById('paypal-terms');
-    if (terms && !terms.checked) {
-      markError(terms, 'Please accept the Terms & Conditions.');
-      if (!firstInvalid) { firstInvalid = terms; }
-    }
     if (firstInvalid) {
       setStatus('Please complete the highlighted fields.', 'err');
       try { firstInvalid.focus(); } catch (focusError) { /* ignore */ }
@@ -166,8 +147,8 @@ function piePayPalStarterCode()
     var select = document.getElementById('paypal-service');
     return select && select.value ? select.value : 'Service payment';
   }
-  function emailValue() {
-    var input = document.getElementById('paypal-email');
+  function nameValue() {
+    var input = document.getElementById('paypal-name');
     return input && input.value ? input.value.trim() : '';
   }
 
@@ -187,16 +168,34 @@ function piePayPalStarterCode()
           purchase_units: [{
             amount: { value: amountValue(), currency_code: 'USD' },
             description: serviceValue(),
-            custom_id: emailValue()
+            custom_id: nameValue()
           }],
           /* Digital / service payment: never request a shipping address. */
           application_context: { shipping_preference: 'NO_SHIPPING', user_action: 'PAY_NOW' }
         });
       },
       onApprove: function (data, actions) {
-        return actions.order.capture().then(function (details) {
-          var payer = details && details.payer && details.payer.name ? details.payer.name : 'Your payment';
-          setStatus(payer + ' is complete. Reference: ' + (data.orderID || '') + '.', 'ok');
+        /* Prefer the server-side capture: with a PayPal Secret stored in
+           Admin -> Payments, window.TPT_PAYPAL.capture() asks TPT's own
+           endpoint to capture and verify the order with PayPal, and the page
+           then shows the confirmed payment (amount + reference). The Secret
+           itself never reaches this page. Without a Secret the standard
+           client-side capture runs exactly as before. */
+        var verify = (window.TPT_PAYPAL && window.TPT_PAYPAL.serverVerification)
+          ? window.TPT_PAYPAL.capture(data.orderID, amountValue(), { name: nameValue(), service: serviceValue() })
+          : actions.order.capture();
+        return verify.then(function (details) {
+          if (window.TPT_PAYPAL && window.TPT_PAYPAL.serverVerification) { return; } /* the page shows the confirmation */
+          var capture = details && details.purchase_units && details.purchase_units[0] && details.purchase_units[0].payments
+            ? details.purchase_units[0].payments.captures[0] : null;
+          var status = capture && capture.status ? capture.status : (details && details.status);
+          if (String(status || '').toUpperCase() === 'COMPLETED') {
+            setStatus('Payment complete. Reference: ' + ((capture && capture.id) || (data.orderID || '')) + '.', 'ok');
+          } else {
+            setStatus('PayPal has not completed this payment yet. Please contact us before paying again.', 'err');
+          }
+        }).catch(function (error) {
+          setStatus(error && error.message ? error.message : 'We could not verify this payment. Please contact us before paying again.', 'err');
         });
       },
       onCancel: function () { setStatus('The payment was cancelled.', 'err'); },
@@ -232,26 +231,23 @@ function pieStripeStarterCode()
      ========================================================================== -->
 <style>
   /* Scoped to .stripe-pay-* so nothing else on the page is affected. */
-  .stripe-pay-form{display:grid;gap:18px;max-width:560px}
+  .stripe-pay-form{display:grid;gap:18px;max-width:100%}
+  /* Full-width panel: name across the top, service + amount side by side. */
+  @media (min-width:901px){
+    .stripe-pay-form .field.full{grid-column:auto}
+    .stripe-pay-form .field:first-of-type{grid-column:1/-1}
+    .stripe-pay-form .full{grid-column:1/-1}
+  }
   .stripe-pay-card{padding:14px 16px;background:var(--bg-soft);border:1px solid var(--line);border-radius:12px}
   .stripe-pay-card.StripeElement--focus{border-color:var(--violet);box-shadow:0 0 0 4px rgba(124,58,237,.16)}
   .stripe-pay-card.StripeElement--invalid{border-color:var(--red)}
-  .stripe-pay-check{display:flex;gap:10px;align-items:flex-start;font-size:.88rem;color:var(--muted);text-transform:none;letter-spacing:0;font-weight:400}
-  .stripe-pay-check input{width:18px;height:18px;margin-top:2px;flex:none;accent-color:var(--violet)}
-  .stripe-pay-check a{color:var(--violet-soft)}
-  @media (max-width:720px){.stripe-pay-form{max-width:100%}}
-</style>
+  </style>
 
 <div id="stripe-payment-container" class="stripe-pay-form">
   <form id="stripe-payment-form" class="form-grid" novalidate>
     <div class="field full">
-      <label for="stripe-name">Full name <span class="req">*</span></label>
-      <input id="stripe-name" name="name" type="text" maxlength="150" autocomplete="name" placeholder="John Smith" required>
-      <span class="error-msg"></span>
-    </div>
-    <div class="field full">
-      <label for="stripe-email">Email address <span class="req">*</span></label>
-      <input id="stripe-email" name="email" type="email" maxlength="150" autocomplete="email" placeholder="john@example.com" required>
+      <label for="stripe-name">Name / Business name <span class="req">*</span></label>
+      <input id="stripe-name" name="name" type="text" maxlength="150" autocomplete="name" placeholder="John Smith / Acme Inc." required>
       <span class="error-msg"></span>
     </div>
     <div class="field full">
@@ -271,13 +267,6 @@ function pieStripeStarterCode()
       <label for="stripe-card-element">Card details <span class="req">*</span></label>
       <div class="stripe-pay-card" id="stripe-card-element"><!-- Stripe Elements mounts here --></div>
       <span class="error-msg" id="stripe-card-errors"></span>
-    </div>
-    <div class="field full">
-      <label class="stripe-pay-check" for="stripe-terms">
-        <input type="checkbox" id="stripe-terms" name="terms" required>
-        <span>I have read and accept the <a href="{{TERMS_URL}}" data-tpt-terms target="_blank" rel="noopener">Terms &amp; Conditions</a>.</span>
-      </label>
-      <span class="error-msg"></span>
     </div>
     <div class="full">
       <button class="btn btn-primary btn-lg btn-block" type="submit" id="stripe-payment-button">Pay now</button>
@@ -322,24 +311,18 @@ function pieStripeStarterCode()
   function validate() {
     clearErrors();
     var firstInvalid = null;
-    ['stripe-name', 'stripe-email', 'stripe-service', 'stripe-amount'].forEach(function (id) {
+    ['stripe-name', 'stripe-service', 'stripe-amount'].forEach(function (id) {
       var input = document.getElementById(id);
       if (!input) { return; }
       var value = (input.value || '').trim();
       var message = '';
       if (!value) { message = 'This field is required.'; }
-      else if (id === 'stripe-email' && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value)) { message = 'Enter a valid email address.'; }
       else if (id === 'stripe-amount' && !(parseFloat(value) > 0)) { message = 'Enter an amount greater than zero.'; }
       if (message) {
         markError(input, message);
         if (!firstInvalid) { firstInvalid = input; }
       }
     });
-    var terms = document.getElementById('stripe-terms');
-    if (terms && !terms.checked) {
-      markError(terms, 'Please accept the Terms & Conditions.');
-      if (!firstInvalid) { firstInvalid = terms; }
-    }
     if (firstInvalid) {
       setStatus('Please complete the highlighted fields.', 'err');
       try { firstInvalid.focus(); } catch (focusError) { /* ignore */ }
@@ -368,8 +351,7 @@ function pieStripeStarterCode()
     if (payButton) { payButton.disabled = true; }
     setStatus('Processing…', '');
     stripe.createToken(card, {
-      name: (document.getElementById('stripe-name') || {}).value || '',
-      email: (document.getElementById('stripe-email') || {}).value || ''
+      name: (document.getElementById('stripe-name') || {}).value || ''
     }).then(function (result) {
       if (payButton) { payButton.disabled = false; }
       if (result.error) {

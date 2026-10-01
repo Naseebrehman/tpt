@@ -17,6 +17,8 @@ $pageLibs = isset($pageLibs) && is_array($pageLibs) ? $pageLibs : array();
 ?>
 </main>
 
+<?php if (!empty($contactModalEnabled)) { require __DIR__ . '/quick-contact.php'; } ?>
+
 <footer class="site-footer footer-compact">
     <div class="container">
         <div class="footer-grid">
@@ -44,7 +46,7 @@ $pageLibs = isset($pageLibs) && is_array($pageLibs) ? $pageLibs : array();
                 <ul>
                     <li><?= icon('mail', 16) ?><a href="mailto:<?= esc(getSetting('site_email', 'info@thepietechnologies.com')) ?>"><?= esc(getSetting('site_email', 'info@thepietechnologies.com')) ?></a></li>
                     <li><?= icon('phone', 16) ?><a href="tel:<?= esc(preg_replace('/[^0-9+]/', '', getSetting('site_phone', '+1 (213) 257 8242'))) ?>"><?= esc(getSetting('site_phone', '+1 (213) 257 8242')) ?></a></li>
-                    <li><?= icon('pin', 16) ?><span><?= esc(getSetting('site_address', 'Collingswood, NJ, USA · Punjab, Pakistan')) ?></span></li>
+                    <li><?= icon('pin', 16) ?><span><?= esc(getSetting('site_address', 'Collingswood, New Jersey, USA')) ?></span></li>
                 </ul>
             </div>
         </div>

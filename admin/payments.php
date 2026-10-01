@@ -15,8 +15,16 @@
  *  (there is no second Services manager):
  *
  *      paypal_client_id   PayPal Client ID        → {{PAYPAL_CLIENT_ID}}
+ *      paypal_secret      PayPal Secret           → server-side only (never
+ *                                                   rendered to a browser)
+ *      paypal_env         live / sandbox PayPal environment for the REST calls
  *      terms_url          Terms & Conditions URL  → {{TERMS_URL}} (shared)
  *      payment_services   Services               → {{SERVICES_OPTIONS}}
+ *
+ *  The PayPal Secret is used for ONE thing: creating and capturing/verifying
+ *  orders on the server (core/PayPal.php + paypal-api.php). It is never echoed
+ *  in this dashboard, never placed in HTML/JavaScript and never returned by any
+ *  endpoint — the dashboard only ever shows whether one is stored.
  * ---------------------------------------------------------------------------
  */
 
@@ -101,11 +109,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $paypalEnabled  = !empty($_POST['paypal_enabled']) ? '1' : '0';
         $paypalCode     = paymentCodeFromRequest('paypal_sdk_code');
         $paypalClientId = paymentCleanValue(isset($_POST['paypal_client_id']) ? $_POST['paypal_client_id'] : '');
+        $paypalEnv      = (isset($_POST['paypal_env']) && $_POST['paypal_env'] === 'sandbox') ? 'sandbox' : 'live';
+        /* The Secret is never sent back to the browser: an empty field keeps
+           the stored value, the explicit button clears it. */
+        $paypalSecretInput = isset($_POST['paypal_secret']) ? paymentCleanValue($_POST['paypal_secret']) : '';
+        $clearPaypalSecret = !empty($_POST['paypal_secret_clear']) && $paypalSecretInput === '';
 
         /* Validate the Client ID before anything is written, so a typo can
            never overwrite the saved implementation. */
         if ($paypalClientId !== '' && !pieIsValidPayPalClientId($paypalClientId)) {
             setFlash('err', 'The PayPal Client ID may only contain letters, numbers, hyphens and underscores (at least 8 characters). Nothing was changed.');
+            paymentServicesRedirect();
+        }
+        if ($paypalSecretInput !== '' && !pieIsValidPayPalSecret($paypalSecretInput)) {
+            setFlash('err', 'That PayPal Secret does not look valid (at least 16 characters, letters/numbers/-/_/. only). Nothing was changed.');
             paymentServicesRedirect();
         }
 
@@ -124,9 +141,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)',
             array('paypal_sdk_code', $paypalCode)
         );
+        dbExec(
+            'INSERT INTO settings (setting_key, setting_value) VALUES (?, ?)
+             ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)',
+            array('paypal_env', $paypalEnv)
+        );
+        /* Write the Secret only when a new one was typed, or clear it when the
+           administrator explicitly asked. The stored value is never displayed. */
+        if ($paypalSecretInput !== '') {
+            dbExec(
+                'INSERT INTO settings (setting_key, setting_value) VALUES (?, ?)
+                 ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)',
+                array('paypal_secret', $paypalSecretInput)
+            );
+        } elseif ($clearPaypalSecret) {
+            dbExec('DELETE FROM settings WHERE setting_key = ?', array('paypal_secret'));
+        }
         settingsCache(true);
         if ($paymentAction === 'save_paypal') {
-            setFlash('ok', 'PayPal payment code saved — stored exactly as provided.');
+            setFlash('ok', 'PayPal settings saved — payment code stored exactly as provided'
+                . ($paypalSecretInput !== '' ? ', and the Secret is stored server-side only.' : '.'));
             paymentServicesRedirect();
         }
     }
@@ -219,6 +253,9 @@ $stripeEnabled  = (getSetting('stripe_enabled', '0') === '1');
 $paypalSdkCode  = getSetting('paypal_sdk_code', '');
 $stripeSdkCode  = getSetting('stripe_sdk_code', '');
 $paypalClientId = piePayPalClientId();
+$paypalEnv      = piePayPalEnv();
+$paypalSecretSet = piePayPalSecretConfigured();
+$paypalServerReady = piePayPalServerReady();
 $termsUrl       = getSetting('terms_url', '');
 $idConflicts    = piePaymentIdConflicts(array('paypal' => $paypalSdkCode, 'stripe' => $stripeSdkCode));
 $unlinkedSelects = array_merge(
@@ -276,6 +313,9 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
     <?php if ($paypalEnabled && $paypalClientId === ''): ?>
         <p class="hint" style="color:#fca5a5">PayPal is enabled but no Client ID is saved. The PayPal SDK cannot start without it — add it below.</p>
     <?php endif; ?>
+    <?php if ($paypalEnabled && $paypalClientId !== '' && !$paypalSecretSet): ?>
+        <p class="hint" style="color:#fcd34d">PayPal has no Secret saved, so payments are captured in the browser instead of being verified on the server. Add the PayPal Secret below to switch on server-side verification (recommended).</p>
+    <?php endif; ?>
 
     <form method="post">
         <?= csrfField() ?>
@@ -288,9 +328,36 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
         </label>
 
         <div class="a-field">
-            <label for="paypal_client_id">PayPal Client ID</label>
+            <label for="paypal_client_id">PayPal Client ID <span style="color:var(--muted)">(public — used by the SDK in the browser)</span></label>
             <input id="paypal_client_id" name="paypal_client_id" type="text" value="<?= esc($paypalClientId) ?>" placeholder="AxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxX" autocomplete="off" spellcheck="false">
-            <div class="hint">The PayPal SDK is loaded with <code>?client-id=</code> from this field. Use <code>{{PAYPAL_CLIENT_ID}}</code> (or <code>{{PAYPAL_SDK_URL}}</code>) inside your code and you never have to touch the code again to change the ID. Letters, numbers, hyphens and underscores only — the PayPal <strong>Secret</strong> is never stored or exposed here.</div>
+            <div class="hint">The PayPal SDK is loaded with <code>?client-id=</code> from this field. Use <code>{{PAYPAL_CLIENT_ID}}</code> (or <code>{{PAYPAL_SDK_URL}}</code>) inside your code and you never have to touch the code again to change the ID. Letters, numbers, hyphens and underscores only.</div>
+        </div>
+
+        <div class="a-field">
+            <label for="paypal_secret">PayPal Secret <span style="color:var(--muted)">(server-side only — never sent to a browser)</span></label>
+            <?php if ($paypalSecretSet): ?>
+            <div class="a-toolbar" style="margin:0 0 8px">
+                <span class="badge active"><?= icon('lock', 14) ?> A Secret is stored</span>
+                <span class="badge <?= $paypalServerReady ? 'active' : 'inactive' ?>"><?= $paypalServerReady ? 'Server-side capture active' : 'Add a Client ID to activate' ?></span>
+            </div>
+            <?php endif; ?>
+            <input id="paypal_secret" name="paypal_secret" type="password" value="" placeholder="<?= $paypalSecretSet ? 'Enter a new Secret to replace the stored one' : 'E... your PayPal REST API Secret' ?>" autocomplete="new-password" spellcheck="false">
+            <div class="hint">
+                Used only on the server: orders are created and captured/verified with PayPal’s REST API in <code>core/PayPal.php</code>, and the Secret is never printed, logged, escaped into the page or returned by any endpoint.
+                <?php if ($paypalSecretSet): ?>Leave this field empty to keep the stored Secret.<?php endif; ?>
+            </div>
+            <?php if ($paypalSecretSet): ?>
+            <label class="a-check" style="margin-top:8px"><input type="checkbox" name="paypal_secret_clear" value="1"> Remove the stored Secret (falls back to client-side capture in the browser)</label>
+            <?php endif; ?>
+        </div>
+
+        <div class="a-field">
+            <label for="paypal_env">PayPal environment</label>
+            <select id="paypal_env" name="paypal_env">
+                <option value="live"<?= $paypalEnv === 'live' ? ' selected' : '' ?>>Live (api-m.paypal.com)</option>
+                <option value="sandbox"<?= $paypalEnv === 'sandbox' ? ' selected' : '' ?>>Sandbox (api-m.sandbox.paypal.com)</option>
+            </select>
+            <div class="hint">Where the server-side create/capture calls go. Use Sandbox with PayPal test credentials while you are testing.</div>
         </div>
 
         <div class="a-field">
@@ -383,6 +450,43 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
     <p class="hint" style="margin-top:10px"><?php foreach ($unlinkedSelects as $unlinked): ?><code style="display:inline-block;margin:0 8px 6px 0"><?= esc($unlinked) ?></code><?php endforeach; ?></p>
 </div>
 <?php endif; ?>
+
+<!-- ============= Server-verified PayPal payments (read-only) ============= -->
+<?php
+/* Audit trail of captures that the SERVER verified with PayPal. Rendered only
+   when the existing payments table is present; nothing is editable here. */
+$verifiedPayments = Schema::hasTable('payments')
+    ? dbAll("SELECT id, name, email, service, amount_usd, reference, provider_ref, created_at
+             FROM payments WHERE method = 'paypal' AND status = 'paid'
+             ORDER BY id DESC LIMIT 10")
+    : array();
+?>
+<div class="a-card">
+    <h3><?= icon('shield', 18) ?> Server-verified PayPal payments</h3>
+    <?php if (!$verifiedPayments): ?>
+        <p class="hint">No server-verified PayPal payment has been recorded yet. Each capture that the server confirms with PayPal is listed here (amount, buyer, service and payment reference) in the existing <code>payments</code> table.</p>
+    <?php else: ?>
+        <div class="a-table-wrap">
+            <table class="a-table">
+                <thead>
+                    <tr><th>When</th><th>Buyer</th><th>Service</th><th>Amount</th><th>PayPal reference</th></tr>
+                </thead>
+                <tbody>
+                <?php foreach ($verifiedPayments as $verified): ?>
+                    <tr>
+                        <td><?= esc(date('Y-m-d H:i', strtotime((string) $verified['created_at']))) ?></td>
+                        <td><?= esc($verified['name'] !== '' ? $verified['name'] : '—') ?><br><span style="color:var(--muted);font-size:.82rem"><?= esc($verified['email'] !== '' ? $verified['email'] : '—') ?></span></td>
+                        <td><?= esc($verified['service'] !== '' ? $verified['service'] : '—') ?></td>
+                        <td>$<?= esc(number_format((float) $verified['amount_usd'], 2)) ?> USD</td>
+                        <td><code><?= esc($verified['provider_ref'] !== '' ? $verified['provider_ref'] : $verified['reference']) ?></code></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <p class="hint" style="margin-top:12px">Shown for your records. Payment card details are never stored — only the PayPal reference, amount, buyer and service.</p>
+    <?php endif; ?>
+</div>
 
 <!-- ======================== Form Services Section ======================== -->
 <div class="a-card">

@@ -31,6 +31,10 @@ function dbAll($sql, $params = array())
 }
 function dbOne($sql, $params = array())
 {
+    if (strpos($sql, 'information_schema.TABLES') !== false) {
+        /* Notifications::tableReady() probes this before listing recipients. */
+        return array('c' => 1);
+    }
     if (strpos($sql, 'FROM settings') !== false) {
         $key = $params[0] ?? '';
         return isset($GLOBALS['fake_settings'][$key]) ? array('setting_key' => $key, 'setting_value' => $GLOBALS['fake_settings'][$key]) : null;
@@ -192,10 +196,14 @@ check(function_exists('piePaymentServices'), 'admin-managed payment service list
 check(!function_exists('piePaymentProviders') && !function_exists('piePayPalOrder') && !function_exists('pieStripeCheckout'), 'gateway backend helpers are removed');
 check(!function_exists('pieStripeIntent'), 'gateway intent helper is removed');
 /* The PayPal Client ID is a public, client-side value the dashboard feeds into
-   the saved PayPal code through {{PAYPAL_CLIENT_ID}} — it is not a server-side
-   credential and no secret is ever stored. */
+   the saved PayPal code through {{PAYPAL_CLIENT_ID}}. The PayPal Secret is the
+   opposite: it is stored in Admin → Payments and used ONLY on the server, so it
+   has a helper here but is never rendered into a page, script or API response. */
 check(function_exists('piePayPalClientId') && piePayPalClientId() === '', 'PayPal Client ID is an admin setting with no default value');
-check(!function_exists('piePayPalSecret') && !function_exists('pieStripeSecretKey'), 'no gateway secret helper exists');
+check(function_exists('piePayPalSecret') && piePayPalSecret() === '', 'the PayPal Secret is an admin setting with no default value');
+check(!function_exists('pieStripeSecretKey'), 'no Stripe secret helper exists');
+check(!function_exists('piePayPalSecretValue') && !function_exists('piePayPalSecretPublic'), 'the Secret is never exposed through a "public" helper');
+check(function_exists('piePayPalServerReady') && piePayPalServerReady() === false, 'server-side PayPal capture stays off until a Secret is saved');
 
 /* -------------------------------- done ---------------------------------- */
 echo "\n$count checks passed.\n";

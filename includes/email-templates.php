@@ -35,7 +35,7 @@ function emailShell($innerHtml, $preheader = '', $unsubscribeUrl = null)
         . '<tr><td style="padding:34px 32px;">' . $innerHtml . '</td></tr>'
         . '<tr><td style="padding:22px 32px;border-top:1px solid #23232b;background:#0d0d11;">'
         . '<p style="margin:0 0 6px;font-size:12px;color:#8b8b96;">&copy; ' . $year . ' ' . $siteName . ' &middot; '
-        . esc(getSetting('site_address', 'Collingswood, NJ, USA · Punjab, Pakistan')) . '</p>'
+        . esc(getSetting('site_address', 'Collingswood, New Jersey, USA')) . '</p>'
         . '<p style="margin:0;font-size:12px;color:#6b7280;">'
         . '<a href="' . $siteUrl . '" style="color:#a78bfa;text-decoration:none;">Website</a> &nbsp;&middot;&nbsp; '
         . '<a href="' . $siteUrl . '/contact" style="color:#a78bfa;text-decoration:none;">Contact</a> &nbsp;&middot;&nbsp; '

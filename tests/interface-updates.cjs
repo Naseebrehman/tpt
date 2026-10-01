@@ -2,7 +2,7 @@
 const {chromium}=require('playwright');
 const base=(process.env.TPT_TEST_BASE_URL||'http://127.0.0.1:8765').replace(/\/$/,'');
 (async()=>{
- const browser=await chromium.launch({headless:true,executablePath:process.env.TPT_CHROMIUM_EXECUTABLE||undefined,args:['--no-sandbox','--disable-dev-shm-usage','--no-zygote']});
+ const browser=await chromium.launch({headless:true,executablePath:process.env.TPT_CHROMIUM_EXECUTABLE||undefined,args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu','--hide-scrollbars']});
  const page=await browser.newPage();let count=0;
  function check(ok,name){if(!ok)throw Error(name);count++;console.log('PASS',name)}
  await page.route('**/*',route=>route.request().url().startsWith(base)?route.continue():route.abort());

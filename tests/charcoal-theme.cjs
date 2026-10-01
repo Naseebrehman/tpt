@@ -4,7 +4,7 @@ const base=(process.env.TPT_TEST_BASE_URL||'http://127.0.0.1:8765').replace(/\/$
 function luminance(hex){const rgb=hex.replace('#','').match(/../g).map(v=>parseInt(v,16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);return rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722;}
 function contrast(a,b){const x=luminance(a),y=luminance(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);}
 (async()=>{
- const browser=await chromium.launch({headless:true,executablePath:process.env.TPT_CHROMIUM_EXECUTABLE||undefined,args:['--no-sandbox','--disable-dev-shm-usage','--no-zygote']});
+ const browser=await chromium.launch({headless:true,executablePath:process.env.TPT_CHROMIUM_EXECUTABLE||undefined,args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu','--hide-scrollbars']});
  try{
   const page=await browser.newPage();let checks=0;
   function check(ok,name){if(!ok)throw Error(name);checks++;console.log('PASS',name);}

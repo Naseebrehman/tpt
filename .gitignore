@@ -15,3 +15,6 @@
 /config/config.local.php
 /storage/*/*
 !/storage/*/.gitkeep
+
+# the sandbox preview symlink (see tests/harness/README.md)
+/node_modules

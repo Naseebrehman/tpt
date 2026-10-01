@@ -50,7 +50,7 @@ require_once __DIR__ . '/includes/header.php';
             <h2 class="section-title" style="font-size:clamp(1.8rem,3.6vw,2.8rem)">Strategists, buyers, SEOs, designers &amp; engineers. One table.</h2>
         </div>
         <p class="story-copy" data-aos="fade-up">
-            TPT is a digital growth and technology team operating from <span class="hl">Collingswood, New Jersey and Punjab, Pakistan</span> — built deliberately across time zones so client work moves while you sleep. Our background spans software development and digital marketing, which is why our campaigns ship with tracking that works and our websites ship with positioning that sells.
+            TPT is a digital growth and technology team based in <span class="hl">Collingswood, New Jersey, USA</span> — working remotely with clients across time zones so the work keeps moving. Our background spans software development and digital marketing, which is why our campaigns ship with tracking that works and our websites ship with positioning that sells.
         </p>
         <p class="story-copy" data-aos="fade-up">
             And the name? <span class="hl">Everyone wants a slice of growth. We bake the whole pie</span> — crust to filling: strategy underneath, data holding it together.
@@ -164,18 +164,6 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 </section>
 <?php endif; ?>
-
-<!-- ========================= TPT BY THE NUMBERS ========================= -->
-<section class="section" style="padding-top:0">
-    <div class="container">
-        <div class="result-stats">
-            <div class="result-stat" data-aos="fade-up"><strong><span data-countup="5">0</span></strong><span>Disciplines — strategy, media, search, web and data</span></div>
-            <div class="result-stat" data-aos="fade-up" data-aos-delay="80"><strong><span data-countup="11">0</span></strong><span>Services, every one run as part of the system</span></div>
-            <div class="result-stat" data-aos="fade-up" data-aos-delay="160"><strong><span data-countup="12">0</span></strong><span>Free playbooks in the Growth Library</span></div>
-            <div class="result-stat" data-aos="fade-up" data-aos-delay="240"><strong><span data-countup="2">0</span></strong><span>Locations — New Jersey · Punjab, one standard</span></div>
-        </div>
-    </div>
-</section>
 
 <section class="final-cta">
     <div class="container">

@@ -27,7 +27,7 @@
   --font-body:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
   --container:1240px;
   --gutter:clamp(18px,4vw,40px);
-  --section:clamp(72px,9vw,132px);
+  --section:clamp(56px,6.6vw,100px);
   --ease:cubic-bezier(.22,1,.36,1);
   --nav-h:76px;
 }
@@ -67,13 +67,13 @@ html{scrollbar-color:#666b7c var(--bg)}
   color:var(--violet-soft);margin:0 0 18px;
 }
 .eyebrow::before{content:"";width:26px;height:1px;background:var(--violet);}
-.section-head{max-width:820px;margin-bottom:clamp(36px,5vw,64px)}
+.section-head{max-width:820px;margin-bottom:clamp(26px,3.6vw,44px)}
 .section-head.center{margin-inline:auto;text-align:center}
 .section-head.center .eyebrow{justify-content:center}
 .section-head.center .eyebrow::before{display:none}
 .section-title{font-size:clamp(2.1rem,5vw,4rem);letter-spacing:-.035em;line-height:1.02}
 .section-title .accent{color:var(--violet-soft)}
-.section-lead{margin-top:20px;color:var(--muted);font-size:clamp(1rem,1.4vw,1.15rem);line-height:1.75;max-width:640px}
+.section-lead{margin-top:16px;color:var(--muted);font-size:clamp(1rem,1.4vw,1.15rem);line-height:1.75;max-width:640px}
 .section-head.center .section-lead{margin-inline:auto}
 
 .display{font-size:clamp(2.6rem,7.4vw,5.7rem);line-height:.98;letter-spacing:-.04em}
@@ -260,8 +260,8 @@ body.menu-open .mobile-services{opacity:1}
 /* ------------------------------- footer ---------------------------------- */
 .site-footer{background:#16171c;border-top:1px solid var(--line);margin-top:0}
 .footer-grid{
-  display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr 1.2fr;gap:clamp(28px,4vw,48px);
-  padding:clamp(56px,7vw,88px) 0 clamp(36px,4vw,56px);
+  display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr 1.2fr;gap:clamp(24px,3.4vw,42px);
+  padding:clamp(44px,5.4vw,68px) 0 clamp(28px,3.2vw,44px);
 }
 .footer-brand p{color:var(--muted);font-size:.92rem;line-height:1.75;margin:18px 0 22px;max-width:320px}
 .footer-socials{display:flex;gap:10px;flex-wrap:wrap}

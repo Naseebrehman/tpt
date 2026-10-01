@@ -56,11 +56,12 @@ $expectations = array(
     'subscribers'  => array('Newsletter Subscribers'),
     'admins'       => array('Admin Management'),
     'media'        => array('Media Library'),
-    'comments'     => array('Blog Comments'),
+    'chats'        => array('Alia'),
     'content'      => array('Content'),
 );
 
-$smokePage = isset($argv[1]) ? preg_replace('/[^a-z_]/', '', $argv[1]) : 'settings';
+$smokeArgs = isset($argv[1]) ? (string) $argv[1] : (string) getenv('TPT_HARNESS_ARGS');
+$smokePage = trim($smokeArgs) !== '' ? preg_replace('/[^a-z_]/', '', trim($smokeArgs)) : 'settings';
 if (!isset($expectations[$smokePage])) {
     fwrite(STDOUT, "FAIL unknown admin page '$smokePage'\n");
     exit(1);

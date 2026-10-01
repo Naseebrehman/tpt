@@ -42,6 +42,9 @@ $jsonLd = json_encode(array(
 /* Real clients, named in the testimonials and case studies we publish. */
 $clients = array('Alpha Global', 'Pay Stream', 'Nicks Roofing');
 
+/* This page offers the short Start-a-project popup. */
+$contactModalEnabled = true;
+
 require_once __DIR__ . '/includes/header.php';
 ?>
 
@@ -57,7 +60,7 @@ require_once __DIR__ . '/includes/header.php';
         </h1>
         <p class="hero-sub">Most agencies sell tactics. We build the system under them — strategy, creative, media, websites and data working as one engine, with a single team accountable for the only number that matters: yours.</p>
         <div class="hero-ctas">
-            <a href="<?= url('contact') ?>" class="btn btn-primary btn-lg btn-magnetic">Start here <?= icon('arrow-r', 18) ?></a>
+            <a href="<?= url('contact') ?>" class="btn btn-primary btn-lg btn-magnetic" data-contact-modal>Start here <?= icon('arrow-r', 18) ?></a>
             <a href="<?= url('portfolio') ?>" class="btn btn-ghost btn-lg btn-magnetic">See the work</a>
         </div>
 
@@ -119,30 +122,63 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 </section>
 
-<!-- =============================== STATS ================================ -->
-<section class="section" style="padding-top:0" aria-label="TPT by the numbers">
+<!-- ========================= HOW WE WORK ================================ -->
+<section class="section how-section" aria-labelledby="howHeading">
     <div class="container">
-        <div class="stats-grid">
-            <div class="stat-card" data-aos="fade-up">
-                <span class="stat-index mono">01</span>
-                <div class="stat-value"><span data-countup="5">0</span></div>
-                <p class="stat-label">Disciplines — GROW, GET FOUND, BUILD, CREATE and MEASURE.</p>
+        <div class="section-head" data-aos="fade-up">
+            <p class="eyebrow">How we work</p>
+            <h2 class="section-title" id="howHeading">One system, run in six moves.</h2>
+            <p class="section-lead">Every engagement — a single service or the full machine — runs on the same operating rhythm, with one accountable team and a written plan you can hold us to.</p>
+        </div>
+
+        <div class="stepper stepper-6" role="list">
+            <div class="step" role="listitem" data-aos="fade-up">
+                <span class="dot mono">01</span>
+                <div>
+                    <h4>Discover</h4>
+                    <p>We learn the offer, the market and the numbers — accounts, tracking, CRM and the leads that actually closed.</p>
+                </div>
             </div>
-            <div class="stat-card" data-aos="fade-up" data-aos-delay="80">
-                <span class="stat-index mono">02</span>
-                <div class="stat-value"><span data-countup="11">0</span></div>
-                <p class="stat-label">Services that plug into one system instead of eleven silos.</p>
+            <div class="step" role="listitem" data-aos="fade-up" data-aos-delay="70">
+                <span class="dot mono">02</span>
+                <div>
+                    <h4>Strategize</h4>
+                    <p>Which disciplines apply, what each will be measured on, what we would fix first — written down before anything is built.</p>
+                </div>
             </div>
-            <div class="stat-card" data-aos="fade-up" data-aos-delay="160">
-                <span class="stat-index mono">03</span>
-                <div class="stat-value"><span data-countup="12">0</span></div>
-                <p class="stat-label">Free playbooks in the Growth Library — the frameworks we run.</p>
+            <div class="step" role="listitem" data-aos="fade-up" data-aos-delay="140">
+                <span class="dot mono">03</span>
+                <div>
+                    <h4>Build</h4>
+                    <p>Campaign structure, creative, landing pages, tracking and automation, built to be tested rather than admired.</p>
+                </div>
             </div>
-            <div class="stat-card" data-aos="fade-up" data-aos-delay="240">
-                <span class="stat-index mono">04</span>
-                <div class="stat-value"><span data-countup="2">0</span></div>
-                <p class="stat-label">Locations — Collingswood, NJ and Punjab, Pakistan. One team.</p>
+            <div class="step" role="listitem" data-aos="fade-up" data-aos-delay="210">
+                <span class="dot mono">04</span>
+                <div>
+                    <h4>Launch</h4>
+                    <p>Controlled starts, verified conversion tracking and a speed-to-lead path wired to a real human on your side.</p>
+                </div>
             </div>
+            <div class="step" role="listitem" data-aos="fade-up" data-aos-delay="280">
+                <span class="dot mono">05</span>
+                <div>
+                    <h4>Optimize</h4>
+                    <p>Weekly testing with written kill rules — winners scale, losers retire early, and every change has a hypothesis.</p>
+                </div>
+            </div>
+            <div class="step" role="listitem" data-aos="fade-up" data-aos-delay="350">
+                <span class="dot mono">06</span>
+                <div>
+                    <h4>Scale</h4>
+                    <p>Budget follows evidence: vertical, then horizontal — reported against cost per qualified lead and revenue, monthly.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="how-foot" data-aos="fade-up">
+            <p><strong>What you get every month:</strong> one point of contact, a shared project board, weekly updates and a performance review with real numbers — across all five disciplines.</p>
+            <a class="btn btn-ghost btn-magnetic" href="<?= url('contact') ?>" data-contact-modal>Plan the first 90 days <?= icon('arrow-r', 18) ?></a>
         </div>
     </div>
 </section>
@@ -492,7 +528,7 @@ require_once __DIR__ . '/includes/header.php';
         <h2 data-aos="fade-up">Start here. Tell us the goal — we&rsquo;ll build the system.</h2>
         <p data-aos="fade-up" data-aos-delay="80">A free strategy call with a clear plan for your next 90 days: which disciplines apply, what they&rsquo;d cost, and what we&rsquo;d measure. No pressure, no jargon — and an honest &ldquo;not yet&rdquo; when that&rsquo;s the answer.</p>
         <div class="hero-ctas" data-aos="fade-up" data-aos-delay="140">
-            <a href="<?= url('contact') ?>" class="btn btn-primary btn-lg btn-magnetic">Start a Project <?= icon('arrow-r', 18) ?></a>
+            <a href="<?= url('contact') ?>" class="btn btn-primary btn-lg btn-magnetic" data-contact-modal>Start a Project <?= icon('arrow-r', 18) ?></a>
             <a href="<?= url('services') ?>" class="btn btn-ghost btn-lg btn-magnetic">Browse Services</a>
         </div>
     </div>

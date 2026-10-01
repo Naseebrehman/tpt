@@ -432,9 +432,9 @@
   /* ---------------------------------------------------------------------
      International phone input (contact + payment forms)
      --------------------------------------------------------------------- */
-  function initIntlPhone() {
+  function initIntlPhone(scope) {
     if (!window.intlTelInput) return;
-    document.querySelectorAll('[data-intl-phone]').forEach(function (input) {
+    (scope || document).querySelectorAll('[data-intl-phone]').forEach(function (input) {
       if (input.dataset.itiInit === '1') return;
       input.dataset.itiInit = '1';
       var iti = window.intlTelInput(input, {
@@ -610,7 +610,7 @@
       var data = new FormData(form);
       /* FormData(form) omits the clicked submit button. The PHP contact handler
          uses this marker to distinguish a real submission from a page request. */
-      if (form.id === 'contactForm') data.set('contact_submit', '1');
+      if (form.id === 'contactForm' || form.hasAttribute('data-quick-contact')) data.set('contact_submit', '1');
       fetch(form.getAttribute('action') || window.location.href, {
         method: 'POST',
         body: data,
@@ -647,9 +647,11 @@
     });
   }
 
-  function initContactForm() {
-    var form = document.getElementById('contactForm');
+  function initContactForm(form) {
+    form = form || document.getElementById('contactForm');
     if (!form) return;
+    if (form.getAttribute('data-ajax-bound') === '1') return;
+    form.setAttribute('data-ajax-bound', '1');
     ajaxForm(form, function (json) {
       var success = document.getElementById('formSuccess');
       if (success) {
@@ -663,6 +665,190 @@
       } else {
         form.reset();
       }
+    });
+  }
+
+  /* ---------------------------------------------------------------------
+     Start-a-project popup — the SHORT form, only where the popup is offered.
+
+     Pages that set $contactModalEnabled render a short five-field form into
+     #tpt-quick-contact (includes/quick-contact.php). The popup moves THAT
+     form into the dialog, so submissions still go to the same contact
+     endpoint: same validation, same database row, same SMTP mail and the same
+     admin notification as the Contact Us page.
+
+     The popup opens only from an explicit [data-contact-modal] trigger, so
+     every other "Start a Project" button keeps linking to the Contact Us page.
+     --------------------------------------------------------------------- */
+  function initContactModal() {
+    var triggers = document.querySelectorAll('[data-contact-modal]');
+    if (!triggers.length) return;
+
+    var quickHost = document.getElementById('tpt-quick-contact');
+    var quickForm = document.getElementById('quickContactForm');
+    var quickSuccess = document.getElementById('quickFormSuccess');
+
+    var panel = document.createElement('div');
+    panel.className = 'contact-modal';
+    panel.id = 'contactModal';
+    panel.setAttribute('aria-hidden', 'true');
+    panel.innerHTML =
+      '<div class="contact-modal__overlay" data-modal-close></div>' +
+      '<div class="contact-modal__panel" role="dialog" aria-modal="true" aria-labelledby="contactModalTitle">' +
+        '<button type="button" class="contact-modal__close" data-modal-close aria-label="Close">' +
+          '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>' +
+        '</button>' +
+        '<div class="contact-modal__head">' +
+          '<p class="eyebrow">Start a project</p>' +
+          '<h2 id="contactModalTitle">Tell us what you are building.</h2>' +
+          '<p class="contact-modal__lead">Five fields, one reply from a senior strategist within one business day.</p>' +
+        '</div>' +
+        '<div class="contact-modal__body"></div>' +
+      '</div>';
+    document.body.appendChild(panel);
+
+    var body = panel.querySelector('.contact-modal__body');
+    var serviceOptions = [];
+    if (quickForm) {
+      Array.prototype.forEach.call(quickForm.querySelectorAll('select[name="service"] option'), function (option) {
+        if (option.value) { serviceOptions.push(option.value); }
+      });
+    }
+    var lastFocus = null;
+    var isOpen = false;
+    var mounted = false;
+
+    function focusable() {
+      return Array.prototype.slice.call(
+        panel.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')
+      ).filter(function (el) { return el.getClientRects().length > 0; });
+    }
+
+    function mount() {
+      if (mounted || !quickForm || !quickHost) return false;
+      body.innerHTML = '';
+      /* Move the real form (never a copy) and its confirmation block. */
+      body.appendChild(quickForm);
+      if (quickSuccess) body.appendChild(quickSuccess);
+      if (quickHost.parentNode) quickHost.parentNode.removeChild(quickHost);
+      mounted = true;
+      initQuickContactForm();
+      return true;
+    }
+
+    function initQuickContactForm() {
+      if (!quickForm || quickForm.getAttribute('data-ajax-bound') === '1') return;
+      quickForm.setAttribute('data-ajax-bound', '1');
+      initIntlPhone(quickForm);
+      ajaxForm(quickForm, function (json) {
+        if (quickSuccess) {
+          if (json.message) {
+            var message = quickSuccess.querySelector('p');
+            if (message) message.textContent = json.message;
+          }
+          quickForm.style.display = 'none';
+          quickSuccess.classList.add('show');
+          quickSuccess.scrollIntoView({ behavior: prefersReduced ? 'auto' : 'smooth', block: 'center' });
+          window.setTimeout(function () {
+            close();
+            reset();
+          }, prefersReduced ? 800 : 3200);
+        }
+      });
+    }
+
+    function reset() {
+      if (!quickForm) return;
+      quickForm.style.display = '';
+      quickForm.reset();
+      if (quickSuccess) quickSuccess.classList.remove('show');
+    }
+
+    function open(service) {
+      lastFocus = document.activeElement;
+      if (mounted || mount()) {
+        var select = quickForm.querySelector('select[name="service"]');
+        var custom = document.getElementById('serviceCustom');
+        if (service && select) {
+          var matched = null;
+          serviceOptions.forEach(function (option) {
+            if (option.toLowerCase() === service.toLowerCase()) matched = option;
+          });
+          if (!matched) {
+            serviceOptions.forEach(function (option) {
+              if (!matched && option.toLowerCase().indexOf(service.toLowerCase()) !== -1) matched = option;
+            });
+          }
+          if (matched) { select.value = matched; }
+          else if (custom) { custom.value = service; }
+        }
+      }
+      if (!isOpen) {
+        isOpen = true;
+        panel.classList.add('open');
+        document.body.classList.add('modal-open');
+        panel.setAttribute('aria-hidden', 'false');
+      }
+      /* Focus lands after the dialog becomes visible (a hidden element cannot
+         take focus), with a second attempt once the open transition ends. */
+      focusFirstField();
+      window.requestAnimationFrame(focusFirstField);
+      window.setTimeout(focusFirstField, 320);
+    }
+
+    function focusFirstField() {
+      var target = (!quickForm || quickForm.style.display === 'none' || !mounted)
+        ? panel.querySelector('.contact-modal__close')
+        : (quickForm.querySelector('input[name="name"]') || panel.querySelector('.contact-modal__close'));
+      if (target && typeof target.focus === 'function') {
+        try { target.focus({ preventScroll: true }); } catch (error) { /* ignore */ }
+      }
+    }
+
+    function close() {
+      if (!isOpen) return;
+      isOpen = false;
+      panel.classList.remove('open');
+      document.body.classList.remove('modal-open');
+      panel.setAttribute('aria-hidden', 'true');
+      if (lastFocus && lastFocus.focus) lastFocus.focus({ preventScroll: true });
+    }
+
+    window.TPT_CONTACT_MODAL = { open: open, close: close };
+
+    /* Only explicit popup triggers — every other contact link navigates. */
+    triggers.forEach(function (trigger) {
+      trigger.addEventListener('click', function (event) {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.button) return;
+        event.preventDefault();
+        var service = '';
+        try { service = new URL(trigger.href, location.origin).searchParams.get('service') || ''; } catch (error) { service = ''; }
+        open(service);
+      });
+    });
+
+    document.addEventListener('click', function (event) {
+      if (event.target.closest && event.target.closest('[data-modal-close]')) {
+        event.preventDefault();
+        close();
+      }
+    });
+
+    /* Escape is handled at document level so it works even if focus is still
+       on the button that opened the dialog. */
+    document.addEventListener('keydown', function (event) {
+      if (!isOpen) return;
+      if (event.key === 'Escape' || event.key === 'Esc') { event.preventDefault(); close(); }
+    });
+
+    panel.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' || event.key === 'Esc') { event.preventDefault(); close(); return; }
+      if (event.key !== 'Tab') return;
+      var items = focusable();
+      if (!items.length) return;
+      var first = items[0], last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     });
   }
 
@@ -782,6 +968,7 @@
     initLibraryFilter();
     initCharts();
     initContactForm();
+    initContactModal();
     initNewsletterForms();
     initIntlPhone();
     initReadingProgress();

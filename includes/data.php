@@ -247,7 +247,7 @@ function pieHomeFaq()
 {
     return array(
         array('q' => 'How is TPT different from a typical marketing agency?', 'a' => 'Most agencies sell isolated services — a few ads here, a post there. TPT builds connected growth systems: strategy, creative, media, websites and data working as one engine, with a single accountable team.'),
-        array('q' => 'Do you work with businesses outside the US?', 'a' => 'Yes. With locations in Collingswood, NJ and Punjab, Pakistan, we serve clients across time zones. Strategy calls, reporting and delivery are all built for remote collaboration.'),
+        array('q' => 'Do you work with businesses outside the US?', 'a' => 'Yes. TPT is based in Collingswood, New Jersey, USA and works with clients across time zones. Strategy calls, reporting and delivery are all built for remote collaboration.'),
         array('q' => 'How much do your services cost?', 'a' => 'Every engagement is scoped to your goals, market and stage of growth — so we quote per project or retainer, not from a generic price list. Tell us your goal and we will come back with a concrete plan and honest numbers.'),
         array('q' => 'How quickly will we see results?', 'a' => 'It depends on the channel. Paid campaigns can generate leads within days of launch; SEO and AI-search visibility compound over months. We set expectations in writing before anything starts — no vague promises.'),
         array('q' => 'Who owns the ad accounts, website and data?', 'a' => 'You do. Always. Campaigns, pixels, analytics, creative files and code live in accounts you own, with TPT added as a partner. If we ever part ways, everything stays with you.'),
