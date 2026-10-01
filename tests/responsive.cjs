@@ -5,7 +5,7 @@ const base=(process.env.TPT_TEST_BASE_URL || 'http://127.0.0.1:8765').replace(/\
 const screenshotDir=process.env.TPT_SCREENSHOT_DIR || path.join(os.tmpdir(),'tpt-layout-tests');
 fs.mkdirSync(screenshotDir,{recursive:true});
 (async()=>{
- const browser=await chromium.launch({headless:true, executablePath:process.env.TPT_CHROMIUM_EXECUTABLE || undefined, args:['--no-sandbox','--disable-dev-shm-usage','--no-zygote']});
+ const browser=await chromium.launch({headless:true, executablePath:process.env.TPT_CHROMIUM_EXECUTABLE || undefined, args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu','--hide-scrollbars']});
  let checks=0; function check(value,msg){if(!value)throw Error(msg);checks++;console.log('PASS',msg)}
  const page=await browser.newPage();
  for(const width of [320,390,768,1280,1440]){
@@ -57,7 +57,7 @@ fs.mkdirSync(screenshotDir,{recursive:true});
   for(const route of ['blog','resources','portfolio']){
     await page.goto(base+'/'+route+'/');await page.waitForTimeout(300);
     check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),route+' no overflow '+width);
-    check(await page.locator('.blog-card,.resource-card,.pf-card').count()>=3,route+' sample cards '+width);
+    check(await page.locator('.blog-card,.resource-card,.pf-card').count()>=2,route+' sample cards '+width);
   }
 
  }

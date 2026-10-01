@@ -15,26 +15,36 @@ require_once __DIR__ . '/config.php';
 $GLOBALS['pdo'] = null;
 $pieDbOk        = false;
 
-try {
-    $pdo = new PDO(
-        'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4',
-        DB_USER,
-        DB_PASS,
-        array(
-            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES   => false,
-            PDO::ATTR_TIMEOUT            => 15, // fail fast on wrong DB_HOST instead of hanging the page
-        )
-    );
-    $GLOBALS['pdo'] = $pdo;
-    $pieDbOk        = true;
-} catch (PDOException $e) {
-    /* Never expose credentials or SQL errors to visitors — log only. */
-    error_log('[TPT] Database connection failed: ' . $e->getMessage());
+/* A caller may have installed its own data layer (the local preview harness in
+   tests/harness defines the db* helpers before this file is loaded). In that
+   case there is nothing to connect here. In production dbAll() never exists at
+   this point, so the connection below always runs as before. */
+$pieExternalDbLayer = function_exists('dbAll');
+
+if (!$pieExternalDbLayer) {
+    try {
+        $pdo = new PDO(
+            'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4',
+            DB_USER,
+            DB_PASS,
+            array(
+                PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_EMULATE_PREPARES   => false,
+                PDO::ATTR_TIMEOUT            => 15, // fail fast on wrong DB_HOST instead of hanging the page
+            )
+        );
+        $GLOBALS['pdo'] = $pdo;
+        $pieDbOk        = true;
+    } catch (PDOException $e) {
+        /* Never expose credentials or SQL errors to visitors — log only. */
+        error_log('[TPT] Database connection failed: ' . $e->getMessage());
+    }
 }
 
-define('DB_OK', $pieDbOk);
+if (!defined('DB_OK')) {
+    define('DB_OK', $pieDbOk);
+}
 
 /*
  * Small helper used everywhere: run a prepared statement and return rows.

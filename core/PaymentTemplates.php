@@ -39,13 +39,13 @@ function piePayPalStarterCode()
 
      All ids are prefixed with `paypal-` so PayPal and Stripe never collide.
      Shipping is disabled: digital / service payment, no address requested.
+     No Terms checkbox: one small legal line replaces it.
      ========================================================================== -->
 <style>
   /* Scoped to .paypal-pay-* so nothing else on the page is affected. */
   .paypal-pay-form{display:grid;gap:18px;max-width:560px}
-  .paypal-pay-form .paypal-pay-check{display:flex;gap:10px;align-items:flex-start;font-size:.88rem;color:var(--muted);text-transform:none;letter-spacing:0;font-weight:400}
-  .paypal-pay-form .paypal-pay-check input{width:18px;height:18px;margin-top:2px;flex:none;accent-color:var(--violet)}
-  .paypal-pay-form .paypal-pay-check a{color:var(--violet-soft)}
+  .paypal-pay-terms{font-size:.8rem;line-height:1.6;color:var(--muted-2);margin:0}
+  .paypal-pay-terms a{color:var(--violet-soft);text-decoration:underline}
   .paypal-pay-buttons{min-height:52px;margin-bottom:14px}
   .paypal-pay-buttons iframe{max-width:100%}
   @media (max-width:720px){.paypal-pay-form{max-width:100%}}
@@ -80,11 +80,8 @@ function piePayPalStarterCode()
     <textarea id="paypal-notes" name="notes" rows="3" maxlength="1000" placeholder="Anything the team should know (optional)"></textarea>
   </div>
   <div class="field full">
-    <label class="paypal-pay-check" for="paypal-terms">
-      <input type="checkbox" id="paypal-terms" name="terms" required>
-      <span>I have read and accept the <a href="{{TERMS_URL}}" data-tpt-terms target="_blank" rel="noopener">Terms &amp; Conditions</a>.</span>
-    </label>
-    <span class="error-msg"></span>
+    <!-- No Terms checkbox: one small line of text, as required. -->
+    <p class="paypal-pay-terms">By continuing with your payment, you agree to our <a href="{{TERMS_URL}}" data-tpt-terms target="_blank" rel="noopener">Terms &amp; Conditions</a>.</p>
   </div>
   <div class="full">
     <!-- Required PayPal render container: keep this id, it is PayPal's own. -->
@@ -137,11 +134,6 @@ function piePayPalStarterCode()
         if (!firstInvalid) { firstInvalid = input; }
       }
     });
-    var terms = document.getElementById('paypal-terms');
-    if (terms && !terms.checked) {
-      markError(terms, 'Please accept the Terms & Conditions.');
-      if (!firstInvalid) { firstInvalid = terms; }
-    }
     if (firstInvalid) {
       setStatus('Please complete the highlighted fields.', 'err');
       try { firstInvalid.focus(); } catch (focusError) { /* ignore */ }
@@ -194,9 +186,27 @@ function piePayPalStarterCode()
         });
       },
       onApprove: function (data, actions) {
-        return actions.order.capture().then(function (details) {
-          var payer = details && details.payer && details.payer.name ? details.payer.name : 'Your payment';
-          setStatus(payer + ' is complete. Reference: ' + (data.orderID || '') + '.', 'ok');
+        /* Prefer the server-side capture: with a PayPal Secret stored in
+           Admin -> Payments, window.TPT_PAYPAL.capture() asks TPT's own
+           endpoint to capture and verify the order with PayPal, and the page
+           then shows the confirmed payment (amount + reference). The Secret
+           itself never reaches this page. Without a Secret the standard
+           client-side capture runs exactly as before. */
+        var verify = (window.TPT_PAYPAL && window.TPT_PAYPAL.serverVerification)
+          ? window.TPT_PAYPAL.capture(data.orderID, amountValue())
+          : actions.order.capture();
+        return verify.then(function (details) {
+          if (window.TPT_PAYPAL && window.TPT_PAYPAL.serverVerification) { return; } /* the page shows the confirmation */
+          var capture = details && details.purchase_units && details.purchase_units[0] && details.purchase_units[0].payments
+            ? details.purchase_units[0].payments.captures[0] : null;
+          var status = capture && capture.status ? capture.status : (details && details.status);
+          if (String(status || '').toUpperCase() === 'COMPLETED') {
+            setStatus('Payment complete. Reference: ' + ((capture && capture.id) || (data.orderID || '')) + '.', 'ok');
+          } else {
+            setStatus('PayPal has not completed this payment yet. Please contact us before paying again.', 'err');
+          }
+        }).catch(function (error) {
+          setStatus(error && error.message ? error.message : 'We could not verify this payment. Please contact us before paying again.', 'err');
         });
       },
       onCancel: function () { setStatus('The payment was cancelled.', 'err'); },
@@ -236,9 +246,8 @@ function pieStripeStarterCode()
   .stripe-pay-card{padding:14px 16px;background:var(--bg-soft);border:1px solid var(--line);border-radius:12px}
   .stripe-pay-card.StripeElement--focus{border-color:var(--violet);box-shadow:0 0 0 4px rgba(124,58,237,.16)}
   .stripe-pay-card.StripeElement--invalid{border-color:var(--red)}
-  .stripe-pay-check{display:flex;gap:10px;align-items:flex-start;font-size:.88rem;color:var(--muted);text-transform:none;letter-spacing:0;font-weight:400}
-  .stripe-pay-check input{width:18px;height:18px;margin-top:2px;flex:none;accent-color:var(--violet)}
-  .stripe-pay-check a{color:var(--violet-soft)}
+  .stripe-pay-terms{font-size:.8rem;line-height:1.6;color:var(--muted-2);margin:0}
+  .stripe-pay-terms a{color:var(--violet-soft);text-decoration:underline}
   @media (max-width:720px){.stripe-pay-form{max-width:100%}}
 </style>
 
@@ -273,11 +282,8 @@ function pieStripeStarterCode()
       <span class="error-msg" id="stripe-card-errors"></span>
     </div>
     <div class="field full">
-      <label class="stripe-pay-check" for="stripe-terms">
-        <input type="checkbox" id="stripe-terms" name="terms" required>
-        <span>I have read and accept the <a href="{{TERMS_URL}}" data-tpt-terms target="_blank" rel="noopener">Terms &amp; Conditions</a>.</span>
-      </label>
-      <span class="error-msg"></span>
+      <!-- No Terms checkbox: one small line of text, as required. -->
+      <p class="stripe-pay-terms">By continuing with your payment, you agree to our <a href="{{TERMS_URL}}" data-tpt-terms target="_blank" rel="noopener">Terms &amp; Conditions</a>.</p>
     </div>
     <div class="full">
       <button class="btn btn-primary btn-lg btn-block" type="submit" id="stripe-payment-button">Pay now</button>
@@ -335,11 +341,6 @@ function pieStripeStarterCode()
         if (!firstInvalid) { firstInvalid = input; }
       }
     });
-    var terms = document.getElementById('stripe-terms');
-    if (terms && !terms.checked) {
-      markError(terms, 'Please accept the Terms & Conditions.');
-      if (!firstInvalid) { firstInvalid = terms; }
-    }
     if (firstInvalid) {
       setStatus('Please complete the highlighted fields.', 'err');
       try { firstInvalid.focus(); } catch (focusError) { /* ignore */ }

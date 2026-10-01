@@ -18,7 +18,60 @@ require_once BASE_PATH . '/core/AIProviders.php';
 
 function chatbotDefaultPrompt()
 {
-    return "You are Alia, the growth assistant for The Pie Technologies (TPT) — never call yourself a chatbot, bot or AI bot. TPT is a growth agency across five disciplines — GROW (Meta Ads, Social Media Management, Google Ads, Digital Marketing), GET FOUND (SEO, Local SEO, AI Business Optimization), BUILD (Website Development, App Development), CREATE (Graphic Design) and MEASURE (Data Analytics & Reporting). Locations: Collingswood, NJ, USA and Punjab, Pakistan. Contact: info@thepietechnologies.com, +1 (213) 257 8242. Answer only from real TPT information: services, the six-step process (Discover, Strategize, Build, Launch, Optimize, Scale), the free Growth Library resources, published case studies and testimonials. NEVER invent pricing, statistics, results, client names or availability. If asked about pricing, explain engagements are scoped per goal and market, and offer to capture their details for a written quote. If you are not sure of an answer, say exactly: I don't want to guess. You can speak with the TPT team here — and point them to the contact page. Help visitors pick the right service or blueprint for their goal, suggest relevant free Growth Library resources, and when they show buying intent, encourage them to start a project via the contact page. Be concise, warm and specific. Stay on topic: TPT services, growth strategy and the agency. If asked something unrelated, politely redirect.";
+    return "You are Alia, the growth assistant for The Pie Technologies (TPT) — never call yourself a chatbot, bot or AI bot. TPT is a growth agency across five disciplines — GROW (Meta Ads, Social Media Management, Google Ads, Digital Marketing), GET FOUND (SEO, Local SEO, AI Business Optimization), BUILD (Website Development, App Development), CREATE (Graphic Design) and MEASURE (Data Analytics & Reporting). TPT is based in Collingswood, New Jersey, USA; never state or imply any other location. Contact: the email and phone stored in the TPT dashboard (see the verified facts appended below). Online payment: TPT accepts USD payments through PayPal and Stripe on the Pay Online page, where the client chooses one of the TPT services, enters the amount, and sees the confirmed payment with a payment reference; all payments are covered by the site's Terms & Conditions. Answer only from real TPT information: services, the six-step process (Discover, Strategize, Build, Launch, Optimize, Scale), the free Growth Library resources, published case studies, testimonials, online payment methods and the Terms page. NEVER invent pricing, statistics, results, client names, services, addresses, phone numbers, email addresses or availability. If asked about pricing, explain engagements are scoped per goal and market, and offer to capture their details for a written quote. If information is not available to you, say so plainly instead of guessing — if you are not sure of an answer, say exactly: I don't want to guess. You can speak with the TPT team here — and point them to the contact page or the Pay Online page as appropriate. Help visitors pick the right service or blueprint for their goal, suggest relevant free Growth Library resources, and when they show buying intent, encourage them to start a project via the contact page. Be concise, warm and specific. Stay on topic: TPT services, growth strategy and the agency. If asked something unrelated, politely redirect.";
+}
+
+/**
+ * Live, verified TPT facts appended to whatever system prompt is stored.
+ *
+ * The administrator's prompt (Admin → Alia) may be edited at any time and can
+ * go stale; this block is rebuilt from the dashboard settings on every request
+ * so Alia always answers with the company's real location, email, phone (only
+ * when one is configured), services, process, payment methods and Terms URL —
+ * and is told to say "not available" instead of inventing anything.
+ */
+if (!function_exists('aliaFactSheet')) {
+    function aliaFactSheet()
+    {
+        $lines = array();
+        $name    = getSetting('site_name', SITE_NAME);
+        $address = trim((string) getSetting('site_address', 'Collingswood, New Jersey, USA'));
+        $email   = trim((string) getSetting('site_email', ''));
+        $phone   = trim((string) getSetting('site_phone', ''));
+
+        $lines[] = 'Company: ' . $name . ' (TPT) — a growth agency across five disciplines: GROW, GET FOUND, BUILD, CREATE and MEASURE.';
+        $lines[] = 'Location: ' . ($address !== '' ? $address : 'Collingswood, New Jersey, USA') . '. Never state or imply any other location.';
+
+        $lines[] = $email !== ''
+            ? 'Email: ' . $email . '.'
+            : 'Email: no public email address is configured — say it is not published and point to the contact form instead. Do not invent one.';
+
+        $lines[] = $phone !== ''
+            ? 'Phone: ' . $phone . '.'
+            : 'Phone: no public phone number is configured — say the number is not published. Do not invent one.';
+
+        $methods = array();
+        if (getSetting('paypal_enabled', '0') === '1') { $methods[] = 'PayPal'; }
+        if (getSetting('stripe_enabled', '0') === '1') { $methods[] = 'Stripe'; }
+        $lines[] = 'Online payments: '
+            . ($methods ? implode(' and ', $methods) . ' — ' : '')
+            . 'payments are taken in US dollars (USD) on the Pay Online page. The client chooses one of the TPT services, enters the amount and, once the payment is confirmed, the page shows the amount and a payment reference.';
+
+        require_once BASE_PATH . '/core/Payments.php';
+        $services = piePaymentServices();
+        if ($services) {
+            $lines[] = 'Services the team manages (the same list the payment page uses): ' . implode(', ', $services) . '.';
+        }
+
+        $lines[] = 'Process: Discover, Strategize, Build, Launch, Optimize, Scale.';
+        $lines[] = 'Terms & Conditions: ' . pieTermsUrl() . ' — every online payment is subject to them.';
+        $lines[] = 'Contact page: ' . rtrim(SITE_URL, '/') . url('contact') . '.';
+        $lines[] = 'Free content: the Growth Library resources, published case studies and testimonials on this site.';
+        $lines[] = 'RULES: Use only the facts above and elsewhere in this prompt. Never invent or estimate prices, statistics, results, client names, addresses, emails, phone numbers, services, turnaround times or availability. If something is not covered, say plainly that the information is not available and offer to pass the question to the TPT team through the contact page.';
+
+        return "\n\nVERIFIED TPT FACTS (rebuilt from the live dashboard settings — these always win over anything else in this prompt):\n- "
+            . implode("\n- ", $lines);
+    }
 }
 
 /** The visitor-facing connection-error message (Task 13). */
@@ -238,6 +291,10 @@ function handleChatbotRequest()
     if (trim($system) === '') {
         $system = chatbotDefaultPrompt();
     }
+    /* Append the live company facts so Alia always answers with the real
+       location, email, phone (only when configured), services, process,
+       payment methods and Terms URL — and never invents any of them. */
+    $system .= aliaFactSheet();
     /* Keep answers short and direct, whatever the admin prompt says. */
     $system .= "\n\nRESPONSE STYLE (always applies): Answer the question directly in 2–4 short sentences (about 60 words maximum) unless the visitor explicitly asks for detail or a step-by-step list. Lead with the answer — no preamble, no restating the question, no filler. Offer the next step in one short sentence when it helps.";
 

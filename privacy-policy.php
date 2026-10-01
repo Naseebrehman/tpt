@@ -38,13 +38,13 @@ require_once __DIR__ . '/includes/header.php';
         <p>Contact enquiries are kept for 24 months so we can reference past conversations. Newsletter records live until you unsubscribe. You can request deletion of anything we hold about you at any time.</p>
 
         <h2>6. Your rights</h2>
-        <p>You may request access to, correction of, or deletion of your personal data, and you may object to processing, by emailing <?= esc(getSetting('site_email', 'hello@thepietechnologies.com')) ?>. We respond within 30 days.</p>
+        <p>You may request access to, correction of, or deletion of your personal data, and you may object to processing, by emailing <?= esc(getSetting('site_email', 'info@thepietechnologies.com')) ?>. We respond within 30 days.</p>
 
         <h2>7. Security</h2>
         <p>Data is stored in access-controlled databases over encrypted connections, forms are protected against CSRF and injection, and uploads are validated and scanned by type. No system is perfect; if we ever suffer a breach affecting your data we will tell you promptly.</p>
 
         <h2>8. Contact</h2>
-        <p>Questions about this policy: <?= esc(getSetting('site_email', 'hello@thepietechnologies.com')) ?> · <?= esc(getSetting('site_address', 'Lahore, Pakistan')) ?></p>
+        <p>Questions about this policy: <?= esc(getSetting('site_email', 'info@thepietechnologies.com')) ?> · <?= esc(getSetting('site_address', 'Collingswood, New Jersey, USA')) ?></p>
     </div>
 </section>
 

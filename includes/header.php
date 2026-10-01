@@ -104,7 +104,7 @@ fbq('track', 'PageView');
 </script>
 <?php endif; ?>
 </head>
-<body class="theme-dark<?= $bodyClass !== '' ? ' ' . esc($bodyClass) : '' ?>">
+<body class="theme-dark<?= $bodyClass !== '' ? ' ' . esc($bodyClass) : '' ?>" data-contact-url="<?= esc(url('contact')) ?>">
 
 <a class="skip-link" href="#main">Skip to content</a>
 

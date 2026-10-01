@@ -131,15 +131,15 @@ require_once __DIR__ . '/includes/header.php';
                 <div class="info-card">
                     <span class="info-icon"><?= icon('pin', 22) ?></span>
                     <span>
-                        <strong>Two locations, one standard</strong>
-                        <p><?= esc(getSetting('site_address', 'Collingswood, NJ, USA · Punjab, Pakistan')) ?></p>
+                        <strong>Where we’re based</strong>
+                        <p><?= esc(getSetting('site_address', 'Collingswood, New Jersey, USA')) ?></p>
                     </span>
                 </div>
                 <div class="info-card">
                     <span class="info-icon"><?= icon('clock', 22) ?></span>
                     <span>
                         <strong>Business hours</strong>
-                        <p>Monday – Saturday<br>9:00 – 19:00 (ET &amp; PKT coverage)</p>
+                        <p>Monday – Saturday<br>9:00 – 19:00 ET</p>
                     </span>
                 </div>
                 <div class="info-card">
