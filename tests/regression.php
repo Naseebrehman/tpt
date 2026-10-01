@@ -60,17 +60,38 @@ foreach (glob(BASE_PATH . '/*.php') as $pageFile) {
     $source = (string) file_get_contents($pageFile);
     if (strpos($source, '$contactModalEnabled = true') !== false) { $hostPages[] = basename($pageFile); }
 }
-check($hostPages === array('index.php'), 'exactly one public page offers the popup (found: ' . implode(', ', $hostPages) . ')');
+sort($hostPages);
+check($hostPages === array('index.php', 'portfolio.php', 'resource-single.php', 'services-index.php'), 'the marketing pages offer the popup (found: ' . implode(', ', $hostPages) . ')');
+check(strpos((string) file_get_contents(BASE_PATH . '/includes/service-page.php'), '$contactModalEnabled = true') !== false, 'every service page offers the popup with its service pre-selected');
 $triggerPages = array();
 foreach (glob(BASE_PATH . '/*.php') as $pageFile) {
     if (strpos((string) file_get_contents($pageFile), 'data-contact-modal') !== false) { $triggerPages[] = basename($pageFile); }
 }
 sort($triggerPages);
-check($triggerPages === array('index.php'), 'popup triggers are used on the home page only (found: ' . implode(', ', $triggerPages) . ')');
+check($triggerPages === array('index.php', 'portfolio.php', 'resource-single.php', 'services-index.php'), 'popup triggers are used on the marketing pages (found: ' . implode(', ', $triggerPages) . ')');
+$headerSource = (string) file_get_contents(BASE_PATH . '/includes/header.php');
+check(substr_count($headerSource, 'data-contact-modal') === 2, 'the desktop and mobile Start a Project buttons are popup triggers');
+check(strpos((string) file_get_contents(BASE_PATH . '/portfolio/case-study.php'), 'data-contact-modal') !== false, 'case studies offer the popup');
 $contactSource = (string) file_get_contents(BASE_PATH . '/contact.php');
 check(strpos($contactSource, 'id="contactForm"') !== false, 'the Contact Us page keeps the full form');
 check(strpos($contactSource, 'id="formSuccess"') !== false, 'the Contact Us page keeps its success block');
 check(strpos($contactSource, 'data-contact-modal') === false, 'the Contact Us page itself does not open the popup');
+
+/* The popup is only usable when its dialog styles exist and pages without the
+   form fall back to the normal Contact Us link. */
+$refinements = (string) file_get_contents(BASE_PATH . '/assets/css/refinements.css');
+foreach (array('.contact-modal{', '.contact-modal.open{display:block}', '.contact-modal__overlay{', '.contact-modal__panel{', '.contact-modal__close{', 'body.modal-open{overflow:hidden}') as $rule) {
+    check(strpos($refinements, $rule) !== false, 'popup style present: ' . $rule);
+}
+$mainJs = (string) file_get_contents(BASE_PATH . '/assets/js/main.js');
+check(strpos($mainJs, "if (!quickHost || !quickForm) return;") !== false, 'a Start button on a page without the popup keeps its normal link');
+check(strpos($mainJs, "if (document.getElementById('contactModal')) return;") !== false, 'the popup never stacks a second dialog');
+check(strpos($mainJs, "trigger.getAttribute('data-modal-bound')") !== false, 'popup triggers are bound once');
+check(strpos($mainJs, 'function safeInit(init)') !== false
+    && strpos($mainJs, '].forEach(safeInit);') !== false, 'each widget initializes in isolation so the popup cannot be skipped');
+check(substr_count($mainJs, "document.addEventListener('DOMContentLoaded'") === 1, 'the boot sequence is registered once');
+/* The payment page + popup wiring must never regress on the JS side. */
+check(strpos($mainJs, "panel.classList.add('open')") !== false && strpos($mainJs, 'body.appendChild(quickForm);') !== false, 'the popup mounts the real short form into the dialog');
 $mailer = new PieMailer(array('from_email'=>'sender@example.test','host'=>'smtp.example.test'));
 check(!$mailer->send("victim@example.test\r\nBcc:attacker@example.test", 'Test', 'Test')['success'], 'SMTP recipient injection rejected');
 check(!$mailer->send('victim@example.test', "Test\r\nBcc:attacker", 'Test')['success'], 'SMTP header injection rejected');

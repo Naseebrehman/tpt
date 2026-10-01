@@ -76,7 +76,6 @@ require_once __DIR__ . '/includes/header.php';
           <div class="pay-field">
             <label for="payment-amount">Amount (USD) <span aria-hidden="true">*</span></label>
             <div class="pay-amount-input"><span aria-hidden="true">$</span><input id="payment-amount" name="amount" type="number" min="0.01" max="1000000" step="0.01" inputmode="decimal" placeholder="500.00" required></div>
-            <small>Enter an amount between $0.01 and $1,000,000.00.</small>
           </div>
           <p class="pay-terms-inline">By continuing with your payment, you agree to our <a href="<?= esc($termsUrl) ?>" target="_blank" rel="noopener">Terms &amp; Conditions</a>.</p>
         </div>
@@ -85,7 +84,6 @@ require_once __DIR__ . '/includes/header.php';
           <div class="pay-checkout-copy">
             <p class="eyebrow">Payment method</p>
             <h3>Pay with PayPal</h3>
-            <p>Enter your details first, then use the PayPal button to complete the payment on PayPal’s secure checkout.</p>
           </div>
           <div class="pay-gateway-actions">
             <div id="paypal-button-container" class="pay-paypal-buttons"></div>
@@ -220,11 +218,13 @@ document.addEventListener('keydown', function(e){
   }
   function details(){
     var name = value('payment-name');
+    var amountRaw = value('payment-amount');
     var service = value('payment-service');
-    var amount = amountValue(value('payment-amount'));
-    if (!name) { fail('Enter your name or business name.'); return null; }
-    if (!service) { fail('Choose a service from the list.'); return null; }
-    if (!amount) { fail('Enter an amount from $0.01 to $1,000,000.00 USD.'); return null; }
+    if (!name) { fail('Please fill the required field: Name / Business name.'); return null; }
+    if (!service) { fail('Please fill the required field: Service.'); return null; }
+    if (!amountRaw) { fail('Please fill the required field: Amount (USD).'); return null; }
+    var amount = amountValue(amountRaw);
+    if (!amount) { fail('Please enter a valid amount in USD.'); return null; }
     fail('');
     return { name: name, service: service, amount: amount };
   }

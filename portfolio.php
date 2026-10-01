@@ -5,6 +5,9 @@ $pageTitle = 'Work — Case Studies | The Pie Technologies';
 $metaDesc  = 'Real engagements, described honestly — what was broken, what we built, and how it was measured. No invented numbers; client-confidential where required.';
 $activeNav = 'portfolio';
 
+/* This page offers the short Start-a-project popup. */
+$contactModalEnabled = true;
+
 $items      = getPortfolioItems('');
 $industries = array();
 foreach ($items as $item) {
@@ -73,7 +76,7 @@ require_once __DIR__ . '/includes/header.php';
         <h2 data-aos="fade-up">Your business could be the next case study.</h2>
         <p data-aos="fade-up" data-aos-delay="80">Every engagement above started with one call and an honest conversation about goals — and a promise to describe the results truthfully, whatever they are.</p>
         <div class="hero-ctas" data-aos="fade-up" data-aos-delay="140">
-            <a href="<?= url('contact') ?>" class="btn btn-primary btn-lg btn-magnetic">Start a Project <?= icon('arrow-r', 18) ?></a>
+            <a href="<?= url('contact') ?>" class="btn btn-primary btn-lg btn-magnetic" data-contact-modal>Start a Project <?= icon('arrow-r', 18) ?></a>
         </div>
     </div>
 </section>

@@ -36,6 +36,9 @@ foreach ($all as $candidate) {
     }
 }
 
+/* This page offers the short Start-a-project popup. */
+$contactModalEnabled = true;
+
 require_once dirname(__DIR__) . '/includes/header.php';
 ?>
 
@@ -159,7 +162,7 @@ if ($behindLinks): ?>
             <h2 style="font-size:clamp(1.4rem,3vw,2.2rem)">Let&rsquo;s talk about your numbers.</h2>
         </div>
         <div style="display:flex;gap:14px;flex-wrap:wrap">
-            <a href="<?= url('contact') ?>" class="btn btn-primary btn-magnetic">Start a Project <?= icon('arrow-r', 18) ?></a>
+            <a href="<?= url('contact') ?>" class="btn btn-primary btn-magnetic" data-contact-modal>Start a Project <?= icon('arrow-r', 18) ?></a>
             <?php if ($next): ?>
             <a href="<?= url('portfolio/' . $next['slug']) ?>" class="btn btn-ghost btn-magnetic">Next Case Study: <?= esc($next['client_name']) ?> <?= icon('arrow-r', 16) ?></a>
             <?php endif; ?>

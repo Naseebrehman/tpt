@@ -455,8 +455,47 @@ blockquote,pre,table{max-width:100%}
   .how-section .stepper .step h4{font-size:.95rem}
 }
 
-/* Short popup form: honeypot, note and the compact two-column grid. */
+/* Short "Start a project" popup: overlay + dialog panel, then the compact
+   two-column form grid. The panel scrolls internally on short viewports and
+   becomes a full-height sheet on phones. */
 .quick-contact-host{display:none}
+.contact-modal{position:fixed;inset:0;z-index:960;display:none}
+.contact-modal.open{display:block}
+.contact-modal__overlay{position:absolute;inset:0;background:rgba(6,7,12,.74);backdrop-filter:blur(4px)}
+.contact-modal__panel{
+  position:relative;display:flex;flex-direction:column;
+  width:min(680px,calc(100vw - 32px));max-height:calc(100dvh - 48px);
+  margin:clamp(16px,6vh,64px) auto 0;padding:clamp(22px,3vw,34px);
+  border:1px solid var(--line-strong);border-radius:20px;
+  background:radial-gradient(620px 260px at 92% -12%,rgba(124,58,237,.2),transparent 62%),var(--surface);
+  box-shadow:0 40px 90px -40px rgba(0,0,0,.85);
+}
+.contact-modal__close{
+  position:absolute;top:14px;right:14px;display:grid;place-items:center;width:40px;height:40px;flex:none;
+  border:1px solid var(--line);border-radius:50%;background:rgba(255,255,255,.04);color:var(--text);cursor:pointer;
+  transition:background .18s,border-color .18s,transform .18s;
+}
+.contact-modal__close:hover{background:rgba(255,255,255,.1);border-color:var(--line-strong);transform:rotate(90deg)}
+.contact-modal__close:focus-visible{outline:2px solid var(--violet-soft);outline-offset:2px}
+.contact-modal__head{padding-right:54px}
+.contact-modal__head .eyebrow{margin-bottom:8px}
+.contact-modal__head h2{margin:0 0 8px;font-size:clamp(1.3rem,2.6vw,1.7rem);letter-spacing:-.03em;line-height:1.25}
+.contact-modal__lead{margin:0;color:var(--muted);font-size:.88rem;line-height:1.65}
+.contact-modal__body{margin-top:22px;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.contact-modal__body .form-success{margin-top:0;text-align:center}
+body.modal-open{overflow:hidden}
+body.modal-open .chatbot,body.modal-open .whatsapp-float,body.modal-open .back-to-top{visibility:hidden;pointer-events:none}
+@media(prefers-reduced-motion:no-preference){
+  .contact-modal.open .contact-modal__overlay{animation:cmFade .2s ease-out}
+  .contact-modal.open .contact-modal__panel{animation:cmRise .28s cubic-bezier(.2,.7,.3,1)}
+  @keyframes cmFade{from{opacity:0}to{opacity:1}}
+  @keyframes cmRise{from{opacity:0;transform:translateY(14px) scale(.99)}to{opacity:1;transform:none}}
+}
+@media(max-width:640px){
+  .contact-modal__panel{width:100%;height:100dvh;max-height:100dvh;margin:0;border:0;border-radius:0;padding:calc(20px + env(safe-area-inset-top)) 20px calc(20px + env(safe-area-inset-bottom))}
+  .contact-modal__head h2{font-size:1.35rem}
+  .contact-modal__body{margin-top:18px}
+}
 .contact-modal .quick-honeypot{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
 .contact-modal .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 16px}
 .contact-modal .form-grid .full{grid-column:1/-1}
@@ -466,7 +505,6 @@ blockquote,pre,table{max-width:100%}
 .contact-modal .form-status{margin-top:12px}
 .quick-contact-note{margin-top:10px;font-size:.78rem;line-height:1.6;color:var(--muted-2);text-align:center}
 .quick-contact-note a{color:var(--violet-soft);text-decoration:underline}
-.contact-modal__body .form-success{margin-top:6px}
 @media(max-width:560px){
   .contact-modal .form-grid{grid-template-columns:minmax(0,1fr)}
 }
