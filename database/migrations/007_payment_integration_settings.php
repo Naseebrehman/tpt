@@ -1,21 +1,15 @@
 <?php
-/** Migration 007 — payment integration settings.
+/** Historical migration 007 — shared payment page settings.
  *
- * The Pay Online page now substitutes three admin-controlled values into the
- * administrator's saved PayPal / Stripe code:
+ * The Pay Online form uses the existing Services list and one shared Terms URL.
+ * The PayPal Client ID is retained as the public application identifier used
+ * by the server's OAuth flow; gateway Secrets are introduced by later server-
+ * side migrations. Migration 010 removes obsolete browser-code settings.
  *
- *   paypal_client_id  the PayPal Client ID used by the PayPal SDK
- *   terms_url         the ONE shared Terms & Conditions URL (PayPal + Stripe)
- *   payment_services  the existing Services system (single source of truth)
- *
- * Only the two new settings rows are added here; the Services table already
- * exists from migration 003 and is never duplicated. The payment-code column
- * is re-checked so a complete implementation (HTML + CSS + JavaScript) is never
- * truncated — MEDIUMTEXT holds 16 MB.
- *
- * Every statement is re-runnable (MySQL DDL auto-commits). */
+ * Keep this migration re-runnable for installations that have not applied it.
+ */
 return function (PDO $pdo) {
-    /* Payment code storage must stay wide enough for a complete paste. */
+    /* Keep the shared settings value column at its established capacity. */
     $check = $pdo->prepare(
         "SELECT DATA_TYPE FROM information_schema.COLUMNS
          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'settings' AND COLUMN_NAME = 'setting_value'"

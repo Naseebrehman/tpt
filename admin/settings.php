@@ -255,9 +255,9 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
     <div class="a-tabpanel" data-panel="payments">
         <div class="a-card">
             <h3>Payment page</h3>
-            <p class="hint">The Pay Online page renders the custom PayPal and Stripe payment code you save in Admin &rarr; Payments — your complete HTML, CSS and JavaScript, stored and displayed exactly as provided. Three dashboard values reach that code without editing it: the PayPal Client ID, the shared Terms &amp; Conditions URL and the service list from the Services system. This site stores no gateway credentials and makes no provider API calls.</p>
+            <p class="hint">Configure PayPal and Stripe for separate server-side hosted checkouts. Gateway secrets are encrypted in the database and used only by PHP; payment records are created only after provider confirmation. Manage gateway credentials, the shared Terms &amp; Conditions URL, Services and recent confirmed payments in Admin &rarr; Payments.</p>
             <div class="a-toolbar">
-                <a class="a-btn" href="<?= esc(url('admin/payments')) ?>"><?= icon('card', 15) ?> Manage payment code</a>
+                <a class="a-btn" href="<?= esc(url('admin/payments')) ?>"><?= icon('card', 15) ?> Configure payment gateways</a>
                 <a class="a-btn" href="<?= esc(url('pay-online')) ?>" target="_blank" rel="noopener">Preview Pay Online</a>
             </div>
         </div>

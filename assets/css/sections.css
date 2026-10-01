@@ -687,8 +687,8 @@
 .goal-chip.active{border-color:var(--violet);background:rgba(124,58,237,.16);color:#fff}
 
 /* ------------------------------ pay online ------------------------------- */
-/* Built-in payment form / method chooser / status badges removed — the Pay
-   Online page now renders the admin's saved custom payment code only. */
+/* Checkout-specific layout lives in refinements.css alongside its responsive
+   fields, server-confirmed status notice and separate provider buttons. */
 
 /* Keep image shading local to the caption; the photograph above stays clear. */
 .work-body,.pf-body,.why-copy{background:linear-gradient(180deg,transparent,rgba(24,25,30,.88) 26px,rgba(24,25,30,.94))}

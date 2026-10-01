@@ -11,10 +11,10 @@
  * ---------------------------------------------------------------------------
  */
 require_once dirname(__DIR__) . '/includes/init.php';
+requireAdmin();
 require_once BASE_PATH . '/core/Schema.php';
 require_once BASE_PATH . '/core/PaymentRecords.php';
 Schema::ensure();
-requireAdmin();
 
 /* The export is generated from a GET form, so the CSRF token travels with the
    filters and is validated before anything is read. */

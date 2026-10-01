@@ -239,9 +239,6 @@ body:has(.whatsapp-float) .footer-compact .footer-bottom{padding-left:56px}
 .captcha-field{display:flex;justify-content:flex-start;max-width:100%;overflow:hidden}
 .captcha-field iframe{max-width:100%}
 
-/* Payment page — styles for the removed built-in form are gone; only the
-   layout grid and the admin-code container below remain. */
-
 /* =====================================================================
    Global overflow guards (Task 23)
    ===================================================================== */
@@ -296,90 +293,105 @@ blockquote,pre,table{max-width:100%}
   .newsletter-panel{border-radius:16px}
 }
 
-/* Pay Online: predictable layout and containers for the admin's custom code. */
-.payment-layout{grid-template-columns:minmax(0,1.25fr) minmax(240px,.75fr)}
-@media(max-width:720px){.payment-layout{grid-template-columns:minmax(0,1fr)}}
-
-/* ---------------------------------------------------------------------
-   Pay Online — one two-column block per provider (PayPal / Stripe).
-   LEFT: "Make a Payment", the buyer's fields and the shared Terms line.
-   RIGHT: the gateway's own buttons, vertically centred, with the
-   "Powered by" line underneath. The bridge only reveals the grid after it
-   has MOVED the administrator's real nodes into it, so nothing is copied,
-   rewritten or executed twice and the code below keeps working on its own.
-   --------------------------------------------------------------------- */
-.pay-providers{display:grid;grid-template-columns:minmax(0,1fr);gap:clamp(20px,2.8vw,32px)}
-/* Both gateways enabled: full-width blocks stacked (PayPal first, Stripe
-   below) with a thin divider and their own label. */
-.pay-providers.is-split .pay-provider + .pay-provider{border-top:1px solid var(--line);margin-top:clamp(20px,2.8vw,30px);padding-top:clamp(20px,2.8vw,30px)}
-.pay-provider{min-width:0}
-.pay-provider-label{margin-bottom:14px;font-size:.68rem;display:flex;align-items:center;flex-wrap:wrap;gap:10px}
-.pay-provider-mode{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;border:1px solid rgba(34,197,94,.35);background:rgba(34,197,94,.1);color:#a7f3d0;font-size:.66rem;letter-spacing:.02em;text-transform:none}
-.pay-provider-mode svg{color:#6ee7b7;flex:none}
-
-.pay-split{display:none;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:clamp(20px,3.2vw,46px);align-items:center;width:100%;min-width:0;grid-column:1/-1}
-.pay-provider.is-split-ready .pay-split{display:grid}
-.pay-split-form{min-width:0;max-width:100%}
-.pay-split-title{margin-bottom:16px;font-size:clamp(1.15rem,2.2vw,1.6rem);letter-spacing:-.02em}
-.pay-split-fields{display:grid;gap:16px;min-width:0;max-width:100%}
-.pay-split-fields>*{min-width:0;max-width:100%}
-.pay-split-fields input,.pay-split-fields select,.pay-split-fields textarea{max-width:100%}
-.pay-split-actions{display:flex;flex-direction:column;justify-content:center;align-items:stretch;gap:12px;min-width:0;max-width:100%}
-.pay-split-buttons{display:flex;flex-direction:column;gap:12px;min-width:0;max-width:100%}
-.pay-split-buttons iframe,.pay-split-buttons button,.pay-split-buttons .btn,.pay-split-buttons [id$="-button-container"]{max-width:100%}
-.pay-split-buttons .field{min-width:0;max-width:100%}
-.pay-powered-by{margin:0;text-align:center;font-size:.74rem;letter-spacing:.02em;color:var(--muted-2)}
-.pay-powered-by strong{color:var(--muted);font-weight:600}
-/* Wide gateway code (iframes, inputs, tables) never overflows the panel. */
-.pay-custom-code{min-width:0;max-width:100%;overflow-x:auto}
-.pay-custom-code iframe{max-width:100%}
-@media (max-width:820px){
-  /* Mobile: stack the columns — form and Terms first, buttons below. */
-  .pay-provider.is-split-ready .pay-split{grid-template-columns:minmax(0,1fr);align-items:stretch}
-  .pay-split-actions{padding-top:8px}
-  .pay-split-buttons{align-items:stretch}
+/* Pay Online — compact centered checkout, no third-party browser SDK panels. */
+.pay-section{padding-block:clamp(24px,3.8vw,48px) clamp(34px,5vw,62px)}
+.pay-panel{
+  width:min(100%,1120px);margin-inline:auto;padding:clamp(22px,3.2vw,38px);
+  overflow:hidden;border:1px solid rgba(167,139,250,.2);
+  background:radial-gradient(ellipse at 92% 0,rgba(34,211,238,.07),transparent 35%),
+             linear-gradient(145deg,rgba(124,58,237,.055),transparent 48%),var(--surface);
+  box-shadow:0 28px 80px -54px rgba(0,0,0,.85);
 }
-.pay-custom-code + .pay-custom-code{margin-top:28px}
-.pay-terms-note{margin-top:18px;font-size:.82rem;line-height:1.65;color:var(--muted-2)}
-.pay-terms-note a{color:var(--violet-soft);text-decoration:underline}
-.pay-terms-note + .pay-terms-note{display:none}
-.pay-confirmation{display:none;margin-bottom:20px;padding:18px 20px;border-radius:14px;border:1px solid rgba(34,197,94,.4);background:rgba(34,197,94,.1);color:#d1fae5;font-size:.95rem;line-height:1.7}
-.pay-confirmation.show{display:block}
-.pay-confirmation strong{display:block;font-size:1.05rem;color:#a7f3d0;margin-bottom:4px;font-family:var(--font-display)}
-.pay-confirmation .mono{display:inline-block;margin-top:6px;padding:3px 8px;border-radius:6px;background:rgba(0,0,0,.32);color:#fff;font-size:.86rem}
-.pay-confirmation.pay-confirmation-error{border-color:rgba(239,68,68,.45);background:rgba(239,68,68,.1);color:#fecaca}
-/* The provider code never leaks white panels into the dark page. */
-.pay-custom-code input[type="text"],.pay-custom-code input[type="email"],.pay-custom-code input[type="number"],
-.pay-custom-code select,.pay-custom-code textarea{background:rgba(16,16,23,.9);color:var(--text);border:1px solid var(--line-strong)}
-.pay-custom-code fieldset{border-color:var(--line)}
+.pay-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:clamp(22px,3vw,32px)}
+.pay-panel-head .eyebrow{margin-bottom:8px}
+.pay-panel-head h2{font-size:clamp(1.3rem,2.5vw,1.75rem);letter-spacing:-.035em;margin-bottom:8px}
+.pay-panel-head .sub{max-width:68ch;color:var(--muted);line-height:1.65;margin:0}
+.pay-secure-mark{display:inline-flex;align-items:center;gap:8px;flex:none;padding:9px 12px;border:1px solid rgba(34,211,238,.2);border-radius:999px;background:rgba(34,211,238,.055);color:#a5f3fc;font-size:.76rem;font-weight:600;white-space:nowrap}
+.pay-secure-mark svg{color:var(--cyan)}
+.pay-layout{display:grid;grid-template-columns:minmax(0,1.18fr) minmax(270px,.82fr);gap:clamp(22px,3.4vw,42px);align-items:stretch;margin:0}
+.pay-form-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 18px;align-content:start;min-width:0}
+.pay-field{display:grid;align-content:start;gap:8px;min-width:0}
+.pay-field label{font-size:.78rem;font-weight:600;color:var(--text);letter-spacing:.005em}
+.pay-field label>span:first-child:not(.optional){color:#c4b5fd}
+.pay-field .optional{margin-left:5px;color:var(--muted-2);font-size:.7rem;font-weight:500}
+.pay-field input,.pay-field select,.pay-field textarea{
+  width:100%;max-width:100%;min-width:0;min-height:50px;padding:12px 14px;border-radius:11px;
+  border:1px solid var(--line-strong);background:rgba(9,10,15,.58);color:var(--text);
+  font:inherit;font-size:.9rem;line-height:1.4;outline:none;transition:border-color .18s,box-shadow .18s,background .18s;
+}
+.pay-field input::placeholder,.pay-field textarea::placeholder{color:var(--muted-2);opacity:.82}
+.pay-field input:focus,.pay-field select:focus,.pay-field textarea:focus{border-color:rgba(167,139,250,.8);background:rgba(9,10,15,.82);box-shadow:0 0 0 3px rgba(124,58,237,.18)}
+.pay-field select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,#9b9baa 50%),linear-gradient(135deg,#9b9baa 50%,transparent 50%);background-position:calc(100% - 18px) 22px,calc(100% - 13px) 22px;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:36px}
+.pay-field select option{background:#17171f;color:#f4f4f8}
+.pay-field textarea{min-height:94px;resize:vertical}
+.pay-field small{color:var(--muted-2);font-size:.7rem;line-height:1.45}
+.pay-field-notes{grid-column:1/-1}
+.pay-amount-input{position:relative;min-width:0}
+.pay-amount-input>span{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#a5f3fc;font-weight:700;pointer-events:none}
+.pay-amount-input input{padding-left:31px}
+.pay-checkout-options{
+  display:flex;flex-direction:column;justify-content:center;min-width:0;padding:clamp(20px,2.7vw,30px);
+  border:1px solid rgba(167,139,250,.18);border-radius:16px;
+  background:linear-gradient(155deg,rgba(124,58,237,.11),rgba(34,211,238,.045) 60%),rgba(9,10,15,.45);
+}
+.pay-checkout-copy .eyebrow{margin-bottom:8px;color:#c4b5fd}
+.pay-checkout-copy h3{font-size:clamp(1.08rem,1.8vw,1.28rem);letter-spacing:-.025em;margin-bottom:9px}
+.pay-checkout-copy>p:last-child{color:var(--muted);font-size:.82rem;line-height:1.65;margin:0}
+.pay-gateway-actions{display:grid;gap:12px;margin-top:22px}
+.pay-submit{
+  display:flex;align-items:center;gap:13px;width:100%;min-width:0;min-height:68px;padding:12px 15px;
+  border:1px solid transparent;border-radius:13px;appearance:none;cursor:pointer;text-align:left;
+  color:#fff;font:inherit;background:linear-gradient(125deg,#7c3aed,#6034d5);
+  box-shadow:0 12px 30px -20px rgba(124,58,237,.9);transition:transform .18s,box-shadow .18s,border-color .18s,filter .18s;
+}
+.pay-submit:hover{transform:translateY(-2px);box-shadow:0 18px 38px -19px rgba(124,58,237,.78);filter:brightness(1.06)}
+.pay-submit:focus-visible{outline:3px solid rgba(34,211,238,.8);outline-offset:3px}
+.pay-submit:active{transform:translateY(0)}
+.pay-submit-stripe{background:linear-gradient(120deg,rgba(26,28,39,.96),rgba(15,19,27,.98));border-color:rgba(34,211,238,.34);box-shadow:0 12px 30px -22px rgba(34,211,238,.55)}
+.pay-submit-stripe:hover{border-color:rgba(34,211,238,.7);box-shadow:0 16px 34px -20px rgba(34,211,238,.46)}
+.pay-submit-mark{display:grid;place-items:center;flex:none;width:40px;height:40px;border-radius:11px;background:rgba(255,255,255,.13);color:#fff}
+.pay-submit-stripe .pay-submit-mark{background:rgba(34,211,238,.1);color:#67e8f9}
+.pay-submit-label{display:grid;gap:4px;flex:1;min-width:0}
+.pay-submit-label strong{font-size:.91rem;line-height:1.25;font-weight:700}
+.pay-submit-label small{font-size:.7rem;line-height:1.35;color:rgba(255,255,255,.74)}
+.pay-submit-arrow{display:grid;place-items:center;flex:none;width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.1)}
+.pay-submit-arrow svg{width:17px;height:17px}
+.pay-terms-note{margin:17px 0 0;color:var(--muted-2);font-size:.74rem;line-height:1.65}
+.pay-terms-note a{color:#c4b5fd;text-decoration:underline;text-decoration-color:rgba(196,181,253,.5);text-underline-offset:3px}
+.pay-terms-note a:hover{color:#fff}
+.pay-no-card{display:flex;align-items:flex-start;gap:7px;margin:12px 0 0;color:var(--muted-2);font-size:.7rem;line-height:1.5}
+.pay-no-card svg{flex:none;margin-top:1px;color:#67e8f9}
+.pay-confirmation{display:grid;gap:6px;margin:0 0 22px;padding:17px 19px;border-radius:13px;border:1px solid rgba(34,197,94,.42);background:rgba(34,197,94,.09);color:#d1fae5;font-size:.9rem;line-height:1.65}
+.pay-confirmation[hidden]{display:none}
+.pay-confirmation strong{font-size:.95rem;color:#a7f3d0;font-weight:700}
+.pay-confirmation code{display:inline-block;max-width:100%;padding:3px 8px;border-radius:6px;background:rgba(0,0,0,.28);color:#fff;font-size:.82rem;overflow-wrap:anywhere}
+.pay-confirmation.is-error{border-color:rgba(248,113,113,.4);background:rgba(239,68,68,.09);color:#fecaca}
+.pay-confirmation.is-error strong{color:#fecaca}
+.pay-confirmation.is-cancelled{border-color:rgba(245,158,11,.42);background:rgba(245,158,11,.08);color:#fde68a}
+.pay-confirmation.is-cancelled strong{color:#fde68a}
+.pay-unavailable{padding:19px 21px;border:1px solid rgba(248,113,113,.3);border-radius:13px;background:rgba(239,68,68,.08);color:#fecaca;line-height:1.65}
+.pay-unavailable strong{display:block;margin-bottom:5px;color:#fecaca}
+.pay-unavailable p{margin:0;color:#fca5a5;font-size:.88rem}
+.pay-unavailable a{color:#c4b5fd;text-decoration:underline}
+@media(max-width:900px){
+  .pay-layout{grid-template-columns:minmax(0,1fr);gap:22px}
+  .pay-checkout-options{padding:22px}
+  .pay-checkout-copy{max-width:66ch}
+}
+@media(max-width:640px){
+  .pay-panel{padding:20px 16px;border-radius:18px}
+  .pay-panel-head{display:block;margin-bottom:22px}
+  .pay-secure-mark{margin-top:14px}
+  .pay-form-fields{grid-template-columns:minmax(0,1fr);gap:14px}
+  .pay-field-notes{grid-column:auto}
+  .pay-field input,.pay-field select,.pay-field textarea{min-height:48px;font-size:16px}
+  .pay-field textarea{min-height:92px}
+  .pay-checkout-options{padding:19px 16px}
+  .pay-gateway-actions{gap:11px;margin-top:18px}
+  .pay-submit{min-height:64px;padding:11px 12px}
+  .pay-submit-label strong{font-size:.88rem}
+}
 
-/* ---------------------------------------------------------------------
-   Confirmed-payment popup — shown once, only after a real confirmation.
-   Accessible dialog: role="dialog", aria-modal, focus trap, Esc to close.
-   --------------------------------------------------------------------- */
-.pay-modal{position:fixed;inset:0;z-index:1500;display:flex;align-items:center;justify-content:center;padding:clamp(14px,3vw,40px);opacity:0;visibility:hidden;transition:opacity .24s var(--ease),visibility .24s}
-.pay-modal.open{opacity:1;visibility:visible}
-.pay-modal__overlay{position:absolute;inset:0;background:rgba(12,13,17,.8);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
-.pay-modal__panel{
-  position:relative;z-index:1;width:min(520px,100%);max-height:calc(100dvh - clamp(24px,6vw,80px));overflow-y:auto;overscroll-behavior:contain;
-  background:var(--surface);border:1px solid var(--line-strong);border-radius:22px;padding:clamp(24px,3.4vw,38px);
-  text-align:center;box-shadow:0 50px 120px -40px rgba(0,0,0,.7);
-  transform:translateY(14px) scale(.985);transition:transform .28s var(--ease);
-}
-.pay-modal.open .pay-modal__panel{transform:none}
-.pay-modal__check{display:inline-grid;place-items:center;width:62px;height:62px;margin-bottom:16px;border-radius:50%;background:rgba(34,197,94,.14);border:1px solid rgba(34,197,94,.45);color:#4ade80}
-.pay-modal__title{font-size:clamp(1.35rem,2.6vw,1.8rem);letter-spacing:-.03em}
-.pay-modal__lead{margin-top:10px;color:var(--muted);font-size:.92rem;line-height:1.65}
-.pay-modal__facts{display:grid;gap:1px;margin:22px 0;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--line);text-align:left}
-.pay-modal__fact{display:flex;align-items:baseline;justify-content:space-between;gap:14px;padding:12px 16px;background:var(--surface)}
-.pay-modal__fact dt{color:var(--muted-2);font-size:.72rem;letter-spacing:.04em;text-transform:uppercase}
-.pay-modal__fact dd{margin:0;font-size:.92rem;font-weight:600;text-align:right;word-break:break-word}
-.pay-modal__close{width:100%}
-@media (max-width:520px){
-  .pay-modal{padding:0}
-  .pay-modal__panel{width:100%;max-height:100dvh;border-radius:18px;padding:26px 18px 28px}
-  .pay-modal__fact{padding:11px 13px}
-}
 .pay-faq-section{padding-block:clamp(14px,2.2vw,26px) clamp(48px,6.4vw,80px)}
 .pay-faq-wrap{max-width:100%;margin-inline:0}
 .pay-faq-head{margin-bottom:clamp(18px,2.4vw,26px)}
@@ -416,12 +428,6 @@ blockquote,pre,table{max-width:100%}
 .pay-help-card .founder-note>p:not(.eyebrow){max-width:760px}
 .pay-help-card .founder-sig a{color:var(--violet-soft);text-decoration:underline}
 @media(max-width:480px){.pay-help-avatar{width:48px;height:48px}.pay-help-avatar svg{width:22px;height:22px}}
-@media(max-width:900px){
-  .pay-shell{grid-template-columns:minmax(0,1fr)}
-}
-@media(max-width:720px){
-  .pay-custom-code{overflow-x:auto}
-}
 
 /* =====================================================================
    Mobile hero buttons — stack cleanly, no overlap, no horizontal scroll

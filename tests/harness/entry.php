@@ -35,6 +35,24 @@ if (getenv('TPT_HARNESS_DB') === '1') {
        Schema::ensure()/migrations run locally. */
     require $tptRoot . '/includes/db.php';
     $GLOBALS['pdo'] = new PieDevPdo();
+} else {
+    /* php-wasm has no PDO MySQL driver. Define the normal no-database contract
+       before the application loads includes/db.php, so it degrades gracefully
+       instead of trying to construct an unsupported PDO connection. */
+    require_once $tptRoot . '/includes/config.php';
+    if (!defined('DB_OK')) { define('DB_OK', false); }
+    if (!function_exists('dbAll')) {
+        function dbAll($sql, $params = array()) { return array(); }
+    }
+    if (!function_exists('dbOne')) {
+        function dbOne($sql, $params = array()) { return null; }
+    }
+    if (!function_exists('dbExec')) {
+        function dbExec($sql, $params = array()) { return -1; }
+    }
+    if (!function_exists('dbInsert')) {
+        function dbInsert($sql, $params = array()) { return -1; }
+    }
 }
 
 /* Apache runs the script with the document root as cwd; match that. */

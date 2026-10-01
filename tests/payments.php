@@ -1,324 +1,147 @@
 <?php
-/**
- * Dependency-free tests for the payment integration layer:
- *   • the existing Admin Services system is the single source of truth
- *   • PayPal Client ID, shared Terms & Conditions URL and the Services list
- *     reach the saved custom code through controlled placeholders only
- *   • nothing else in the administrator's code is rewritten
- *   • PayPal and Stripe can render together without duplicate ids
- *   • PayPal never requests shipping
- *   • complete implementations are stored without truncation
- *   • the Terms checkbox is gone (one small legal line instead)
- *   • the PayPal Secret is stored server-side and never displayed
+/** Dependency-free shared payment-form, validation, encryption and security checks.
  * Run: php tests/payments.php
  */
-error_reporting(E_ALL);
-ini_set('display_errors', '1');
-define('BASE_PATH', dirname(__DIR__));
-define('BASE_URL', ''); define('SITE_URL', 'https://example.test');
-define('SITE_NAME', 'The Pie Technologies'); define('ADMIN_EMAIL', 'admin@example.test');
-define('PRETTY_URLS', true); define('DB_OK', true); define('UPLOAD_PATH', BASE_PATH . '/uploads/');
+require __DIR__ . '/payment-test-bootstrap.php';
+if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 
-/* Fake settings + tables so the modules run without MySQL. */
-$GLOBALS['fake_settings'] = array();
-$GLOBALS['fake_services'] = array();
-$GLOBALS['fake_tables'] = array('payment_services' => true);
-
-function dbAll($sql, $params = array())
-{
-    if (strpos($sql, 'FROM settings') !== false) {
-        $rows = array();
-        foreach ($GLOBALS['fake_settings'] as $k => $v) { $rows[] = array('setting_key' => $k, 'setting_value' => $v); }
-        return $rows;
-    }
-    if (strpos($sql, 'FROM payment_services') !== false) {
-        $rows = array();
-        foreach ($GLOBALS['fake_services'] as $row) {
-            if (strpos($sql, 'is_active = 1') !== false && (int) $row['is_active'] !== 1) { continue; }
-            $rows[] = $row;
-        }
-        return $rows;
-    }
-    return array();
-}
-function dbOne($sql, $params = array())
-{
-    if (strpos($sql, 'information_schema.TABLES') !== false) {
-        /* The table name is inlined in the SQL, exactly like the real query. */
-        $table = preg_match("/TABLE_NAME = '([a-z_]+)'/i", $sql, $m) ? $m[1] : '';
-        return array('c' => !empty($GLOBALS['fake_tables'][$table]) ? 1 : 0);
-    }
-    if (strpos($sql, 'FROM settings') !== false) {
-        $key = $params[0] ?? '';
-        return isset($GLOBALS['fake_settings'][$key]) ? array('setting_key' => $key, 'setting_value' => $GLOBALS['fake_settings'][$key]) : null;
-    }
-    return null;
-}
-function dbExec($sql, $params = array()) { return 1; }
-function dbInsert($sql, $params = array()) { return 1; }
-
-require BASE_PATH . '/includes/functions.php';
-require BASE_PATH . '/core/Payments.php';
-require BASE_PATH . '/core/PaymentTemplates.php';
-
-$count = 0;
-function check($condition, $message) { global $count; $count++; if (!$condition) { throw new RuntimeException('FAIL: ' . $message); } echo 'PASS: ' . $message . PHP_EOL; }
-function setFakeSetting($key, $value) { $GLOBALS['fake_settings'][$key] = $value; settingsCache(true); }
-function setFakeServices(array $rows) { $GLOBALS['fake_services'] = $rows; }
-function source($relativePath) { return (string) file_get_contents(BASE_PATH . '/' . $relativePath); }
-
-/* ------------------------- Services (single source) ------------------------- */
-setFakeServices(array(
+paymentSetServices(array(
     array('id' => 1, 'name' => 'AI Optimization', 'sort_order' => 1, 'is_active' => 1),
     array('id' => 2, 'name' => 'Web Development', 'sort_order' => 2, 'is_active' => 1),
     array('id' => 3, 'name' => 'Retired Service', 'sort_order' => 3, 'is_active' => 0),
     array('id' => 4, 'name' => 'Digital Marketing', 'sort_order' => 4, 'is_active' => 1),
-    array('id' => 5, 'name' => 'Business Consultation', 'sort_order' => 5, 'is_active' => 1),
 ));
 $services = piePaymentServices();
-check($services === array('AI Optimization', 'Web Development', 'Digital Marketing', 'Business Consultation'), 'services come from the existing Services system in admin order, active only');
-
-/* Reordering the admin list reorders both payment dropdowns. */
-setFakeServices(array(
-    array('id' => 5, 'name' => 'Business Consultation', 'sort_order' => 1, 'is_active' => 1),
+paymentCheck($services === array('AI Optimization', 'Web Development', 'Digital Marketing'), 'active services use the existing ordered Admin Services list');
+$options = pieServicesOptionsHtml();
+paymentCheck(substr_count($options, '<option') === 3 && strpos($options, 'Retired Service') === false, 'hidden Services stay out of the public dropdown');
+paymentSetServices(array(
+    array('id' => 4, 'name' => 'Digital Marketing', 'sort_order' => 1, 'is_active' => 1),
     array('id' => 1, 'name' => 'AI Optimization', 'sort_order' => 2, 'is_active' => 1),
 ));
-check(piePaymentServices() === array('Business Consultation', 'AI Optimization'), 'moving a service up/down changes the dropdown order');
-setFakeServices(array(
+paymentCheck(piePaymentServices() === array('Digital Marketing', 'AI Optimization'), 'Admin service reordering is reflected immediately');
+$GLOBALS['fake_tables']['payment_services'] = false;
+paymentCheck(count(piePaymentServices()) === 7, 'legacy fallback services remain available when the table is missing');
+$GLOBALS['fake_tables']['payment_services'] = true;
+paymentSetServices(array());
+paymentCheck(piePaymentServices() === array(), 'an intentionally empty active Services list stays empty instead of exposing defaults');
+paymentSetServices(array(
     array('id' => 1, 'name' => 'AI Optimization', 'sort_order' => 1, 'is_active' => 1),
     array('id' => 2, 'name' => 'Web Development', 'sort_order' => 2, 'is_active' => 1),
-    array('id' => 4, 'name' => 'Digital Marketing', 'sort_order' => 4, 'is_active' => 1),
-    array('id' => 5, 'name' => 'Business Consultation', 'sort_order' => 5, 'is_active' => 1),
 ));
 
-$options = pieServicesOptionsHtml();
-check(strpos($options, '<option value="AI Optimization">AI Optimization</option>') !== false, 'service options are rendered as HTML');
-check(substr_count($options, '<option') === 4, 'one option per active service');
-check(json_decode(pieServicesJson(), true) === $services, 'service JSON matches the dropdown');
-check(strpos($options, '<option value="Retired Service">') === false, 'hidden services never reach the dropdown');
-
-$GLOBALS['fake_tables'] = array();
-check(count(piePaymentServices()) === 7, 'services fall back to the built-in list when the table is missing');
-$GLOBALS['fake_tables'] = array('payment_services' => true);
-
-/* ------------------------------ Admin settings ------------------------------ */
-check(piePayPalClientId() === '' && !piePayPalClientIdConfigured(), 'no PayPal Client ID by default');
-setFakeSetting('paypal_client_id', 'TEST-CLIENT_ID_123');
-check(piePayPalClientId() === 'TEST-CLIENT_ID_123' && piePayPalClientIdConfigured(), 'PayPal Client ID is read from the dashboard');
-check(strpos(piePayPalSdkUrl(), 'client-id=TEST-CLIENT_ID_123') !== false, 'the PayPal SDK URL is built from the stored Client ID');
-check(!pieIsValidPayPalClientId('has spaces') && !pieIsValidPayPalClientId('short'), 'unsafe Client IDs are rejected');
-
-setFakeSetting('terms_url', 'https://example.test/legal/terms');
-check(pieTermsUrl() === 'https://example.test/legal/terms', 'the shared Terms URL is read from the dashboard');
-setFakeSetting('terms_url', '');
-check(pieTermsUrl() === 'https://example.test/terms', 'an empty Terms URL falls back to this site\'s Terms page');
-setFakeSetting('terms_url', 'https://example.test/legal/terms');
-
-$placeholders = piePaymentPlaceholders();
-foreach (array('{{PAYPAL_CLIENT_ID}}', '{{PAYPAL_SDK_URL}}', '{{TERMS_URL}}', '{{SERVICES_OPTIONS}}', '{{SERVICES_JSON}}') as $token) {
-    check(isset($placeholders[$token]), 'integration point exists: ' . $token);
+paymentCheck(pieIsValidTermsUrl('https://example.test/terms') && pieIsValidTermsUrl('/terms'), 'shared Terms accepts absolute HTTPS URLs and site-local paths');
+paymentCheck(!pieIsValidTermsUrl('javascript:alert(1)') && !pieIsValidTermsUrl('//evil.example/terms') && !pieIsValidTermsUrl('/\\\\evil.example'), 'Terms links reject script schemes, protocol-relative hosts and backslashes');
+paymentCheck(piePaymentNormalizeAmount('500') === '500.00', 'whole-dollar amount is normalized to two decimals');
+paymentCheck(piePaymentNormalizeAmount('0.01') === '0.01' && piePaymentNormalizeAmount('1000000.00') === '1000000.00', 'the minimum and maximum USD amounts are accepted');
+foreach (array('', '0', '0.00', '-5', '+5', '1e3', '1.001', '1,000', '1000000.01', '10000000', array('amount' => 5)) as $invalidAmount) {
+    paymentCheck(piePaymentNormalizeAmount($invalidAmount) === '', 'invalid/ambiguous amount is rejected');
 }
-check($placeholders['{{TERMS_AND_CONDITIONS_URL}}'] === $placeholders['{{TERMS_URL}}'], 'the Terms URL has exactly one value for both gateways');
 
-/* --------------------- Only placeholders are substituted -------------------- */
-$customCode = "<style>\n  .mine { color: red; } /* keep me */\n</style>\n"
-    . "<form id=\"paypal-payment-form\" class=\"mine\">\n"
-    . "  <select id=\"paypal-service\" name=\"service\"><option value=\"\">Pick</option>{{SERVICES_OPTIONS}}</select>\n"
-    . "  <input id=\"paypal-amount\" name=\"amount\" type=\"number\" value=\"500\">\n"
-    . "  <a href=\"{{TERMS_URL}}\">Terms &amp; Conditions</a>\n"
-    . "  <script src=\"https://www.paypal.com/sdk/js?client-id={{PAYPAL_CLIENT_ID}}&currency=USD\"></script>\n"
-    . "</form>\n"
-    . "<script>\n  // \$not-a-php-var and \"quotes\" stay untouched\n"
-    .  "  document.querySelector('#paypal-amount').addEventListener('change', function () { paypal.Buttons({}).render('#paypal-button-container'); });\n"
-    . "</script>\n";
-
-$rendered = pieRenderPaymentCode($customCode, 'paypal');
-$expected = str_replace(
-    array('{{PAYPAL_CLIENT_ID}}', '{{TERMS_URL}}', '{{SERVICES_OPTIONS}}'),
-    array('TEST-CLIENT_ID_123', 'https://example.test/legal/terms', $options),
-    $customCode
-);
-check($rendered === $expected, 'rendering replaces ONLY the integration points — the rest is byte-identical');
-check(strpos($rendered, '{{') === false, 'no placeholder is left unresolved');
-check(strpos($rendered, 'color: red') !== false && strpos($rendered, 'keep me') !== false, 'CSS and comments survive');
-check(strpos($rendered, 'paypal.Buttons({}).render') !== false, 'JavaScript survives');
-check(strpos($rendered, '&amp;') !== false, 'existing HTML entities are not decoded or re-encoded');
-check(substr_count($rendered, '<style>') === 1 && substr_count($rendered, '<script') === 2, 'style and script blocks are preserved');
-check(strpos($rendered, 'client-id=TEST-CLIENT_ID_123') !== false, 'the SDK URL uses the stored Client ID');
-
-/* A pasted SDK URL that still carries an old client id follows the dashboard. */
-$pastedSdk = '<script src="https://www.paypal.com/sdk/js?client-id=OLD_CLIENT_ID&currency=USD"></script>';
-check(strpos(pieRenderPaymentCode($pastedSdk, 'paypal'), 'client-id=TEST-CLIENT_ID_123') !== false, 'a hard-coded SDK client id is pointed at the dashboard value');
-check(strpos(pieRenderPaymentCode($pastedSdk, 'paypal'), 'OLD_CLIENT_ID') === false, 'the old hard-coded client id is gone');
-setFakeSetting('paypal_client_id', '');
-check(pieRenderPaymentCode($pastedSdk, 'paypal') === $pastedSdk, 'without a stored Client ID the pasted code is left alone');
-setFakeSetting('paypal_client_id', 'TEST-CLIENT_ID_123');
-check(pieRenderPaymentCode($pastedSdk, 'stripe') === $pastedSdk, 'the Stripe block is never touched by the PayPal Client ID');
-
-/* The dashboard Client ID always wins, whatever the pasted SDK URL looks like. */
-check(pieRenderPaymentCode('<script src="https://www.paypal.com/sdk/js?currency=USD&intent=capture"></script>', 'paypal') === '<script src="https://www.paypal.com/sdk/js?client-id=TEST-CLIENT_ID_123&currency=USD&intent=capture"></script>', 'the Client ID is added to an SDK URL that has none');
-check(pieRenderPaymentCode('<script src="https://www.paypal.com/sdk/js"></script>', 'paypal') === '<script src="https://www.paypal.com/sdk/js?client-id=TEST-CLIENT_ID_123"></script>', 'the Client ID is added to a bare SDK URL');
-check(pieRenderPaymentCode("<script src='https://www.paypal.com/sdk/js?client-id=OLD_CLIENT_ID&currency=USD'></script>", 'paypal') === "<script src='https://www.paypal.com/sdk/js?client-id=TEST-CLIENT_ID_123&currency=USD'></script>", 'quoted SDK URLs are handled');
-check(pieRenderPaymentCode('<script src="https://example.com/sdk/js?client-id=KEEPME"></script>', 'paypal') === '<script src="https://example.com/sdk/js?client-id=KEEPME"></script>', 'non-PayPal URLs are never touched');
-check(pieRenderPaymentCode('client-id=NOT_A_URL stays', 'paypal') === 'client-id=NOT_A_URL stays', 'plain text that only looks like a parameter is left alone');
-
-/* -------------------------- PayPal shipping disabled ----------------------- */
-$paypalStarter = piePayPalStarterCode();
-$stripeStarter = pieStripeStarterCode();
-check(strpos($paypalStarter, "shipping_preference: 'NO_SHIPPING'") !== false, 'the PayPal implementation creates its order with shipping_preference NO_SHIPPING');
-check(stripos($paypalStarter, 'GET_FROM_FILE') === false, 'PayPal never takes the shipping address from the buyer profile');
-check(preg_match('/shipping_preference[^,}]*NO_SHIPPING/', $paypalStarter) === 1, 'the only shipping preference configured is NO_SHIPPING');
-check(!preg_match('/name=["\']shipping/i', $paypalStarter) && !preg_match('/id=["\']paypal-shipping/i', $paypalStarter), 'no shipping address field is created');
-check(!preg_match('/shipping_amount|shipping_charge|delivery_fee/i', $paypalStarter), 'no shipping charge is added');
-check(strpos($paypalStarter, 'id="paypal-button-container"') !== false, 'the PayPal SDK render container is preserved');
-
-/* ---------------------- Both gateways on the same page --------------------- */
-$paypalIds = piePaymentCodeIds($paypalStarter);
-$stripeIds = piePaymentCodeIds($stripeStarter);
-check(count($paypalIds) > 5 && count($stripeIds) > 5, 'both implementations define their own elements');
-check(count(array_intersect($paypalIds, $stripeIds)) === 0, 'PayPal and Stripe share no HTML id');
-check(in_array('paypal-payment-form', $paypalIds, true) && in_array('stripe-payment-form', $stripeIds, true), 'each form has its own unique id');
-check(in_array('paypal-service', $paypalIds, true) && in_array('stripe-service', $stripeIds, true), 'each service dropdown has its own unique id');
-check(!in_array('paypal-terms', $paypalIds, true) && !in_array('stripe-terms', $stripeIds, true), 'the Terms checkbox is gone from both implementations');
-check(substr_count($paypalStarter, 'data-tpt-terms') === 0 && substr_count($stripeStarter, 'data-tpt-terms') === 0, 'the legal line is not duplicated inside each provider form');
-check(substr_count($paypalStarter, 'Terms &amp; Conditions') === 0 && substr_count($stripeStarter, 'Terms &amp; Conditions') === 0, 'neither form repeats the Terms sentence');
-check(substr_count($paypalStarter, 'By continuing with your payment') === 0 && substr_count($stripeStarter, 'By continuing with your payment') === 0, 'the shared legal line is rendered once by the page, not by each form');
-check(!preg_match('/name="terms"|id="paypal-terms"|id="stripe-terms"/', $paypalStarter . $stripeStarter), 'no Terms checkbox remains in either implementation');
-check(preg_match('/type="checkbox"[^>]*name="terms"/i', $paypalStarter . $stripeStarter) === 0, 'no checkbox is required before paying');
-check(in_array('paypal-amount', $paypalIds, true) && in_array('stripe-amount', $stripeIds, true), 'each amount field has its own unique id');
-check(in_array('paypal-button-container', $paypalIds, true) && in_array('stripe-payment-container', $stripeIds, true), 'provider containers are unique');
-check(count(piePaymentCodeIds($paypalStarter)) === count(array_unique($paypalIds)), 'no id is repeated inside the PayPal code');
-check(count(piePaymentCodeIds($stripeStarter)) === count(array_unique($stripeIds)), 'no id is repeated inside the Stripe code');
-check(piePaymentIdConflicts(array('paypal' => $paypalStarter, 'stripe' => $stripeStarter)) === array(), 'the two implementations can be enabled together without conflicts');
-
-$clashing = '<form id="payment-form"><input id="service"><input id="amount"></form>';
-$other    = '<form id="payment-form"><input id="amount"></form>';
-check(piePaymentIdConflicts(array('paypal' => $clashing, 'stripe' => $other)) === array('amount', 'payment-form'), 'duplicate ids across the two blocks are reported');
-check(piePaymentIdConflicts(array('paypal' => $paypalStarter, 'stripe' => '')) === array(), 'an empty Stripe block reports no conflicts');
-
-/* A dropdown that ignores the Services system is reported, not silently ignored. */
-check(piePaymentUnlinkedSelects($paypalStarter) === array(), 'the PayPal starter is linked to the Services system');
-check(piePaymentUnlinkedSelects($stripeStarter) === array(), 'the Stripe starter is linked to the Services system');
-check(piePaymentUnlinkedSelects('<select id="paypal-service"><option>Service 1</option></select>') === array('paypal-service'), 'a hard-coded dropdown is reported');
-check(piePaymentUnlinkedSelects('<select><option>x</option></select>') === array('(unnamed select)'), 'an unnamed hard-coded dropdown is reported');
-check(piePaymentUnlinkedSelects('<select id="a" data-tpt-services></select>') === array(), 'a dropdown marked data-tpt-services is linked');
-check(piePaymentUnlinkedSelects('') === array(), 'no dropdown, no warning');
-
-/* Both implementations read the shared Services list and the shared Terms URL. */
-foreach (array($paypalStarter, $stripeStarter) as $index => $starter) {
-    check(strpos($starter, '{{SERVICES_OPTIONS}}') !== false, 'starter ' . ($index + 1) . ' builds its dropdown from the Services system');
-    check(strpos($starter, 'data-tpt-services') !== false, 'starter ' . ($index + 1) . ' also works through the shared bridge');
-}
-check(strpos($paypalStarter, '{{PAYPAL_CLIENT_ID}}') !== false, 'the PayPal starter takes its Client ID from the dashboard');
-check(strpos(source('core/Payments.php'), 'querySelectorAll(\'a[data-tpt-terms]\')') !== false, 'the bridge still rewrites any data-tpt-terms link to the one shared Terms URL');
-
-/* ------------------- Payment form asks for three things ------------------- */
-check(substr_count($paypalStarter, '<input') === 2 && substr_count($paypalStarter, '<select') === 1 && substr_count($paypalStarter, '<textarea') === 0, 'the PayPal form has exactly three fields (name/business, service, amount)');
-check(substr_count($stripeStarter, '<input') === 2 && substr_count($stripeStarter, '<select') === 1 && substr_count($stripeStarter, '<textarea') === 0, 'the Stripe form has exactly three fields plus the card element');
-check(strpos($paypalStarter, 'Name / Business name') !== false && strpos($stripeStarter, 'Name / Business name') !== false, 'both forms label the field Name / Business name');
-check(strpos($paypalStarter, 'paypal-email') === false && strpos($stripeStarter, 'stripe-email') === false, 'neither form asks for an email address');
-check(strpos($paypalStarter, 'name="notes"') === false && strpos($stripeStarter, 'name="notes"') === false, 'neither form asks for project notes');
-check(strpos($paypalStarter, "Name / Business name") !== false || strpos($paypalStarter, 'paypal-name') !== false, 'the PayPal name field keeps its id');
-check(strpos($paypalStarter, "'paypal-email'") === false && strpos($paypalStarter, "getElementById('paypal-email')") === false, 'PayPal validation no longer references the removed email field');
-check(strpos($stripeStarter, "'stripe-email'") === false && strpos($stripeStarter, "getElementById('stripe-email')") === false, 'Stripe validation no longer references the removed email field');
-check(strpos(source('core/Payments.php'), 'buyer.name') !== false && strpos(source('core/Payments.php'), 'buyer.service') !== false, 'the server capture also records the typed name and chosen service');
-
-/* --------------------------------- Bridge ---------------------------------- */
-$bridge = piePaymentBridge(array('paypal', 'stripe'));
-check(strpos($bridge, 'window.TPT_PAYMENT=') !== false, 'the bridge publishes the shared payment settings');
-check(strpos($bridge, "'NO_SHIPPING'") !== false, 'the bridge forces NO_SHIPPING on PayPal orders');
-check(strpos($bridge, 'TPT_PAYMENT_SERVICES') !== false, 'the bridge exposes the shared Services list');
-check(strpos($bridge, 'data-tpt-terms') !== false, 'the bridge applies the shared Terms URL');
-check(strpos($bridge, '"providers":["paypal","stripe"]') !== false, 'the bridge only wires the rendered providers');
-check(strpos($bridge, '</script>') === false || strpos($bridge, '<\/script>') !== false || strpos($bridge, 'json_encode') === false, 'the bridge never breaks out of its script tag');
-/* The two-column placement must always be able to run: a container is never
-   moved into itself, and the "Powered by" search never picks one of the
-   bridge's own columns (which would throw a HierarchyRequestError and leave
-   the block in its stacked fallback layout). */
-check(strpos($bridge, 'node.contains(column)') !== false, 'the bridge refuses to move a container into one of its own children');
-check(strpos($bridge, 'data-tpt-split], [data-tpt-form]') !== false, 'the "Powered by" search skips the bridge\'s own grid and columns');
-check(strpos($bridge, '[data-tpt-powered]') !== false, 'the bridge\'s own "Powered by" line is never moved');
-setFakeServices(array(array('id' => 9, 'name' => 'Evil</script><script>alert(1)</script>', 'sort_order' => 1, 'is_active' => 1)));
-$hostileBridge = piePaymentBridge(array('paypal'));
-check(strpos($hostileBridge, '</script><script>alert(1)') === false, 'service names cannot break out of the bridge script');
-setFakeServices(array(
-    array('id' => 1, 'name' => 'AI Optimization', 'sort_order' => 1, 'is_active' => 1),
-    array('id' => 2, 'name' => 'Web Development', 'sort_order' => 2, 'is_active' => 1),
-    array('id' => 4, 'name' => 'Digital Marketing', 'sort_order' => 4, 'is_active' => 1),
-    array('id' => 5, 'name' => 'Business Consultation', 'sort_order' => 5, 'is_active' => 1),
+$validated = piePaymentValidateSubmission(array(
+    'name' => '  Ada Lovelace  ',
+    'email' => 'ADA@example.test',
+    'phone' => '+1 (555) 123-4567',
+    'service' => 'AI Optimization',
+    'amount' => '250.25',
+    'notes' => "First line\n<script>alert(1)</script> second line",
 ));
+paymentCheck($validated['ok'] === true, 'valid customer, active service and amount pass server validation');
+paymentCheck($validated['data']['email'] === 'ada@example.test' && $validated['data']['amount'] === '250.25', 'email and amount are normalized server-side');
+paymentCheck(strpos($validated['data']['notes'], '<script') === false && strpos($validated['data']['notes'], "\n") !== false, 'notes are sanitized while retaining line breaks');
+foreach (array(
+    array('email' => 'nope'),
+    array('service' => 'Retired Service'),
+    array('service' => 'Made up service'),
+    array('amount' => '1e3'),
+    array('name' => '<b></b>'),
+    array('email' => array('bad')),
+) as $invalidPatch) {
+    $base = array('name' => 'Customer', 'email' => 'buyer@example.test', 'phone' => '', 'service' => 'AI Optimization', 'amount' => '25.00', 'notes' => '');
+    $result = piePaymentValidateSubmission(array_merge($base, $invalidPatch));
+    paymentCheck($result['ok'] === false, 'server rejects invalid submitted payment data');
+}
 
-/* --------------------- Complete code is never truncated -------------------- */
-$largeCode = str_repeat("/* line of CSS */\n.paypal-pay-form .field input{border:1px solid var(--line)}\n<div id=\"paypal-x\">text</div>\n", 900);
-check(strlen($largeCode) > 40000, 'the sample implementation is larger than 40 KB');
-check(pieRenderPaymentCode($largeCode, 'paypal') === $largeCode, 'a large implementation with no placeholders is returned unchanged');
-check(html_entity_decode(esc($largeCode), ENT_QUOTES) === $largeCode, 'a large implementation survives the textarea round-trip (escaping is lossless)');
-check(html_entity_decode(esc($paypalStarter), ENT_QUOTES) === $paypalStarter, 'the PayPal starter survives the textarea round-trip');
-check(html_entity_decode(esc($stripeStarter), ENT_QUOTES) === $stripeStarter, 'the Stripe starter survives the textarea round-trip');
+/* The key is private configuration, not a database setting. */
+$secret = 'sk_test_' . str_repeat('AbC123', 5);
+$ciphertext = piePaymentCredentialEncrypt($secret);
+paymentCheck(is_string($ciphertext) && strpos($ciphertext, 'enc:v1:') === 0, 'credentials use the versioned AES-GCM ciphertext format');
+paymentCheck($ciphertext !== $secret && strpos($ciphertext, $secret) === false, 'stored credential text does not contain the plaintext key');
+paymentCheck(piePaymentCredentialDecrypt($ciphertext) === $secret, 'an encrypted credential decrypts only with the configured server key');
+$altered = substr($ciphertext, 0, -1) . (substr($ciphertext, -1) === 'A' ? 'B' : 'A');
+paymentCheck(piePaymentCredentialDecrypt($altered) === '', 'tampered ciphertext fails closed');
+paymentCheck(piePaymentCredentialIsEncrypted($ciphertext) && !piePaymentCredentialIsEncrypted($secret), 'legacy plaintext is distinguishable for migration');
 
-$schema = source('database/schema-mysql.sql') . source('database.sql');
-check(strpos($schema, 'setting_value MEDIUMTEXT') !== false, 'payment code is stored in a MEDIUMTEXT column');
-$widen = source('database/migrations/006_payment_code_storage.php') . source('database/migrations/007_payment_integration_settings.php');
-check(strpos($widen, 'MEDIUMTEXT') !== false && strpos($widen, 'ALTER TABLE `settings`') !== false, 'older installations are widened to MEDIUMTEXT');
-$seed = source('database/seed.php') . source('database.sql');
-check(strpos($seed, "'paypal_client_id'") !== false && strpos($seed, "'terms_url'") !== false, 'fresh installs seed the new payment settings');
-$upgrade = source('database-upgrade.sql');
-check(strpos($upgrade, "'paypal_client_id'") !== false && strpos($upgrade, "'terms_url'") !== false, 'the upgrade dump adds the new payment settings');
-check(substr_count($upgrade, "WHERE setting_key = 'terms_url'") === 1, 'the Terms URL setting is added exactly once');
+$paypalClientId = 'AbCdEfGh1234567890_XYZ';
+paymentSetSetting('paypal_enabled', '1');
+paymentSetSetting('paypal_client_id', $paypalClientId);
+paymentSetSetting('paypal_env', 'sandbox');
+paymentSetSetting('paypal_secret', piePaymentCredentialEncrypt('PaypalSecret-' . str_repeat('x', 30)));
+paymentCheck(pieIsPayPalEnabled() && piePayPalEnv() === 'sandbox', 'PayPal enabled and Sandbox settings are read by PHP');
+paymentCheck(piePayPalServerReady() && piePayPalApiBase() === 'https://api-m.sandbox.paypal.com', 'PayPal server readiness requires its Client ID and decryptable Secret');
+paymentCheck(piePayPalSecretConfigured() && piePayPalSecret() === 'PaypalSecret-' . str_repeat('x', 30), 'PayPal Secret decrypts on the server only');
+$goodPayPalSecret = $GLOBALS['fake_settings']['paypal_secret'];
+paymentSetSetting('paypal_secret', piePaymentCredentialEncrypt('too-short'));
+paymentCheck(piePayPalServerReady() === false, 'PayPal will not be exposed to customers with an invalid stored Secret');
+paymentSetSetting('paypal_secret', $goodPayPalSecret);
+paymentCheck(pieIsValidPayPalClientId('bad id') === false && pieIsValidPayPalClientId('x') === false, 'malformed PayPal Client IDs are rejected');
+paymentSetSetting('stripe_enabled', '1');
+paymentSetSetting('stripe_secret_key', piePaymentCredentialEncrypt($secret));
+paymentCheck(pieIsStripeEnabled() && pieStripeServerReady() && pieStripeKeyMode() === 'test', 'Stripe test key is decrypted server-side and its mode is detected');
+paymentCheck(pieStripeSecret() === $secret, 'Stripe Secret Key remains available only through the PHP helper');
+$goodStripeSecret = $GLOBALS['fake_settings']['stripe_secret_key'];
+paymentSetSetting('stripe_secret_key', piePaymentCredentialEncrypt('pk_test_' . str_repeat('x', 24)));
+paymentCheck(pieStripeServerReady() === false, 'Stripe will not be exposed to customers with a publishable key in the Secret field');
+paymentSetSetting('stripe_secret_key', $goodStripeSecret);
 
-/* ------------------------------- Admin wiring ------------------------------ */
-$admin = source('admin/payments.php');
-check(strpos($admin, 'name="paypal_client_id"') !== false, 'the dashboard has a PayPal Client ID field');
-check(substr_count($admin, 'name="terms_url"') === 1, 'the dashboard has exactly ONE Terms & Conditions URL field');
-check(!preg_match('/name="(paypal|stripe)_terms_url"/', $admin), 'no per-gateway Terms URL duplicates exist');
-check(strpos($admin, "payment_action\" value=\"save_shared\"") !== false || strpos($admin, "value=\"save_shared\"") !== false, 'the shared settings have their own save action');
-check(strpos($admin, 'paymentCodeFromRequest') !== false && strpos($admin, 'paymentCodeFromRequest($field)') !== false, 'saved payment code is taken from the request untouched');
-check(strpos($admin, 'sanitizeMultiline($_POST[\'paypal_sdk_code\']') === false, 'payment code is never sanitised on save');
-check(!preg_match('/name="paypal_sdk_code"[^>]*maxlength/', $admin) && !preg_match('/name="stripe_sdk_code"[^>]*maxlength/', $admin), 'no character limit on the payment code fields');
-check(substr_count($admin, 'data-edit-code="paypal_sdk_code"') === 1 && substr_count($admin, 'data-edit-code="stripe_sdk_code"') === 1, 'both editors keep the Edit Code button');
-check(strpos($admin, 'esc($paypalSdkCode)') !== false && strpos($admin, 'esc($stripeSdkCode)') !== false, 'saved code is HTML-escaped for the textarea');
-check(strpos($admin, 'piePaymentIdConflicts') !== false, 'the dashboard audits duplicate ids between the two blocks');
-check(strpos($admin, 'piePaymentUnlinkedSelects') !== false, 'the dashboard flags dropdowns that ignore the Services system');
-check(strpos($admin, 'service_action') !== false && strpos($admin, 'payment_services') !== false, 'the existing Services manager is preserved');
-check(strpos($admin, 'piePayPalStarterCode()') !== false && strpos($admin, 'pieStripeStarterCode()') !== false, 'ready-to-paste implementations are offered');
-check(strpos($admin, 'name="paypal_secret"') !== false, 'the dashboard stores the PayPal Secret');
-check(preg_match('/name="paypal_secret"[^>]*type="password"|type="password"[^>]*name="paypal_secret"/', $admin) === 1, 'the Secret field is a password field');
-check(!preg_match('/name="paypal_secret"[^>]*value="<\?=/', $admin), 'the stored Secret is never written back into the field');
-check(!preg_match('/esc\(\$paypalSecret\)|esc\(piePayPalSecret/', $admin), 'the stored Secret is never printed anywhere in the dashboard');
-check(strpos($admin, 'paypal_secret_clear') !== false, 'an empty Secret field keeps the stored value until it is explicitly removed');
-check(strpos($admin, 'name="stripe_secret_key"') !== false, 'the dashboard stores the Stripe Secret Key');
-check(strpos($admin, 'name="stripe_webhook_secret"') !== false, 'the dashboard stores the Stripe Webhook Secret');
-check(preg_match('/name="stripe_secret_key"[^>]*type="password"|type="password"[^>]*name="stripe_secret_key"/', $admin) === 1, 'the Stripe Secret Key field is a password field');
-check(preg_match('/name="stripe_webhook_secret"[^>]*type="password"|type="password"[^>]*name="stripe_webhook_secret"/', $admin) === 1, 'the Stripe Webhook Secret field is a password field');
-check(!preg_match('/name="stripe_secret_key"[^>]*value="<\?=/', $admin) && !preg_match('/name="stripe_webhook_secret"[^>]*value="<\?=/', $admin), 'stored Stripe credentials are never written back into their fields');
-check(!preg_match('/esc\(\$stripeSecret|esc\(pieStripeSecret|esc\(pieStripeWebhookSecret/', $admin), 'stored Stripe credentials are never printed anywhere in the dashboard');
-check(strpos($admin, 'stripe_secret_clear') !== false && strpos($admin, 'stripe_webhook_secret_clear') !== false, 'empty Stripe credential fields keep the stored values until they are explicitly removed');
-check(strpos($admin, 'stripe-webhook') !== false, 'the dashboard shows the webhook URL that must be registered in Stripe');
-$paypalCore = source('core/PayPal.php');
-check(strpos($paypalCore, 'SERVER-SIDE ONLY') !== false, 'core/PayPal.php marks the Secret as server-side only');
-check(strpos(source('paypal-api.php'), 'piePayPalSecret') === false, 'the public endpoint never touches the Secret directly');
-check(strpos(source('pay-online.php'), 'paypal_secret') === false, 'the Pay Online page never reads the Secret');
-check(strpos(source('pay-online.php'), 'id="tpt-payment-confirmation"') !== false, 'the page ships the confirmed-payment block');
-check(strpos(source('pay-online.php'), 'By continuing with your payment, you agree to our') !== false, 'the page shows the short Terms agreement line');
-check(substr_count(source('pay-online.php'), 'data-tpt-terms-page') === 1, 'exactly ONE shared Terms agreement line is rendered on the page');
+/* Pending attempt first, then record only after matching provider confirmation. */
+$GLOBALS['fake_tables']['payments'] = true;
+$GLOBALS['fake_tables']['payment_records'] = true;
+$created = piePaymentCreateAttempt('stripe', $validated['data']);
+paymentCheck($created['ok'] === true && $created['attempt']['status'] === 'pending', 'checkout first creates a pending row in the existing payments table');
+paymentCheck((bool) preg_match('/^[a-f0-9]{64}$/D', $created['attempt']['token']), 'each pending attempt has an unpredictable server-generated token');
+$attempt = $created['attempt'];
+$recordCountBefore = count($GLOBALS['fake_record_rows']);
+$notConfirmed = piePaymentCompleteAttempt($attempt, 'stripe', array('confirmed' => false), 'cs_test_fake');
+paymentCheck($notConfirmed['ok'] === false && count($GLOBALS['fake_record_rows']) === $recordCountBefore, 'unconfirmed browser/provider data cannot create a success record');
+$amountMismatch = piePaymentCompleteAttempt($attempt, 'stripe', array('confirmed' => true, 'reference' => 'pi_12345678', 'amount' => '249.99', 'currency' => 'USD'), 'cs_test_fake');
+paymentCheck($amountMismatch['ok'] === false && count($GLOBALS['fake_record_rows']) === $recordCountBefore, 'a mismatched gateway amount cannot be recorded as successful');
+$confirmation = array('confirmed' => true, 'reference' => 'pi_12345678', 'amount' => '250.25', 'currency' => 'USD');
+$completed = piePaymentCompleteAttempt($attempt, 'stripe', $confirmation, 'cs_test_session');
+paymentCheck($completed['ok'] === true && $completed['transaction_id'] === 'pi_12345678', 'matching server confirmation creates the successful record');
+$record = $GLOBALS['fake_record_rows']['stripe|pi_12345678'];
+paymentCheck($record['status'] === 'succeeded' && $record['currency'] === 'USD' && $record['amount'] === '250.25', 'record stores confirmed amount, currency and success status');
+paymentCheck($record['payer_name'] === 'Ada Lovelace' && $record['payer_email'] === 'ada@example.test' && $record['payer_phone'] === '+1 (555) 123-4567', 'record stores the server-validated customer details');
+paymentCheck($record['service'] === 'AI Optimization' && $record['notes'] !== '', 'record stores the selected service and customer notes');
+$again = piePaymentCompleteAttempt($attempt, 'stripe', $confirmation, 'cs_test_session');
+paymentCheck($again['ok'] === true && count($GLOBALS['fake_record_rows']) === $recordCountBefore + 1, 'a duplicate provider confirmation does not create another record');
 
-/* --------------------------- Public page wiring --------------------------- */
-$public = source('pay-online.php');
-check(strpos($public, 'pieIsPayPalEnabled()') !== false && strpos($public, 'pieIsStripeEnabled()') !== false, 'the Pay Online page still honours both toggles');
-check(strpos($public, "pieRenderPaymentCode(\$paypalSdkCode, 'paypal')") !== false, 'the PayPal block is rendered through the integration layer');
-check(strpos($public, "pieRenderPaymentCode(\$stripeSdkCode, 'stripe')") !== false, 'the Stripe block is rendered through the integration layer');
-check(strpos($public, 'id="paypal-payment-code"') !== false && strpos($public, 'id="stripe-payment-code"') !== false, 'the two provider blocks keep unique container ids');
-check(strpos($public, 'Online payments are currently unavailable') !== false, 'the unavailable message is unchanged');
-check(substr_count($public, 'pay-custom-code') === 2, 'each provider renders exactly one code block');
-check(strpos($public, '<?= $paypalSdkCode ?>') === false && strpos($public, '<?= $stripeSdkCode ?>') === false, 'code is never echoed without going through the renderer');
-check(substr_count($public, 'class="info-card') === 0, 'the Pay Online page no longer uses the small side cards');
-check(strpos($public, 'Need help or having difficulties?') !== false, 'the need-help block is present');
-check(strpos($public, 'founder-card founder-compact pay-help-card') !== false, 'the help block uses the home-page founder-note layout');
-check(substr_count($public, 'pay-panel') >= 2, 'the payment details panel is rendered');
-check(strpos($public, 'class="pay-shell"') === false, 'the payment details are no longer boxed into a two-column shell');
-check(strpos($public, 'Provider-managed checkout') === false && strpos($public, 'Services you can pay for') === false, 'the two removed helper cards are gone');
-check(strpos($public, 'pay-faq-wrap') !== false, 'the compact payment FAQ has its own wrapper');
-check(substr_count($public, 'paymentFaq') >= 2, 'the FAQ is built from the payment FAQ data');
-check(strpos($public, 'data-contact-modal') === false, 'the Pay Online page links to the Contact page instead of the popup');
+/* PRG notices keep success in server session state, never in a query string. */
+if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
+piePaymentSetNotice('success', '', array('name' => 'Ada Lovelace', 'amount' => '250.25', 'reference' => 'pi_12345678'));
+$notice = piePaymentConsumeNotice();
+paymentCheck($notice['type'] === 'success' && $notice['name'] === 'Ada Lovelace' && $notice['reference'] === 'pi_12345678', 'a server-created PRG notice carries the confirmed name and transaction reference');
+paymentCheck(piePaymentConsumeNotice() === null, 'PRG notices are consumed once');
 
-echo "\n$count checks passed.\n";
+/* Static safety checks for the customer page and Admin. */
+$page = paymentSource('pay-online.php');
+foreach (array('actions.order.create', 'actions.order.capture', 'paypal.com/sdk', 'paypal.Buttons', 'stripe-js', 'Stripe(', 'client_secret', 'TPT_STRIPE', 'TPT_PAYPAL') as $forbidden) {
+    paymentCheck(stripos($page, $forbidden) === false, 'public payment page has no browser payment integration: ' . $forbidden);
+}
+paymentCheck(strpos($page, 'name="phone"') !== false && strpos($page, 'name="service"') !== false && strpos($page, 'name="amount"') !== false, 'existing customer, service and amount form fields remain');
+paymentCheck(strpos($page, 'id="payment-form"') !== false && strpos($page, 'id="payment-name"') !== false && strpos($page, 'id="tpt-payment-confirmation"') !== false, 'stable payment form and confirmation identifiers remain in place');
+paymentCheck(strpos($page, 'Payment Reference:') !== false && strpos($page, 'successfully completed.') !== false, 'the exact server-confirmed thank-you and reference messages are rendered');
+paymentCheck(strpos($page, 'csrfField()') !== false && strpos($page, 'validateCSRF') === false, 'the public form includes the session CSRF field');
+$admin = paymentSource('admin/payments.php');
+paymentCheck(strpos($admin, 'requireAdmin()') !== false && strpos($admin, 'validateCSRF()') !== false, 'Admin Payments retains authentication and CSRF checks');
+paymentCheck(strpos($admin, 'requireAdmin()') < strpos($admin, 'Schema::ensure()'), 'Admin authentication runs before payment migrations or settings writes');
+paymentCheck(strpos($admin, 'name="paypal_secret" type="password" value=""') !== false && strpos($admin, 'name="stripe_secret_key" type="password" value=""') !== false, 'admin secret inputs are blank and never echo stored credentials');
+paymentCheck(strpos($admin, 'pieSavePaymentCredential') !== false && strpos($admin, 'savePaymentSetting(\'paypal_secret\'') === false, 'admin stores provider secrets encrypted rather than as plaintext settings');
+paymentCheck(strpos($admin, 'data-edit-code') === false && strpos($admin, 'paypal_sdk_code') === false && strpos($admin, 'stripe_sdk_code') === false, 'custom payment-code editors/settings have been removed');
+paymentCheck(!file_exists(BASE_PATH . '/core/PaymentTemplates.php'), 'legacy custom payment-code renderer has been removed');
+$routes = paymentSource('app/routes.php');
+paymentCheck(strpos($routes, '/paypal-api') !== false && strpos($routes, '/stripe-api') !== false && strpos($routes, '/stripe-webhook') !== false, 'separate server-side provider routes and signed Stripe webhook are routed');
+$css = paymentSource('assets/css/refinements.css');
+paymentCheck(strpos($css, '.pay-layout{display:grid') !== false && strpos($css, '@media(max-width:640px)') !== false, 'the payment form has responsive desktop/mobile layout rules');
+
+paymentTestSummary();

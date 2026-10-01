@@ -21,14 +21,10 @@ foreach ($admins as $path => $file) {
 $router->add(array('GET', 'HEAD'), '~^/search/?$~D', array('PublicController', 'search'));
 $router->add(array('GET'), '~^/api/search/?$~D', array('ApiController', 'search'));
 $router->add(array('POST'), '~^/api/chat/?$~D', function () { require_once BASE_PATH . '/includes/chatbot-api.php'; handleChatbotRequest(); });
-/* Server-side PayPal create/capture (the browser never receives the Secret). */
-foreach (array('/paypal-api', '/api/paypal/create-order', '/api/paypal/capture-order', '/api/paypal/status') as $paypalPath) {
-    $router->add(array('POST'), '~^' . preg_quote($paypalPath, '~') . '/?$~D', function () { require_once BASE_PATH . '/paypal-api.php'; });
-}
-/* Server-side Stripe create/confirm (the browser never receives the key). */
-foreach (array('/stripe-api', '/api/stripe/create-intent', '/api/stripe/confirm', '/api/stripe/status') as $stripePath) {
-    $router->add(array('POST'), '~^' . preg_quote($stripePath, '~') . '/?$~D', function () { require_once BASE_PATH . '/stripe-api.php'; });
-}
+/* Each checkout endpoint accepts a normal form POST and a provider return GET.
+   Neither endpoint publishes credentials or requires a browser payment SDK. */
+$router->add(array('GET', 'POST'), '~^/paypal-api/?$~D', function () { require_once BASE_PATH . '/paypal-api.php'; });
+$router->add(array('GET', 'POST'), '~^/stripe-api/?$~D', function () { require_once BASE_PATH . '/stripe-api.php'; });
 /* Stripe webhook — authenticated by the Stripe-Signature header, not a session. */
 foreach (array('/stripe-webhook', '/api/stripe/webhook') as $stripeWebhookPath) {
     $router->add(array('POST'), '~^' . preg_quote($stripeWebhookPath, '~') . '/?$~D', function () { require_once BASE_PATH . '/stripe-webhook.php'; });
