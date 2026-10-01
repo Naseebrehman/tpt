@@ -427,8 +427,11 @@ function piePaymentBridge(array $providers)
     return field && typeof field.value === 'string' ? field.value : '';
   }
 
-  /** Ask the server to capture and verify an approved order. */
-  function serverCapture(orderId, expectedAmount) {
+  /** Ask the server to capture and verify an approved order.
+   *  The optional third argument carries the buyer's name/service (used only
+   *  for the payment record) — never a card, email or any credential. */
+  function serverCapture(orderId, expectedAmount, buyer) {
+    buyer = buyer || {};
     return fetch(config.paypal.endpoint, {
       method: 'POST',
       credentials: 'same-origin',
@@ -437,6 +440,10 @@ function piePaymentBridge(array $providers)
         action: 'capture',
         order_id: orderId,
         expected_amount: expectedAmount || '',
+        name: buyer.name || '',
+        service: buyer.service || '',
+        email: buyer.email || '',
+        phone: buyer.phone || '',
         csrf_token: config.csrf || ''
       })
     }).then(function (response) {
@@ -634,7 +641,7 @@ function piePaymentBridge(array $providers)
   /* Exposed for the administrator's own code and for the starter templates. */
   window.TPT_PAYPAL = {
     serverVerification: !!(config.paypal && config.paypal.serverVerification),
-    capture: function (orderId, expectedAmount) { return serverCapture(orderId, expectedAmount); },
+    capture: function (orderId, expectedAmount, buyer) { return serverCapture(orderId, expectedAmount, buyer); },
     showConfirmation: showConfirmation,
     reportProblem: reportCaptureProblem
   };

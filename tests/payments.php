@@ -180,9 +180,9 @@ check(count(array_intersect($paypalIds, $stripeIds)) === 0, 'PayPal and Stripe s
 check(in_array('paypal-payment-form', $paypalIds, true) && in_array('stripe-payment-form', $stripeIds, true), 'each form has its own unique id');
 check(in_array('paypal-service', $paypalIds, true) && in_array('stripe-service', $stripeIds, true), 'each service dropdown has its own unique id');
 check(!in_array('paypal-terms', $paypalIds, true) && !in_array('stripe-terms', $stripeIds, true), 'the Terms checkbox is gone from both implementations');
-check(substr_count($paypalStarter, 'data-tpt-terms') >= 1 && substr_count($stripeStarter, 'data-tpt-terms') >= 1, 'both implementations still link the shared Terms URL');
-check(strpos($paypalStarter, 'By continuing with your payment, you agree to our') !== false, 'the PayPal starter shows the short Terms agreement line');
-check(strpos($stripeStarter, 'By continuing with your payment, you agree to our') !== false, 'the Stripe starter shows the short Terms agreement line');
+check(substr_count($paypalStarter, 'data-tpt-terms') === 0 && substr_count($stripeStarter, 'data-tpt-terms') === 0, 'the legal line is not duplicated inside each provider form');
+check(substr_count($paypalStarter, 'Terms &amp; Conditions') === 0 && substr_count($stripeStarter, 'Terms &amp; Conditions') === 0, 'neither form repeats the Terms sentence');
+check(substr_count($paypalStarter, 'By continuing with your payment') === 0 && substr_count($stripeStarter, 'By continuing with your payment') === 0, 'the shared legal line is rendered once by the page, not by each form');
 check(!preg_match('/name="terms"|id="paypal-terms"|id="stripe-terms"/', $paypalStarter . $stripeStarter), 'no Terms checkbox remains in either implementation');
 check(preg_match('/type="checkbox"[^>]*name="terms"/i', $paypalStarter . $stripeStarter) === 0, 'no checkbox is required before paying');
 check(in_array('paypal-amount', $paypalIds, true) && in_array('stripe-amount', $stripeIds, true), 'each amount field has its own unique id');
@@ -207,10 +207,21 @@ check(piePaymentUnlinkedSelects('') === array(), 'no dropdown, no warning');
 /* Both implementations read the shared Services list and the shared Terms URL. */
 foreach (array($paypalStarter, $stripeStarter) as $index => $starter) {
     check(strpos($starter, '{{SERVICES_OPTIONS}}') !== false, 'starter ' . ($index + 1) . ' builds its dropdown from the Services system');
-    check(strpos($starter, '{{TERMS_URL}}') !== false, 'starter ' . ($index + 1) . ' links the shared Terms URL');
-    check(strpos($starter, 'data-tpt-services') !== false && strpos($starter, 'data-tpt-terms') !== false, 'starter ' . ($index + 1) . ' also works through the shared bridge');
+    check(strpos($starter, 'data-tpt-services') !== false, 'starter ' . ($index + 1) . ' also works through the shared bridge');
 }
 check(strpos($paypalStarter, '{{PAYPAL_CLIENT_ID}}') !== false, 'the PayPal starter takes its Client ID from the dashboard');
+check(strpos(source('core/Payments.php'), 'querySelectorAll(\'a[data-tpt-terms]\')') !== false, 'the bridge still rewrites any data-tpt-terms link to the one shared Terms URL');
+
+/* ------------------- Payment form asks for three things ------------------- */
+check(substr_count($paypalStarter, '<input') === 2 && substr_count($paypalStarter, '<select') === 1 && substr_count($paypalStarter, '<textarea') === 0, 'the PayPal form has exactly three fields (name/business, service, amount)');
+check(substr_count($stripeStarter, '<input') === 2 && substr_count($stripeStarter, '<select') === 1 && substr_count($stripeStarter, '<textarea') === 0, 'the Stripe form has exactly three fields plus the card element');
+check(strpos($paypalStarter, 'Name / Business name') !== false && strpos($stripeStarter, 'Name / Business name') !== false, 'both forms label the field Name / Business name');
+check(strpos($paypalStarter, 'paypal-email') === false && strpos($stripeStarter, 'stripe-email') === false, 'neither form asks for an email address');
+check(strpos($paypalStarter, 'name="notes"') === false && strpos($stripeStarter, 'name="notes"') === false, 'neither form asks for project notes');
+check(strpos($paypalStarter, "Name / Business name") !== false || strpos($paypalStarter, 'paypal-name') !== false, 'the PayPal name field keeps its id');
+check(strpos($paypalStarter, "'paypal-email'") === false && strpos($paypalStarter, "getElementById('paypal-email')") === false, 'PayPal validation no longer references the removed email field');
+check(strpos($stripeStarter, "'stripe-email'") === false && strpos($stripeStarter, "getElementById('stripe-email')") === false, 'Stripe validation no longer references the removed email field');
+check(strpos(source('core/Payments.php'), 'buyer.name') !== false && strpos(source('core/Payments.php'), 'buyer.service') !== false, 'the server capture also records the typed name and chosen service');
 
 /* --------------------------------- Bridge ---------------------------------- */
 $bridge = piePaymentBridge(array('paypal', 'stripe'));
@@ -275,6 +286,7 @@ check(strpos(source('paypal-api.php'), 'piePayPalSecret') === false, 'the public
 check(strpos(source('pay-online.php'), 'paypal_secret') === false, 'the Pay Online page never reads the Secret');
 check(strpos(source('pay-online.php'), 'id="tpt-payment-confirmation"') !== false, 'the page ships the confirmed-payment block');
 check(strpos(source('pay-online.php'), 'By continuing with your payment, you agree to our') !== false, 'the page shows the short Terms agreement line');
+check(substr_count(source('pay-online.php'), 'data-tpt-terms-page') === 1, 'exactly ONE shared Terms agreement line is rendered on the page');
 
 /* --------------------------- Public page wiring --------------------------- */
 $public = source('pay-online.php');
@@ -285,8 +297,11 @@ check(strpos($public, 'id="paypal-payment-code"') !== false && strpos($public, '
 check(strpos($public, 'Online payments are currently unavailable') !== false, 'the unavailable message is unchanged');
 check(substr_count($public, 'pay-custom-code') === 2, 'each provider renders exactly one code block');
 check(strpos($public, '<?= $paypalSdkCode ?>') === false && strpos($public, '<?= $stripeSdkCode ?>') === false, 'code is never echoed without going through the renderer');
-check(substr_count($public, 'class="info-card') === 1, 'the Pay Online page shows exactly ONE helper card');
-check(strpos($public, 'Need help or having difficulties?') !== false, 'the helper card is the need-help card');
+check(substr_count($public, 'class="info-card') === 0, 'the Pay Online page no longer uses the small side cards');
+check(strpos($public, 'Need help or having difficulties?') !== false, 'the need-help block is present');
+check(strpos($public, 'founder-card founder-compact pay-help-card') !== false, 'the help block uses the home-page founder-note layout');
+check(substr_count($public, 'pay-panel') >= 2, 'the payment details panel is rendered');
+check(strpos($public, 'class="pay-shell"') === false, 'the payment details are no longer boxed into a two-column shell');
 check(strpos($public, 'Provider-managed checkout') === false && strpos($public, 'Services you can pay for') === false, 'the two removed helper cards are gone');
 check(strpos($public, 'pay-faq-wrap') !== false, 'the compact payment FAQ has its own wrapper');
 check(substr_count($public, 'paymentFaq') >= 2, 'the FAQ is built from the payment FAQ data');

@@ -92,65 +92,66 @@ require_once __DIR__ . '/includes/header.php';
 
 <section class="section pay-section">
   <div class="container">
-    <div class="pay-shell">
-      <div class="contact-panel pay-panel">
-        <div class="pay-panel-head">
-          <h2>Payment details</h2>
-          <p class="sub">Choose your provider, enter the amount, and pay. Payment communication happens on the provider’s own secure checkout — this site never sees or stores your card or PayPal credentials.</p>
-        </div>
-
-        <!-- Confirmed payments only: filled in after the server has verified the capture. -->
-        <div class="pay-confirmation" id="tpt-payment-confirmation" role="status" aria-live="polite" hidden></div>
-
-        <?php if ($anyBlock): ?>
-          <?php
-          /* One shared bridge, emitted before the first payment block so the
-             PayPal SDK is intercepted before it loads. It publishes the shared
-             Services list, applies the shared Terms URL, replaces the Terms
-             checkbox with the small legal line, forces NO_SHIPPING, verifies
-             the capture on the server and reports the confirmed payment. */
-          echo piePaymentBridge($renderedProviders);
-          ?>
-          <div class="pay-providers<?= $bothProviders ? ' is-split' : '' ?>">
-            <?php if ($paypalBlock): ?>
-              <div class="pay-provider" data-provider="paypal">
-                <?php if ($bothProviders): ?><p class="pay-provider-label eyebrow"><?= icon('card', 14) ?> Pay with PayPal</p><?php endif; ?>
-                <!-- Administrator's complete PayPal implementation — rendered verbatim, executed once. -->
-                <div class="pay-custom-code" id="paypal-payment-code" data-payment-provider="paypal"><?= pieRenderPaymentCode($paypalSdkCode, 'paypal') ?></div>
-              </div>
-            <?php endif; ?>
-            <?php if ($stripeBlock): ?>
-              <div class="pay-provider" data-provider="stripe">
-                <?php if ($bothProviders): ?><p class="pay-provider-label eyebrow"><?= icon('card', 14) ?> Pay by card (Stripe)</p><?php endif; ?>
-                <!-- Administrator's complete Stripe implementation — rendered verbatim, executed once. -->
-                <div class="pay-custom-code" id="stripe-payment-code" data-payment-provider="stripe"><?= pieRenderPaymentCode($stripeSdkCode, 'stripe') ?></div>
-              </div>
-            <?php endif; ?>
-          </div>
-
-          <!-- Small legal line (the Terms checkbox is gone). -->
-          <p class="pay-terms-note" data-tpt-terms-page="1">By continuing with your payment, you agree to our <a href="<?= esc($termsUrl) ?>" target="_blank" rel="noopener">Terms &amp; Conditions</a>.</p>
-        <?php else: ?>
-          <div class="form-status show" style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:#fca5a5;padding:16px 18px;border-radius:12px;margin:16px 0;">
-            <strong style="display:block;margin-bottom:6px;font-size:1rem;color:#fecaca;">Online payments are currently unavailable.</strong>
-            <span>Please contact our team at <a href="mailto:<?= esc($supportEmail) ?>" style="color:#a78bfa;text-decoration:underline;"><?= esc($supportEmail) ?></a><?php if ($supportPhone !== ''): ?> or call <a href="tel:<?= esc(preg_replace('/[^0-9+]/', '', $supportPhone)) ?>" style="color:#a78bfa;text-decoration:underline;"><?= esc($supportPhone) ?></a><?php endif; ?> to arrange alternative payment.</span>
-          </div>
-        <?php endif; ?>
+    <!-- Payment details: full container width on every screen. -->
+    <div class="contact-panel pay-panel">
+      <div class="pay-panel-head">
+        <h2>Payment details</h2>
+        <p class="sub">Choose your provider, enter the amount, and pay. Payment communication happens on the provider’s own secure checkout — this site never sees or stores your card or PayPal credentials.</p>
       </div>
 
-      <aside class="contact-side pay-side">
-        <!-- One helper card only: need help / having difficulties. -->
-        <div class="info-card pay-help-card">
-          <span class="info-icon"><?= icon('mail', 22) ?></span>
-          <span>
-            <strong>Need help or having difficulties?</strong>
-            <p>If a payment does not go through, something looks wrong, or you are not sure which option to choose — stop before paying again and talk to us first.</p>
-            <p>Email <a href="mailto:<?= esc($supportEmail) ?>"><?= esc($supportEmail) ?></a><?php if ($supportPhone !== ''): ?><br>Call <a href="tel:<?= esc(preg_replace('/[^0-9+]/', '', $supportPhone)) ?>"><?= esc($supportPhone) ?></a><?php endif; ?></p>
-            <p>Quote the amount and any reference shown and we will check the payment with the provider for you.</p>
-            <p><a class="link-arrow" href="<?= url('contact') ?>">Send us the details <?= icon('arrow-r', 14) ?></a></p>
-          </span>
+      <!-- Confirmed payments only: filled in after the server has verified the capture. -->
+      <div class="pay-confirmation" id="tpt-payment-confirmation" role="status" aria-live="polite" hidden></div>
+
+      <?php if ($anyBlock): ?>
+        <?php
+        /* One shared bridge, emitted before the first payment block so the
+           PayPal SDK is intercepted before it loads. It publishes the shared
+           Services list, applies the shared Terms URL, replaces the Terms
+           checkbox with the small legal line, forces NO_SHIPPING, verifies
+           the capture on the server and reports the confirmed payment. */
+        echo piePaymentBridge($renderedProviders);
+        ?>
+        <div class="pay-providers<?= $bothProviders ? ' is-split' : '' ?>">
+          <?php if ($paypalBlock): ?>
+            <div class="pay-provider" data-provider="paypal">
+              <p class="pay-provider-label eyebrow"><?= icon('card', 14) ?> Pay with PayPal</p>
+              <!-- Administrator's complete PayPal implementation — rendered verbatim, executed once. -->
+              <div class="pay-custom-code" id="paypal-payment-code" data-payment-provider="paypal"><?= pieRenderPaymentCode($paypalSdkCode, 'paypal') ?></div>
+            </div>
+          <?php endif; ?>
+          <?php if ($stripeBlock): ?>
+            <div class="pay-provider" data-provider="stripe">
+              <p class="pay-provider-label eyebrow"><?= icon('card', 14) ?> Pay by card (Stripe)</p>
+              <!-- Administrator's complete Stripe implementation — rendered verbatim, executed once. -->
+              <div class="pay-custom-code" id="stripe-payment-code" data-payment-provider="stripe"><?= pieRenderPaymentCode($stripeSdkCode, 'stripe') ?></div>
+            </div>
+          <?php endif; ?>
         </div>
-      </aside>
+
+        <!-- Small legal line (the Terms checkbox is gone). -->
+        <p class="pay-terms-note" data-tpt-terms-page="1">By continuing with your payment, you agree to our <a href="<?= esc($termsUrl) ?>" target="_blank" rel="noopener">Terms &amp; Conditions</a>.</p>
+      <?php else: ?>
+        <div class="form-status show" style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:#fca5a5;padding:16px 18px;border-radius:12px;margin:16px 0;">
+          <strong style="display:block;margin-bottom:6px;font-size:1rem;color:#fecaca;">Online payments are currently unavailable.</strong>
+          <span>Please contact our team at <a href="mailto:<?= esc($supportEmail) ?>" style="color:#a78bfa;text-decoration:underline;"><?= esc($supportEmail) ?></a><?php if ($supportPhone !== ''): ?> or call <a href="tel:<?= esc(preg_replace('/[^0-9+]/', '', $supportPhone)) ?>" style="color:#a78bfa;text-decoration:underline;"><?= esc($supportPhone) ?></a><?php endif; ?> to arrange alternative payment.</span>
+        </div>
+      <?php endif; ?>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PAYMENT SUPPORT (founder-note layout) ================= -->
+<section class="section pay-help-section" aria-labelledby="payHelpHeading">
+  <div class="container">
+    <div class="founder-card founder-compact pay-help-card" data-aos="fade-up">
+      <span class="founder-avatar pay-help-avatar" aria-hidden="true"><?= icon('mail', 30) ?></span>
+      <div class="founder-note">
+        <p class="eyebrow">Payment support</p>
+        <h2 id="payHelpHeading">Need help or having difficulties?</h2>
+        <p>If a payment does not go through, something looks wrong, or you are not sure which option to choose — stop before paying again and talk to us first. Quote the amount and any reference shown, and we will check the payment with the provider for you.</p>
+        <span class="founder-sig">Email <a href="mailto:<?= esc($supportEmail) ?>"><?= esc($supportEmail) ?></a><?php if ($supportPhone !== ''): ?> · Call <a href="tel:<?= esc(preg_replace('/[^0-9+]/', '', $supportPhone)) ?>"><?= esc($supportPhone) ?></a><?php endif; ?></span>
+      </div>
+      <a class="btn btn-primary founder-book" href="<?= url('contact') ?>">Send us the details <?= icon('arrow-r', 18) ?></a>
     </div>
   </div>
 </section>
