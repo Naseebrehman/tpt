@@ -25,6 +25,7 @@ if (!defined('DB_OK')) {
     require_once __DIR__ . '/includes/init.php';
 }
 require_once __DIR__ . '/includes/payments.php';
+require_once __DIR__ . '/core/PaymentRecords.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
@@ -131,6 +132,27 @@ $message = 'Thank You, ' . $displayName . '! Your payment of $' . $confirmation[
 /* Existing tables, best effort — a logging failure never affects the buyer. */
 piePayPalRecord($capture['data'], $service, $displayName, $buyerEmail, $buyerPhone);
 
+/* The dashboard's payment record, written EXACTLY ONCE per PayPal capture
+   (the same capture id is never recorded twice, whatever the browser sends).
+   The payer email PayPal itself reports is preferred over the typed one. */
+$recordEmail = $buyerEmail;
+if ($recordEmail === '' && !empty($capture['data']['payer']['email_address'])) {
+    $recordEmail = mb_substr(sanitize($capture['data']['payer']['email_address']), 0, 150);
+}
+$recordId = piePaymentRecord(array(
+    'provider'                => 'paypal',
+    'provider_transaction_id' => $confirmation['reference'],
+    'payer_name'              => $displayName,
+    'payer_email'             => $recordEmail,
+    'service'                 => $service,
+    'amount'                  => $confirmation['amount'],
+    'currency'                => $confirmation['currency'],
+    'status'                  => 'succeeded',
+    'verification_mode'       => 'server',
+    'raw_reference'           => $orderId,
+    'ip_address'              => pieClientIp(),
+));
+
 piePayPalApiRespond(true, $message, array(
     'confirmed' => true,
     'name'      => $displayName,
@@ -138,5 +160,8 @@ piePayPalApiRespond(true, $message, array(
     'currency'  => $confirmation['currency'],
     'reference' => $confirmation['reference'],
     'status'    => $confirmation['status'],
+    'service'   => $service,
+    'provider'  => 'paypal',
+    'record_id' => $recordId,
     'details'   => $capture['data'],
 ));

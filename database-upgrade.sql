@@ -22,6 +22,28 @@ ALTER TABLE resources ADD COLUMN content LONGTEXT AFTER description;
 ALTER TABLE resources ADD COLUMN reading_time INT DEFAULT 5 AFTER category;
 ALTER TABLE resources MODIFY COLUMN resource_type ENUM('guide','template','video','blueprint','playbook','checklist','framework','tutorial','case-study') DEFAULT 'guide';
 
+-- Confirmed payments (one row per gateway transaction, distinct from the
+-- legacy `payments` request/invoice table below).
+CREATE TABLE IF NOT EXISTS payment_records (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  provider VARCHAR(20) NOT NULL DEFAULT '',
+  provider_transaction_id VARCHAR(150) DEFAULT NULL,
+  payer_name VARCHAR(191) NOT NULL DEFAULT '',
+  payer_email VARCHAR(191) NOT NULL DEFAULT '',
+  service VARCHAR(191) NOT NULL DEFAULT '',
+  amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+  currency VARCHAR(10) NOT NULL DEFAULT 'USD',
+  status VARCHAR(30) NOT NULL DEFAULT 'succeeded',
+  verification_mode VARCHAR(20) NOT NULL DEFAULT 'server',
+  raw_reference VARCHAR(255) NOT NULL DEFAULT '',
+  ip_address VARCHAR(45) NOT NULL DEFAULT '',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_provider_transaction (provider, provider_transaction_id),
+  KEY idx_payment_records_provider (provider),
+  KEY idx_payment_records_status (status),
+  KEY idx_payment_records_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS payments (
   id INT AUTO_INCREMENT PRIMARY KEY,
   token VARCHAR(64) UNIQUE NOT NULL,
@@ -104,6 +126,11 @@ INSERT INTO settings (setting_key, setting_value) SELECT 'paypal_client_id', '' 
 INSERT INTO settings (setting_key, setting_value) SELECT 'terms_url', '' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'terms_url');
 INSERT INTO settings (setting_key, setting_value) SELECT 'paypal_secret', '' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'paypal_secret');
 INSERT INTO settings (setting_key, setting_value) SELECT 'paypal_env', 'live' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'paypal_env');
+-- Server-side Stripe credentials (never rendered to a browser): the Secret
+-- Key switches Stripe to server-verified mode, the Webhook Secret verifies
+-- the Stripe-Signature on /stripe-webhook.
+INSERT INTO settings (setting_key, setting_value) SELECT 'stripe_secret_key', '' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'stripe_secret_key');
+INSERT INTO settings (setting_key, setting_value) SELECT 'stripe_webhook_secret', '' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'stripe_webhook_secret');
 
 -- The existing Services system is the single source of truth for both payment
 -- forms; created here only when an older dump is missing it.

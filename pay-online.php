@@ -23,7 +23,6 @@ $paypalEnabled = pieIsPayPalEnabled();
 $stripeEnabled = pieIsStripeEnabled();
 $paypalSdkCode = piePayPalSdkCode();
 $stripeSdkCode = pieStripeSdkCode();
-$serverVerified = piePayPalServerReady();
 
 /* Render a provider block only when it is enabled AND has saved code.
  * Both enabled → both complete code blocks render; both disabled (or no
@@ -40,6 +39,14 @@ if ($paypalBlock) { $renderedProviders[] = 'paypal'; }
 if ($stripeBlock) { $renderedProviders[] = 'stripe'; }
 
 $bothProviders = ($paypalBlock && $stripeBlock);
+/* Server-verified mode is decided PER PROVIDER: PayPal needs a Client ID AND
+   Secret, Stripe needs a Secret Key. Whichever providers run server-side, the
+   badge is shown when at least one of the RENDERED providers does — and each
+   provider without credentials keeps working exactly as it does today
+   (browser-only SDK confirmation). */
+$paypalServerMode = ($paypalBlock && piePayPalServerReady());
+$stripeServerMode = ($stripeBlock && pieStripeServerReady());
+$serverVerified   = ($paypalServerMode || $stripeServerMode);
 $termsUrl      = pieTermsUrl();
 $supportEmail  = getSetting('site_email', 'info@thepietechnologies.com');
 $supportPhone  = getSetting('site_phone', '');
@@ -111,25 +118,61 @@ require_once __DIR__ . '/includes/header.php';
            the capture on the server and reports the confirmed payment. */
         echo piePaymentBridge($renderedProviders);
         ?>
+        <?php
+        /* One complete provider block per enabled gateway. When both are
+           enabled they stack (PayPal first, Stripe below) full-width with a
+           thin divider and their own label; with one enabled that provider is
+           shown full-width on its own.
+
+           Each block is a two-column grid: the buyer's fields and the shared
+           Terms line on the LEFT, the gateway's own buttons (and the
+           "Powered by" line) on the RIGHT, vertically centred. The shared
+           bridge MOVES the administrator's existing field groups and button
+           containers into those columns — no node is copied, rewritten or
+           executed twice, so their ids, names and bindings keep working. Under
+           820px the columns stack (form first, buttons below). */
+        $providerBlocks = array();
+        if ($paypalBlock) {
+            $providerBlocks[] = array(
+                'key'   => 'paypal',
+                'label' => 'Pay with PayPal',
+                'mode'  => $paypalServerMode,
+            );
+        }
+        if ($stripeBlock) {
+            $providerBlocks[] = array(
+                'key'   => 'stripe',
+                'label' => 'Pay by card (Stripe)',
+                'mode'  => $stripeServerMode,
+            );
+        }
+        ?>
         <div class="pay-providers<?= $bothProviders ? ' is-split' : '' ?>">
-          <?php if ($paypalBlock): ?>
-            <div class="pay-provider" data-provider="paypal">
-              <p class="pay-provider-label eyebrow"><?= icon('card', 14) ?> Pay with PayPal</p>
+          <?php foreach ($providerBlocks as $providerBlockItem): $providerKey = $providerBlockItem['key']; ?>
+            <div class="pay-provider" data-provider="<?= esc($providerKey) ?>">
+              <p class="pay-provider-label eyebrow"><?= icon('card', 14) ?> <?= esc($providerBlockItem['label']) ?><?php if ($providerBlockItem['mode']): ?> <span class="pay-provider-mode"><?= icon('lock', 12) ?> Server-verified</span><?php endif; ?></p>
+              <div class="pay-split" data-tpt-split="<?= esc($providerKey) ?>">
+                <div class="pay-split-form" data-tpt-form>
+                  <h3 class="pay-split-title" data-tpt-title>Make a Payment</h3>
+                  <div class="pay-split-fields" data-tpt-fields></div>
+                  <!-- Small legal line (the Terms checkbox is gone), wired to the ONE shared Terms URL. -->
+                  <p class="pay-terms-note" data-tpt-terms-page="1">By continuing with your payment, you agree to our <a href="<?= esc($termsUrl) ?>" data-tpt-terms="1" target="_blank" rel="noopener">Terms &amp; Conditions</a>.</p>
+                </div>
+                <div class="pay-split-actions" data-tpt-actions>
+                  <div class="pay-split-buttons" data-tpt-buttons></div>
+                  <p class="pay-powered-by" data-tpt-powered="1">Powered by <strong><?= $providerKey === 'stripe' ? 'Stripe' : 'PayPal' ?></strong></p>
+                </div>
+              </div>
+              <?php if ($providerKey === 'paypal'): ?>
               <!-- Administrator's complete PayPal implementation — rendered verbatim, executed once. -->
               <div class="pay-custom-code" id="paypal-payment-code" data-payment-provider="paypal"><?= pieRenderPaymentCode($paypalSdkCode, 'paypal') ?></div>
-            </div>
-          <?php endif; ?>
-          <?php if ($stripeBlock): ?>
-            <div class="pay-provider" data-provider="stripe">
-              <p class="pay-provider-label eyebrow"><?= icon('card', 14) ?> Pay by card (Stripe)</p>
+              <?php else: ?>
               <!-- Administrator's complete Stripe implementation — rendered verbatim, executed once. -->
               <div class="pay-custom-code" id="stripe-payment-code" data-payment-provider="stripe"><?= pieRenderPaymentCode($stripeSdkCode, 'stripe') ?></div>
+              <?php endif; ?>
             </div>
-          <?php endif; ?>
+          <?php endforeach; ?>
         </div>
-
-        <!-- Small legal line (the Terms checkbox is gone). -->
-        <p class="pay-terms-note" data-tpt-terms-page="1">By continuing with your payment, you agree to our <a href="<?= esc($termsUrl) ?>" target="_blank" rel="noopener">Terms &amp; Conditions</a>.</p>
       <?php else: ?>
         <div class="form-status show" style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:#fca5a5;padding:16px 18px;border-radius:12px;margin:16px 0;">
           <strong style="display:block;margin-bottom:6px;font-size:1rem;color:#fecaca;">Online payments are currently unavailable.</strong>

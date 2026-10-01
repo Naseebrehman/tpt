@@ -25,6 +25,14 @@ $router->add(array('POST'), '~^/api/chat/?$~D', function () { require_once BASE_
 foreach (array('/paypal-api', '/api/paypal/create-order', '/api/paypal/capture-order', '/api/paypal/status') as $paypalPath) {
     $router->add(array('POST'), '~^' . preg_quote($paypalPath, '~') . '/?$~D', function () { require_once BASE_PATH . '/paypal-api.php'; });
 }
+/* Server-side Stripe create/confirm (the browser never receives the key). */
+foreach (array('/stripe-api', '/api/stripe/create-intent', '/api/stripe/confirm', '/api/stripe/status') as $stripePath) {
+    $router->add(array('POST'), '~^' . preg_quote($stripePath, '~') . '/?$~D', function () { require_once BASE_PATH . '/stripe-api.php'; });
+}
+/* Stripe webhook — authenticated by the Stripe-Signature header, not a session. */
+foreach (array('/stripe-webhook', '/api/stripe/webhook') as $stripeWebhookPath) {
+    $router->add(array('POST'), '~^' . preg_quote($stripeWebhookPath, '~') . '/?$~D', function () { require_once BASE_PATH . '/stripe-webhook.php'; });
+}
 foreach (array('contact' => array('contact.php', 'contact_submit'), 'lead' => array('contact.php', 'contact_submit'), 'newsletter' => array('newsletter.php', null)) as $path => $handler) {
     $router->add(array('POST'), '~^/api/' . $path . '/?$~D', function () use ($handler) { ApiController::legacy($handler[0], $handler[1]); });
 }

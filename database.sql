@@ -212,6 +212,26 @@ CREATE TABLE IF NOT EXISTS payment_events (
     REFERENCES payments (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS payment_records (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  provider VARCHAR(20) NOT NULL DEFAULT '',
+  provider_transaction_id VARCHAR(150) DEFAULT NULL,
+  payer_name VARCHAR(191) NOT NULL DEFAULT '',
+  payer_email VARCHAR(191) NOT NULL DEFAULT '',
+  service VARCHAR(191) NOT NULL DEFAULT '',
+  amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+  currency VARCHAR(10) NOT NULL DEFAULT 'USD',
+  status VARCHAR(30) NOT NULL DEFAULT 'succeeded',
+  verification_mode VARCHAR(20) NOT NULL DEFAULT 'server',
+  raw_reference VARCHAR(255) NOT NULL DEFAULT '',
+  ip_address VARCHAR(45) NOT NULL DEFAULT '',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_provider_transaction (provider, provider_transaction_id),
+  KEY idx_payment_records_provider (provider),
+  KEY idx_payment_records_status (status),
+  KEY idx_payment_records_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS settings (
   id INT AUTO_INCREMENT PRIMARY KEY,
   setting_key VARCHAR(100) UNIQUE NOT NULL,
@@ -362,6 +382,8 @@ INSERT IGNORE INTO settings (setting_key, setting_value) VALUES
 ('paypal_client_id', ''),
 ('paypal_secret', ''),
 ('paypal_env', 'live'),
+('stripe_secret_key', ''),
+('stripe_webhook_secret', ''),
 ('terms_url', '');
 
 -- ---------------------------------------------------------------------------
