@@ -220,10 +220,15 @@ document.addEventListener('keydown', function(e){
 (function(){
   var container = document.getElementById('paypal-button-container');
   var errBox = document.querySelector('[data-err="pp"]');
-  if (!container || typeof paypal === 'undefined' || !paypal.Buttons) { return; }
+  if (!container || !errBox) { return; }
 
   function value(id){ var el = document.getElementById(id); return el ? String(el.value).trim() : ''; }
-  function fail(message){ if (errBox) { errBox.textContent = message || ''; } }
+  function fail(message){ errBox.textContent = message || ''; }
+
+  if (typeof paypal === 'undefined' || !paypal.Buttons) {
+    fail('PayPal could not be loaded. Refresh the page, or contact us before paying.');
+    return;
+  }
   function amountValue(raw){
     if (!/^\d{1,7}(\.\d{1,2})?$/.test(raw)) return '';
     var amount = parseFloat(raw);
@@ -253,7 +258,8 @@ document.addEventListener('keydown', function(e){
         purchase_units: [{
           description: (pending.service + ' — ' + pending.name).slice(0, 127),
           amount: { currency_code: 'USD', value: pending.amount }
-        }]
+        }],
+        application_context: { shipping_preference: 'NO_SHIPPING', user_action: 'PAY_NOW' }
       });
     },
     onApprove: function(data, actions){
