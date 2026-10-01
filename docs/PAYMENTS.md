@@ -1,84 +1,83 @@
-# Pay Online — server-side checkout
+# Pay Online — PayPal JavaScript SDK
 
-This is the existing TPT payment system. PayPal and Stripe are separate hosted-checkout providers; the Pay Online page uses one ordinary server-posted form and does not load either provider's JavaScript SDK.
+The payment page (`pay-online.php`) offers **PayPal only**. It uses the official
+PayPal JavaScript SDK with the Client ID saved in the application settings.
+There is no secret, no server-side capture, no webhook, no payment API and no
+payment record: the order is created, approved and confirmed by PayPal in the
+browser, and the page then shows the success popup with the amount, service and
+PayPal reference.
 
-## Security and checkout flow
+## Configure the Client ID
 
-1. The customer enters their name, email, optional phone/notes, an active service from Admin → Payments, and a USD amount.
-2. The selected PHP endpoint checks the session-bound CSRF token, rate limit, active service, email and amount. Amounts must be from $0.01 to $1,000,000.00 USD with no more than two decimal places.
-3. The server creates a `pending` row in the existing `payments` table, then creates a PayPal Order or Stripe Checkout Session with the matching amount and a random server-generated token.
-4. The browser is redirected to PayPal or Stripe. No provider secret, API authorization header, PaymentIntent client secret, SDK configuration or browser success callback is sent to the public page.
-5. On return, PHP retrieves/captures the payment directly from the provider and checks the provider status, amount, USD currency, transaction reference, and the attempt token/metadata.
-6. Only a matching provider-confirmed payment is written to `payment_records` as `succeeded`, and its original `payments` row is marked `paid`. A failed or cancelled attempt never becomes a successful record. A signed Stripe webhook can independently record a completed Stripe payment if the customer closes the return page.
-7. After the server confirmation, the Pay Online page shows exactly: `Thank You, [Name]! Your payment of $[Amount] USD was successfully completed.` and `Payment Reference: [Transaction ID]`. Failures and cancellations show a non-success notice.
+1. Sign in to the admin dashboard and open **Admin → Payment Settings**.
+2. Paste the **Client ID** of your PayPal REST app (PayPal Developer Dashboard
+   → Apps & Credentials).
+3. Press **Save**.
 
-`payment_records` is the existing Admin audit list. A successful record stores provider, provider transaction ID, customer name/email/phone, service, notes, amount, currency, status, verification mode, provider reference, IP address and recorded time. The existing Admin Dashboard shows recent confirmed payments and totals; Admin → Payments and Admin → Payment records provide the full list/export. Provider transaction IDs are unique per provider, making webhook/return retries idempotent.
+The Client ID is stored in the existing `settings` table under
+`paypal_client_id` and is read live when the page renders, so changing it takes
+effect on the next page load — nothing is hard-coded and no deployment or cache
+clear is needed.
 
-## Configure credentials
+A Client Secret is **not** required and must not be entered: this integration
+never talks to the PayPal REST API from the server. When no Client ID is saved,
+the Pay Online page shows a “payments are currently unavailable” notice and
+loads no SDK or button.
 
-Run the database upgrade first (see below), then sign in and open **Admin → Payments**.
+The same admin screen keeps the existing **Payment form services** manager that
+feeds the service dropdown on the payment page.
 
-### PayPal
+## What the page does
 
-- Create a PayPal REST app in PayPal Developer Dashboard.
-- Set Client ID, Secret and **Sandbox** or **Live** in the PayPal panel. Use matching Sandbox app credentials for tests.
-- Enable PayPal and save. The Secret is accepted by PHP, encrypted at rest, and never rendered back into an input or customer page. To rotate it, enter a new Secret; to remove it, use the explicit remove checkbox.
+1. The visitor enters their name, email, optional phone/notes, an active service
+   and a USD amount.
+2. The PayPal SDK button validates those fields in the browser and creates the
+   order via `actions.order.create()` with the entered amount and service.
+3. PayPal’s own secure checkout opens. Card/PayPal details are entered on
+   PayPal, never on this site.
+4. On approval `actions.order.capture()` completes the payment and the page
+   shows the PayPal success popup (`#tpt-modal`) plus the inline confirmation
+   with the amount, service and reference.
 
-### Stripe
+## What is deliberately not part of this integration
 
-- Enter a Stripe **Secret Key** (`sk_test_…` for test mode or `sk_live_…` for live mode), enable Stripe, and save.
-- A publishable key is not required: Checkout is hosted by Stripe and created by PHP.
-- The optional Webhook Secret (`whsec_…`) enables signature-verified fallback recording if the customer does not return to the site. Register the URL shown in the Stripe panel and subscribe to `checkout.session.completed`, `checkout.session.async_payment_succeeded`, and `payment_intent.succeeded`. All accepted payment events are re-fetched from Stripe before a record is written.
+- PayPal Client Secret or any other PayPal credential
+- Server-side PayPal confirmation/capture
+- PayPal webhooks
+- Payment verification or status tracking
+- Payment database tables, records, history, dashboard or CSV export
+- Payment APIs or confirmation endpoints
 
-PayPal and Stripe can be enabled independently or together. A gateway is shown to customers only when its toggle is on and the server credentials are valid. Both use the same existing Services list and shared Terms & Conditions URL. Services, records, and the payment form have not been replaced with a second system.
-
-### Credential-encryption key
-
-Set a private random `PAYMENT_ENCRYPTION_KEY` in `config/config.local.php` or the `TPT_PAYMENT_ENCRYPTION_KEY` server environment variable before migrating (see `config/config.local.php.example`). Keep it out of Git and outside the web root. If not set, TPT derives a stable encryption key from the existing private database connection settings and site URL. Keep the key stable: changing it makes already encrypted credentials unreadable; re-enter those credentials in Admin → Payments after a key change.
-
-Stored values use the `enc:v1:` AES-256-GCM format and live in the existing `settings` table. Admin forms show only that a credential is present, never the value. Provider errors are scrubbed before they reach logs or visitors.
+`core/Payments.php` only reads the settings written by the admin screen and
+builds the SDK URL (`https://www.paypal.com/sdk/js?client-id=…&currency=USD`).
 
 ## Database upgrade
 
-Run from the application root with the deployment's PHP/database configuration loaded:
+Existing installations that still carry the old Stripe settings, encrypted
+PayPal secrets, payment email templates or `payments`/`payment_records` tables
+are cleaned up by `database/migrations/011_paypal_sdk_only.php`:
 
 ```sh
 php bin/cli.php migrate
 ```
 
-Migration `010_server_side_payment_checkout.php` is re-runnable and:
-
-- adds missing `payments.phone` and `payments.service` compatibility columns;
-- adds `payer_phone` and `notes` to the existing `payment_records` table;
-- seeds disabled gateway toggles without overwriting current settings;
-- removes old custom SDK-code and unused publishable-key settings;
-- encrypts any legacy plaintext PayPal/Stripe credential rows in place.
-
-New-install schema files and `database/seed.php` include the compatible payment fields. The Services table and Admin payment-record dashboard remain shared with the rest of the site.
-
-## Routes and implementation
-
-- `pay-online.php` — shared form and server-set PRG notice.
-- `paypal-api.php` — PayPal form POST, approval return/cancel, capture and confirmation.
-- `stripe-api.php` — Stripe form POST, Checkout Session return/cancel, retrieval and confirmation.
-- `stripe-webhook.php` — optional signed Stripe webhook, with provider re-fetch before recording.
-- `core/Payments.php` — shared input validation, pending attempts, confirmed-record creation and notices.
-- `core/PayPal.php`, `core/Stripe.php` — separate server-only provider clients.
-- `core/PaymentCredentials.php` — AES-256-GCM credential encryption/decryption.
-- `core/PaymentRecords.php` — existing Admin audit/list/export operations.
-- `assets/css/refinements.css` — centered, responsive Pay Online layout and aligned provider buttons.
-
-The application router exposes `/paypal-api`, `/stripe-api`, and `/stripe-webhook` (also `/api/stripe/webhook`). No custom payment-code editor, browser SDK injection, client-side capture handler, or publishable-key field is part of the new flow.
+The migration keeps `paypal_client_id`, drops the legacy payment tables and
+deletes every Stripe/secret setting. Customer payment details were never stored
+by this site, so no payment data needs to be preserved.
 
 ## Staging verification
 
-After the migration and credential setup, verify with provider test accounts only:
+1. Save a PayPal **Sandbox** Client ID, open `/pay-online`, and confirm the
+   PayPal button renders.
+2. Pay with a sandbox buyer account and confirm the PayPal success popup shows
+   the amount, service and reference.
+3. Change the Client ID in Admin → Payment Settings and reload the page; confirm
+   the SDK now loads with the new Client ID.
+4. Clear the Client ID and confirm the page shows the unavailable notice and
+   loads no PayPal SDK.
+5. Inspect page source and browser requests: only the public Client ID appears —
+   no secret, no server endpoint, no payment record request.
 
-1. **PayPal Sandbox:** enable PayPal only, use Sandbox app credentials, submit a valid amount/service, approve with a Sandbox buyer, and verify the exact server-confirmed message plus capture reference. Test user cancellation and a rejected/failed order; neither should be recorded as succeeded.
-2. **Stripe test mode:** enable Stripe with an `sk_test_…` key, use Stripe's test card `4242 4242 4242 4242` with a future expiry and any CVC, then verify the message and PaymentIntent reference. Test a declined test card and return/cancel path; neither should show success.
-3. Inspect Admin → Payments and Admin → Payment records: verify provider, customer name/email/phone, service, amount, USD, unique transaction reference, `succeeded` status and time. Confirm the legacy `payments` attempt is `paid` only after provider confirmation.
-4. Test both providers enabled, each provider disabled, invalid/hidden service, malformed amount, bad CSRF, provider network failure and duplicate Stripe webhook delivery.
-5. Check desktop, tablet and narrow-mobile widths. Inspect page source and browser requests: no `sk_`, `rk_`, PayPal Secret, OAuth token, Stripe client secret, PayPal/Stripe SDK, or browser payment callback should appear.
-6. If using Stripe webhooks, confirm an invalid/missing signature is rejected, a valid event is verified against the Stripe API, and a duplicate event does not create a second record.
-
-Local dependency-free checks are `php tests/payments.php`, `php tests/paypal-server.php`, `php tests/stripe-server.php`, and `php tests/payment-records.php`. They do not perform live provider requests. Run the real Sandbox/test-mode checklist on staging before enabling Live credentials. No live gateway transaction is part of the code-only test suite.
+`node tests/harness/cli.mjs tests/payment-page-render.php` renders the real page
+against an in-memory fixture and checks the Client-ID wiring, the single PayPal
+option and the absence of secrets.

@@ -21,14 +21,6 @@ foreach ($admins as $path => $file) {
 $router->add(array('GET', 'HEAD'), '~^/search/?$~D', array('PublicController', 'search'));
 $router->add(array('GET'), '~^/api/search/?$~D', array('ApiController', 'search'));
 $router->add(array('POST'), '~^/api/chat/?$~D', function () { require_once BASE_PATH . '/includes/chatbot-api.php'; handleChatbotRequest(); });
-/* Each checkout endpoint accepts a normal form POST and a provider return GET.
-   Neither endpoint publishes credentials or requires a browser payment SDK. */
-$router->add(array('GET', 'POST'), '~^/paypal-api/?$~D', function () { require_once BASE_PATH . '/paypal-api.php'; });
-$router->add(array('GET', 'POST'), '~^/stripe-api/?$~D', function () { require_once BASE_PATH . '/stripe-api.php'; });
-/* Stripe webhook — authenticated by the Stripe-Signature header, not a session. */
-foreach (array('/stripe-webhook', '/api/stripe/webhook') as $stripeWebhookPath) {
-    $router->add(array('POST'), '~^' . preg_quote($stripeWebhookPath, '~') . '/?$~D', function () { require_once BASE_PATH . '/stripe-webhook.php'; });
-}
 foreach (array('contact' => array('contact.php', 'contact_submit'), 'lead' => array('contact.php', 'contact_submit'), 'newsletter' => array('newsletter.php', null)) as $path => $handler) {
     $router->add(array('POST'), '~^/api/' . $path . '/?$~D', function () use ($handler) { ApiController::legacy($handler[0], $handler[1]); });
 }

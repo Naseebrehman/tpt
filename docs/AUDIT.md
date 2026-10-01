@@ -29,10 +29,10 @@ review, not a claim that external integrations have been tested.
 7. **Chat:** already named Alia in UI; older README says PIE Bot. Gemini key
    is server-side, model hard-coded to gemini-1.5-flash. Optional name/email
    capture writes chatbot_leads, without lead-management screen, CSRF or limits.
-8. **Payments:** existing PayPal and Stripe hosted checkouts, USD records and
-   Admin Services/Payments screens. PHP validates each request and verifies the
-   provider before recording success; optional Stripe webhooks are signature-
-   verified and re-fetched. Do not trust browser callbacks or return flags.
+8. **Payments:** PayPal only, completed on PayPal’s secure checkout by the
+   PayPal JavaScript SDK loaded with the Client ID from Admin → Payment
+   Settings. No secret, server-side capture, webhook, payment API or payment
+   record exists; the existing admin services list still fills the form.
 9. **Auth:** password_verify/hash, login session rotation, DB lockouts, CSRF;
    imported seed has a documented default account. New installation must prompt
    for a strong password, not create another known credential.

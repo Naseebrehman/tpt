@@ -22,48 +22,6 @@ ALTER TABLE resources ADD COLUMN content LONGTEXT AFTER description;
 ALTER TABLE resources ADD COLUMN reading_time INT DEFAULT 5 AFTER category;
 ALTER TABLE resources MODIFY COLUMN resource_type ENUM('guide','template','video','blueprint','playbook','checklist','framework','tutorial','case-study') DEFAULT 'guide';
 
--- Confirmed payments (one row per gateway transaction, distinct from the
--- legacy `payments` request/invoice table below).
-CREATE TABLE IF NOT EXISTS payment_records (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  provider VARCHAR(20) NOT NULL DEFAULT '',
-  provider_transaction_id VARCHAR(150) DEFAULT NULL,
-  payer_name VARCHAR(191) NOT NULL DEFAULT '',
-  payer_email VARCHAR(191) NOT NULL DEFAULT '',
-  payer_phone VARCHAR(30) NOT NULL DEFAULT '',
-  service VARCHAR(191) NOT NULL DEFAULT '',
-  notes TEXT,
-  amount DECIMAL(10,2) NOT NULL DEFAULT 0,
-  currency VARCHAR(10) NOT NULL DEFAULT 'USD',
-  status VARCHAR(30) NOT NULL DEFAULT 'succeeded',
-  verification_mode VARCHAR(20) NOT NULL DEFAULT 'server',
-  raw_reference VARCHAR(255) NOT NULL DEFAULT '',
-  ip_address VARCHAR(45) NOT NULL DEFAULT '',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY uniq_provider_transaction (provider, provider_transaction_id),
-  KEY idx_payment_records_provider (provider),
-  KEY idx_payment_records_status (status),
-  KEY idx_payment_records_created (created_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS payments (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  token VARCHAR(64) UNIQUE NOT NULL,
-  name VARCHAR(150),
-  email VARCHAR(150),
-  phone VARCHAR(30) NOT NULL DEFAULT '',
-  service VARCHAR(191) NOT NULL DEFAULT '',
-  reference VARCHAR(150),
-  amount_usd DECIMAL(10,2) DEFAULT 0,
-  notes TEXT,
-  method ENUM('invoice','stripe','paypal') DEFAULT 'invoice',
-  status ENUM('requested','pending','paid','failed','cancelled') DEFAULT 'requested',
-  provider_ref VARCHAR(255) DEFAULT '',
-  ip_address VARCHAR(45) DEFAULT '',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 -- ---------------- 2. Retire fabricated demo content (soft) -----------------
 UPDATE portfolio SET is_active = 0 WHERE slug IN ('aurelia-fashion-meta-ads','brew-theory-social-media','ironcore-fitness-seo','nimbus-saas-web-development');
 UPDATE testimonials SET is_active = 0 WHERE company IN ('Aurelia Fashion','Brew Theory','IronCore Fitness','Nimbus SaaS','Zayn Estates');
@@ -123,20 +81,12 @@ WHERE NOT EXISTS (SELECT 1 FROM blog_posts WHERE slug = 'local-seo-what-moves-ma
 -- except where they still equal the old shipped defaults.
 INSERT INTO settings (setting_key, setting_value) SELECT 'alia_enabled', '1' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'alia_enabled');
 
--- Server-side PayPal and Stripe credentials and one shared Terms URL. Secrets
--- are encrypted at rest by migration 010 and never sent to customer browsers.
-INSERT INTO settings (setting_key, setting_value) SELECT 'paypal_enabled', '0' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'paypal_enabled');
+-- The PayPal Client ID is the only payment setting; it is entered in
+-- Admin → Payment Settings and used by the browser PayPal JavaScript SDK.
 INSERT INTO settings (setting_key, setting_value) SELECT 'paypal_client_id', '' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'paypal_client_id');
-INSERT INTO settings (setting_key, setting_value) SELECT 'terms_url', '' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'terms_url');
-INSERT INTO settings (setting_key, setting_value) SELECT 'paypal_secret', '' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'paypal_secret');
-INSERT INTO settings (setting_key, setting_value) SELECT 'paypal_env', 'live' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'paypal_env');
--- Stripe Secret Key and optional Webhook Secret are used only by PHP.
-INSERT INTO settings (setting_key, setting_value) SELECT 'stripe_enabled', '0' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'stripe_enabled');
-INSERT INTO settings (setting_key, setting_value) SELECT 'stripe_secret_key', '' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'stripe_secret_key');
-INSERT INTO settings (setting_key, setting_value) SELECT 'stripe_webhook_secret', '' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'stripe_webhook_secret');
 
--- The existing Services system is the single source of truth for both payment
--- forms; created here only when an older dump is missing it.
+-- The existing Services system is the single source of truth for the
+-- payment form; created here only when an older dump is missing it.
 CREATE TABLE IF NOT EXISTS payment_services (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(150) NOT NULL,

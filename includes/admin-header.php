@@ -24,7 +24,6 @@ $adminNav = array(
     array('key' => 'content', 'label' => 'Content & SEO', 'href' => 'content.php', 'icon' => 'edit'),
     array('key' => 'dashboard',    'label' => 'Dashboard',     'href' => 'index.php',        'icon' => 'grid'),
     array('key' => 'submissions',  'label' => 'Submissions',   'href' => 'submissions.php',  'icon' => 'mail'),
-    array('key' => 'payment-records', 'label' => 'Payments',      'href' => 'payment-records.php', 'icon' => 'chart'),
     array('key' => 'payments',     'label' => 'Payment Settings', 'href' => 'payments.php',  'icon' => 'card'),
     array('key' => 'blog',         'label' => 'Blog',          'href' => 'blog.php',         'icon' => 'edit'),
     array('key' => 'resources',    'label' => 'Resources',     'href' => 'resources.php',    'icon' => 'download'),

@@ -20,8 +20,12 @@ reimport the legacy SQL seeds into production. New installs can use
 The existing frontend, assets and dashboard remain. Clean URLs now have a
 compatibility router (`front.php`, `app/routes.php`); contact handling has a
 controller/repository boundary; working SMTP, Gemini and uploads live in `core/`
-with legacy include wrappers. Payment services remain admin-managed; the complete custom gateway code is pasted by the site owner in Admin → Payments. Three values reach that code without the owner editing it — the PayPal Client ID, the single shared Terms & Conditions URL and the service list — and PayPal orders are created with `shipping_preference: 'NO_SHIPPING'` because payments are for digital services. Branding, Alia controls/leads, content/SEO
-overrides and dependency-free regression tests were added. Gateway processing is intentionally left to owner-managed frontend code.
+with legacy include wrappers. Payments are PayPal only: the Pay Online page loads
+the PayPal JavaScript SDK with the Client ID saved in Admin → Payment Settings
+(stored in the settings table), and the existing admin-managed service list fills
+the payment form. There is no secret, server-side capture, webhook, payment API
+or payment record. Branding, Alia controls/leads, content/SEO
+overrides and dependency-free regression tests were added.
 See [the audit](docs/AUDIT.md) and deployment guide for limitations and pending
 staging checks. This is an incremental upgrade, not a claim that every legacy
 page has been rewritten into MVC or every requested CMS feature is complete.
@@ -88,13 +92,13 @@ blocked from web requests by the included `.htaccess`.
 
 ### Admin (`/admin/`)
 `login.php` (bcrypt + 5-attempt/15-min lockout + CSRF), `index.php` (stat cards, 30-day line
-chart, service bar chart, recent submissions and confirmed payments, quick links, system status), `submissions.php`
+chart, service bar chart, recent submissions, quick links, system status), `submissions.php`
 (filters, bulk actions, CSV export, detail modal with notes + status), `blog.php` +
 `blog-edit.php` (TinyMCE, uploads, SEO fields, auto slug + reading time), `resources.php`,
 `portfolio.php` + `portfolio-edit.php` (Sortable.js reorder, stats/chart JSON editors),
 `team.php` (drag-and-drop order), `testimonials.php`, `subscribers.php`,
 `chats.php` (Alia conversations: full transcript, status, edit, delete),
-`payments.php` (separate server-side PayPal and Stripe hosted-checkout settings; encrypted credentials, Sandbox/Live selection, shared Terms URL, existing Services manager and recent confirmed payment records; see [docs/PAYMENTS.md](docs/PAYMENTS.md)), `payment-records.php` (confirmed payment audit list and CSV export),
+`payments.php` (Payment Settings: the PayPal Client ID used by the PayPal JavaScript SDK plus the existing services manager; see [docs/PAYMENTS.md](docs/PAYMENTS.md)),
 `settings.php` (SMTP / AI providers / notifications / email templates / Site / Social /
 Maintenance tabs with live test buttons),
 `password.php`, `actions.php` (AJAX router), `export.php` (CSV).
@@ -118,14 +122,13 @@ contains safe defaults and computes the paths automatically.
 |---|---|
 | `APP_ENV` | `production` hides PHP errors (default). Use `development` while debugging. |
 | `DB_*` | MySQL host, database name, username, and password. |
-| `PAYMENT_ENCRYPTION_KEY` | Optional private key used to encrypt payment credentials at rest. Keep it stable and out of Git. |
 | `SITE_URL` | Canonical domain for SEO/OG/sitemap. |
 | `PRETTY_URLS` | `true` = extension-less links (needs the bundled `.htaccess`). Set `false` on hosts without mod_rewrite. |
 | `BASE_URL` | Auto-detected, so sub-folder installs work too. |
 
 Other site settings (SMTP, Gemini, agency info, socials, analytics, maintenance mode, founder
-name and default SEO tags) live in the **settings table**. PayPal/Stripe credentials and the
-shared Terms URL are managed separately in Admin → Payments.
+name and default SEO tags) live in the **settings table**, as does the PayPal Client ID
+managed in Admin → Payment Settings.
 
 ---
 

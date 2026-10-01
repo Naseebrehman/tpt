@@ -155,7 +155,7 @@ $templateData = EmailTemplates::get($currentTemplate);
 /* Sample values for the template preview. */
 $previewVars = array(
     'name' => 'John Smith', 'email' => 'john@example.com', 'phone' => '+1 (555) 123-4567',
-    'service' => 'Digital Marketing', 'amount' => '1,500.00', 'payment_method' => 'PayPal',
+    'service' => 'Digital Marketing', 'amount' => '1,500.00',
     'transaction_id' => 'TXN-9F2K4L8Q', 'message' => 'This is a sample message used for the template preview.',
     'subject' => 'Sample subject', 'company' => 'Acme Inc.', 'reference' => 'TPT-2026-0148',
     'status' => 'Paid', 'ip' => '203.0.113.10', 'budget' => '$1000–$2500',
@@ -255,9 +255,9 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
     <div class="a-tabpanel" data-panel="payments">
         <div class="a-card">
             <h3>Payment page</h3>
-            <p class="hint">Configure PayPal and Stripe for separate server-side hosted checkouts. Gateway secrets are encrypted in the database and used only by PHP; payment records are created only after provider confirmation. Manage gateway credentials, the shared Terms &amp; Conditions URL, Services and recent confirmed payments in Admin &rarr; Payments.</p>
+            <p class="hint">The Pay Online page uses the PayPal JavaScript SDK with the Client ID saved in the application settings. Save or change the Client ID, and manage the services shown in the payment form, in Admin &rarr; Payment Settings.</p>
             <div class="a-toolbar">
-                <a class="a-btn" href="<?= esc(url('admin/payments')) ?>"><?= icon('card', 15) ?> Configure payment gateways</a>
+                <a class="a-btn" href="<?= esc(url('admin/payments')) ?>"><?= icon('card', 15) ?> PayPal settings</a>
                 <a class="a-btn" href="<?= esc(url('pay-online')) ?>" target="_blank" rel="noopener">Preview Pay Online</a>
             </div>
         </div>
@@ -457,7 +457,7 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
                 <input type="checkbox" name="notify_cat_<?= $catKey ?>" value="1"<?= Notifications::categoryEnabled($catKey) ? ' checked' : '' ?>>
                 <span><strong><?= esc($catLabel) ?></strong>
                     <span class="hint" style="display:block;margin-top:2px">
-                        <?= $catKey === 'contact' ? 'Contact form submissions' : ($catKey === 'payment' ? 'Completed payments and invoice requests' : ($catKey === 'lead' ? 'Leads captured by the chat assistant' : ($catKey === 'chatbot' ? 'Only meaningful chatbot events (e.g. AI outage alerts — rate-limited)' : ($catKey === 'system' ? 'Important system/admin notifications' : 'Security events (login lockouts, password changes)')))) ?>
+                        <?= $catKey === 'contact' ? 'Contact form submissions' : ($catKey === 'lead' ? 'Leads captured by the chat assistant' : ($catKey === 'chatbot' ? 'Only meaningful chatbot events (e.g. AI outage alerts — rate-limited)' : ($catKey === 'system' ? 'Important system/admin notifications' : 'Security events (login lockouts, password changes)'))) ?>
                     </span>
                 </span>
             </label>

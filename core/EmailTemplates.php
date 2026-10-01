@@ -18,7 +18,7 @@ class EmailTemplates
 {
     /** Supported placeholders shown to the admin. */
     public static $variables = array(
-        'name', 'email', 'phone', 'service', 'amount', 'payment_method',
+        'name', 'email', 'phone', 'service', 'amount',
         'transaction_id', 'message', 'site_name', 'site_url', 'date',
         'company', 'reference', 'status', 'ip', 'budget', 'subject', 'admin_url',
         'post_title', 'post_url', 'post_excerpt', 'featured_image', 'author', 'reading_time',
@@ -46,34 +46,6 @@ class EmailTemplates
                     . '<p style="margin:0 0 18px;font-size:15px;color:#c7c7d1;line-height:1.7;">Your enquiry is now with our strategy team. A senior strategist will reply within one business day.</p>'
                     . '{{table}}'
                     . '<p style="margin:22px 0 0;font-size:13px;color:#8b8b96;line-height:1.7;">Need us faster? Just reply to this email &mdash; a real person reads every message.</p>',
-            ),
-            'payment_admin' => array(
-                'subject' => 'Payment received — ${{amount}} from {{name}}',
-                'body'    => '<h1 style="margin:0 0 8px;font-size:24px;color:#ffffff;font-weight:800;letter-spacing:-0.5px;">Payment Received</h1>'
-                    . '<p style="margin:0;font-size:14px;color:#9ca3af;line-height:1.6;">A customer completed a payment on the website.</p>'
-                    . '{{table}}'
-                    . '<p style="margin:18px 0 0;"><a href="{{admin_url}}" style="display:inline-block;padding:13px 26px;background:#7c3aed;border-radius:8px;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;">Manage in Admin &rarr; Payments</a></p>',
-            ),
-            'payment_confirm' => array(
-                'subject' => 'Payment successful — ${{amount}} to {{site_name}}',
-                'body'    => '<h1 style="margin:0 0 10px;font-size:26px;color:#ffffff;font-weight:800;letter-spacing:-0.5px;">Payment successful &mdash; thank you, {{name}}!</h1>'
-                    . '<p style="margin:0 0 18px;font-size:15px;color:#c7c7d1;line-height:1.7;">We&rsquo;ve received your payment. This email is your confirmation &mdash; keep it for your records.</p>'
-                    . '{{table}}'
-                    . '<p style="margin:22px 0 0;font-size:13px;color:#8b8b96;line-height:1.7;">A question about this payment? Reply to this email and a human will sort it out.</p>',
-            ),
-            'payment_request_admin' => array(
-                'subject' => 'Payment request — ${{amount}} from {{name}}',
-                'body'    => '<h1 style="margin:0 0 8px;font-size:24px;color:#ffffff;font-weight:800;letter-spacing:-0.5px;">New Payment Request</h1>'
-                    . '<p style="margin:0;font-size:14px;color:#9ca3af;line-height:1.6;">A customer asked for a secure invoice link.</p>'
-                    . '{{table}}'
-                    . '<p style="margin:18px 0 0;"><a href="{{admin_url}}" style="display:inline-block;padding:13px 26px;background:#7c3aed;border-radius:8px;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;">Open the secure payment link</a></p>',
-            ),
-            'payment_request_confirm' => array(
-                'subject' => 'Your {{site_name}} secure payment link',
-                'body'    => '<h1 style="margin:0 0 10px;font-size:26px;color:#ffffff;font-weight:800;letter-spacing:-0.5px;">We received your payment request</h1>'
-                    . '<p style="margin:0 0 18px;font-size:15px;color:#c7c7d1;line-height:1.7;">Hi {{name}}, thanks &mdash; your request for <strong style="color:#ffffff;">${{amount}} USD</strong> is with our team.</p>'
-                    . '{{table}}'
-                    . '<p style="margin:22px 0 0;font-size:13px;color:#8b8b96;line-height:1.7;">Card details are handled by the payment provider&rsquo;s hosted checkout &mdash; never by this website.</p>',
             ),
             'lead_admin' => array(
                 'subject' => 'New chatbot lead — {{name}}',
@@ -134,10 +106,6 @@ class EmailTemplates
         $labels = array(
             'contact_admin'          => 'Contact form notification',
             'contact_confirm'        => 'Contact form confirmation',
-            'payment_admin'          => 'Payment admin notification',
-            'payment_confirm'        => 'Payment confirmation',
-            'payment_request_admin'  => 'Invoice request notification',
-            'payment_request_confirm' => 'Invoice request confirmation',
             'lead_admin'             => 'Lead notification',
             'password_reset'         => 'Password reset',
             'welcome'                => 'Welcome email',

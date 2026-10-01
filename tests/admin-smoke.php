@@ -45,8 +45,7 @@ $_SESSION['admin_email'] = 'admin@example.test';
 $expectations = array(
     'settings'     => array('Payments', 'Send Test Email', 'Email Templates', 'Notification recipients', 'AI / Alia', 'CAPTCHA', 'Active provider'),
     'index'        => array('Dashboard'),
-    'payments'     => array('Payments'),
-    'payment-records' => array('Payments', 'Export CSV'),
+    'payments'     => array('PayPal Client ID', 'Save', 'Payment form services'),
     'submissions'  => array('Contact Submissions'),
     'leads'        => array('Lead'),
     'blog'         => array('Blog Manager'),
@@ -62,7 +61,6 @@ $expectations = array(
 );
 
 $smokeArgs = isset($argv[1]) ? (string) $argv[1] : (string) getenv('TPT_HARNESS_ARGS');
-/* Hyphens are kept: some admin screens are named payment-records.php etc. */
 $smokePage = trim($smokeArgs) !== '' ? preg_replace('/[^a-z_-]/', '', trim($smokeArgs)) : 'settings';
 if (!isset($expectations[$smokePage])) {
     fwrite(STDOUT, "FAIL unknown admin page '$smokePage'\n");
@@ -84,7 +82,7 @@ foreach ($expectations[$smokePage] as $needle) {
     }
 }
 /* No secrets ever leak into admin HTML. */
-foreach (array('sk_live', 'sk_test_', 'smtp password here') as $leak) {
+foreach (array('sk_live', 'sk_test_', 'paypal_secret', 'smtp password here') as $leak) {
     if (stripos($html, $leak) !== false) {
         fwrite(STDOUT, "FAIL admin/$smokePage leaks “{$leak}”\n");
         exit(1);

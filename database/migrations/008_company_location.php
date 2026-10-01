@@ -1,22 +1,17 @@
 <?php
-/** Migration 008 — company location + server-side PayPal settings.
+/** Migration 008 — company location.
  *
- *  1. Removes every Pakistan location from the stored settings. The public
- *     pages, JSON-LD, footer and emails all read `site_address` from this
- *     table, so an existing installation must be corrected here too — the
- *     code default alone would not change a live site.
- *     New value: Collingswood, New Jersey, USA (no street address invented).
+ *  Removes every Pakistan location from the stored settings. The public
+ *  pages, JSON-LD, footer and emails all read `site_address` from this
+ *  table, so an existing installation must be corrected here too — the
+ *  code default alone would not change a live site.
+ *  New value: Collingswood, New Jersey, USA (no street address invented).
  *
- *  2. Adds the two settings the server-side PayPal flow needs:
- *        paypal_secret  the PayPal REST API Secret — used ONLY on the server
- *                       (core/PayPal.php + paypal-api.php), never rendered.
- *        paypal_env     'live' (default) or 'sandbox' for those API calls.
+ *  Refreshes the stored Alia system prompt when it still contains an old
+ *  location, so the assistant answers with the real company information.
  *
- *  3. Refreshes the stored Alia system prompt when it still contains an old
- *     location, so the assistant answers with the real company information.
- *
- * Every statement is re-runnable (MySQL DDL auto-commits; the UPDATEs are
- * idempotent because they only touch rows that still contain the old text). */
+ *  Every statement is re-runnable (MySQL DDL auto-commits; the UPDATEs are
+ *  idempotent because they only touch rows that still contain the old text). */
 return function (PDO $pdo) {
     $newLocation = 'Collingswood, New Jersey, USA';
 
@@ -51,9 +46,4 @@ return function (PDO $pdo) {
         $pdo->exec("INSERT INTO settings (setting_key, setting_value) VALUES ('site_address', '" . $newLocation . "')
             ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)");
     }
-
-    /* 2 — server-side PayPal settings (the Secret is stored, never displayed). */
-    $pdo->exec("INSERT IGNORE INTO settings (setting_key, setting_value) VALUES
-        ('paypal_secret', ''),
-        ('paypal_env', 'live')");
 };

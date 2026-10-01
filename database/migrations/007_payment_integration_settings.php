@@ -1,10 +1,9 @@
 <?php
-/** Historical migration 007 — shared payment page settings.
+/** Migration 007 — the payment page Client ID and the existing Services list.
  *
- * The Pay Online form uses the existing Services list and one shared Terms URL.
- * The PayPal Client ID is retained as the public application identifier used
- * by the server's OAuth flow; gateway Secrets are introduced by later server-
- * side migrations. Migration 010 removes obsolete browser-code settings.
+ * The Pay Online page uses one setting only: the public PayPal Client ID that
+ * the PayPal JavaScript SDK is loaded with. No secret, environment or other
+ * gateway credential is stored.
  *
  * Keep this migration re-runnable for installations that have not applied it.
  */
@@ -30,8 +29,7 @@ return function (PDO $pdo) {
         UNIQUE KEY uniq_payment_service (name)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
-    /* One PayPal Client ID and ONE shared Terms & Conditions URL. */
+    /* One PayPal Client ID. */
     $pdo->exec("INSERT IGNORE INTO settings (setting_key, setting_value) VALUES
-        ('paypal_client_id', ''),
-        ('terms_url', '')");
+        ('paypal_client_id', '')");
 };

@@ -43,8 +43,8 @@ check(Content::path('/about.php?utm_source=test') === '/about', 'canonical remov
 check(Content::path('/index.php') === '/', 'canonical home');
 check($router->resolve('POST', '/api/payment')['status'] === 404, 'legacy payment API removed');
 check($router->resolve('POST', '/api/webhooks/stripe')['status'] === 404, 'Stripe webhook API removed');
-check(isset($router->resolve('POST', '/paypal-api')['handler']) && isset($router->resolve('GET', '/paypal-api')['handler']), 'PayPal endpoint routes form POSTs and provider return GETs');
-check(isset($router->resolve('POST', '/stripe-api')['handler']) && isset($router->resolve('GET', '/stripe-api')['handler']), 'Stripe endpoint routes form POSTs and provider return GETs');
+check($router->resolve('GET', '/paypal-api')['status'] === 404 && $router->resolve('POST', '/paypal-api')['status'] === 404, 'the server-side PayPal checkout route is removed');
+check($router->resolve('POST', '/stripe-api')['status'] === 404 && $router->resolve('POST', '/stripe-webhook')['status'] === 404, 'the Stripe checkout and webhook routes are removed');
 
 /* Short "Start a project" popup: opt-in per page, same contact endpoint. */
 $quick = (string) file_get_contents(BASE_PATH . '/includes/quick-contact.php');
@@ -112,14 +112,24 @@ $notOwned = array_diff($createTables, Installer::$appTables);
 check(count($notOwned) === 0, 'installer recognizes every table it creates');
 $notCreated = array_diff(Installer::$appTables, $createTables);
 check(count($notCreated) === 0, 'every application table is created by the fresh schema');
-foreach (array('notification_status', 'chatbot_leads', 'payment_events') as $must) {
+foreach (array('notification_status', 'chatbot_leads') as $must) {
     if (strpos((string) file_get_contents(BASE_PATH . '/database/schema-mysql.sql'), $must) === false) { $bad++; }
 }
 check($bad === 0, 'fresh schema includes former migration-001 additions');
-foreach (array('notification_emails', 'email_templates', 'phone VARCHAR(30)', 'service VARCHAR(191)') as $must) {
+foreach (array('notification_emails', 'email_templates') as $must) {
     if (strpos((string) file_get_contents(BASE_PATH . '/database/schema-mysql.sql'), $must) === false) { $bad++; }
 }
-check($bad === 0, 'fresh schema includes notification/template tables and payment details');
+check($bad === 0, 'fresh schema includes the notification and email-template tables');
+foreach (array('payments', 'payment_records', 'payment_events') as $gone) {
+    if (strpos((string) file_get_contents(BASE_PATH . '/database/schema-mysql.sql'), 'CREATE TABLE IF NOT EXISTS ' . $gone) !== false) { $bad++; }
+}
+check($bad === 0, 'fresh schema contains no payment tables');
+foreach (array('stripe-api.php', 'stripe-webhook.php', 'paypal-api.php', 'core/Stripe.php', 'core/PayPal.php', 'core/PaymentRecords.php', 'admin/payment-records.php') as $removed) {
+    check(!is_file(BASE_PATH . '/' . $removed), 'removed: ' . $removed);
+}
+check(is_file(BASE_PATH . '/database/migrations/011_paypal_sdk_only.php'), 'migration 011 removes legacy Stripe/payment-server state');
+check(strpos((string) file_get_contents(BASE_PATH . '/core/Payments.php'), 'paypal.com/sdk/js') !== false
+    && strpos((string) file_get_contents(BASE_PATH . '/pay-online.php'), 'piePayPalSdkUrl') !== false, 'the payment page loads the PayPal JavaScript SDK built from the saved Client ID');
 check(is_file(BASE_PATH . '/database/migrations/002_notifications.php'), 'migration 002 exists for existing installations');
 check(strpos((string) file_get_contents(BASE_PATH . '/database/migrations/002_notifications.php'), 'notification_emails') !== false, 'migration 002 creates the notification tables');
 check(strpos((string) file_get_contents(BASE_PATH . '/database.sql'), 'Admin@123') !== false, 'phpMyAdmin dump documents its default password');

@@ -1,34 +1,34 @@
 <?php
-/** Pay Online. The form posts directly to an independent server-side gateway
- * endpoint; no PayPal/Stripe browser SDK, payment JavaScript or success callback
- * is loaded on this page.
+/** Pay Online — PayPal only.
+ *
+ * The page renders the existing Services form and loads the PayPal JavaScript
+ * SDK with the Client ID saved in the application settings (Admin → Payment
+ * Settings). The order is created and approved in the browser by PayPal; there
+ * is no secret, no server-side capture/confirmation, no webhook and no payment
+ * record stored by this website.
  */
 require_once __DIR__ . '/includes/init.php';
 require_once __DIR__ . '/includes/payments.php';
 
 $pageTitle = 'Pay Online — The Pie Technologies';
-$metaDesc = 'Pay securely through PayPal or Stripe. Every payment is confirmed by our server.';
+$metaDesc = 'Pay securely by PayPal in USD. Choose a service, enter the amount and pay on PayPal’s secure checkout.';
 $activeNav = 'pay';
 
-$paymentStorageAvailable = piePaymentStorageReady();
-$paypalAvailable = $paymentStorageAvailable && pieIsPayPalEnabled() && piePayPalServerReady();
-$stripeAvailable = $paymentStorageAvailable && pieIsStripeEnabled() && pieStripeServerReady();
-$anyGateway = $paypalAvailable || $stripeAvailable;
-$firstGateway = $paypalAvailable ? 'paypal-api' : 'stripe-api';
+$paypalClientId = piePayPalClientId();
+$paypalReady = piePayPalClientIdConfigured();
 $termsUrl = pieTermsUrl();
 $supportEmail = getSetting('site_email', 'info@thepietechnologies.com');
 $supportPhone = getSetting('site_phone', '');
-$paymentNotice = piePaymentConsumeNotice();
 $paymentServices = piePaymentServices();
 
 $paymentFaq = array(
-    array('q' => 'Which payment methods can I use?', 'a' => 'Use PayPal or a card through Stripe. Only payment methods currently enabled in our secure server-side checkout are shown.'),
-    array('q' => 'Which currency are payments taken in?', 'a' => 'Payments are processed in US dollars (USD). The amount you enter is sent to the selected payment provider by our server.'),
-    array('q' => 'Is my payment secure?', 'a' => 'Your payment is completed on PayPal or Stripe’s secure hosted checkout. This website does not load their payment SDKs or collect your card details.'),
-    array('q' => 'How do I know my payment went through?', 'a' => 'Our server confirms the payment with the provider before showing a thank-you message and payment reference. A click or redirect alone is never treated as success.'),
-    array('q' => 'What can I pay for?', 'a' => 'Choose a service from the list managed by our team in Admin → Payments. If you select “Others”, describe your payment in the notes field.'),
-    array('q' => 'Which terms apply to my payment?', 'a' => 'By continuing with your payment you agree to our Terms & Conditions, linked below the payment options and in the site footer.'),
-    array('q' => 'What if something looks wrong?', 'a' => 'Do not submit another payment if you are unsure. Contact our team with the amount and any payment reference so we can check with the provider.'),
+    array('q' => 'Which payment method can I use?', 'a' => 'PayPal. The PayPal button below opens PayPal’s secure checkout, where you can pay with your PayPal balance, a linked bank account, or a debit or credit card.'),
+    array('q' => 'Which currency are payments taken in?', 'a' => 'Payments are taken in US dollars (USD). The amount you enter is the amount charged.'),
+    array('q' => 'Is my payment secure?', 'a' => 'Yes. You pay on PayPal’s own secure checkout. Your PayPal login and card details are never entered on, or stored by, this website.'),
+    array('q' => 'How do I know my payment went through?', 'a' => 'PayPal shows its own payment confirmation, and this page then displays a success message with the amount, service and PayPal reference. Keep the reference for your records.'),
+    array('q' => 'What can I pay for?', 'a' => 'Choose a service from the list. If you select “Others”, describe your payment in the notes field.'),
+    array('q' => 'Which terms apply to my payment?', 'a' => 'By continuing with your payment you agree to our Terms & Conditions, linked below the payment button and in the site footer.'),
+    array('q' => 'What if something looks wrong?', 'a' => 'Do not submit another payment if you are unsure. Contact our team with the amount and any PayPal reference so we can check it with you.'),
 );
 
 require_once __DIR__ . '/includes/header.php';
@@ -37,12 +37,11 @@ require_once __DIR__ . '/includes/header.php';
   <div class="container">
     <p class="eyebrow crumbs"><a href="<?= url('') ?>">Home</a> &nbsp;/&nbsp; Pay Online</p>
     <h1>Pay online, securely.</h1>
-    <p class="lead">A straightforward checkout, server-verified through PayPal or Stripe.</p>
+    <p class="lead">A straightforward checkout through PayPal.</p>
     <ul class="pay-badges" aria-label="Payment facts">
-      <?php if ($paypalAvailable): ?><li><?= icon('check', 14) ?> PayPal</li><?php endif; ?>
-      <?php if ($stripeAvailable): ?><li><?= icon('check', 14) ?> Stripe</li><?php endif; ?>
+      <li><?= icon('check', 14) ?> PayPal</li>
       <li><?= icon('check', 14) ?> USD</li>
-      <li><?= icon('lock', 14) ?> Server-confirmed</li>
+      <li><?= icon('lock', 14) ?> Secure PayPal checkout</li>
     </ul>
   </div>
 </section>
@@ -54,26 +53,15 @@ require_once __DIR__ . '/includes/header.php';
         <div>
           <p class="eyebrow">Secure checkout</p>
           <h2 id="paymentHeading">Payment details</h2>
-          <p class="sub">Enter your details once, then choose a provider. Card and PayPal credentials stay on the provider’s hosted checkout.</p>
+          <p class="sub">Enter your details and the amount, then pay with the PayPal button. Your PayPal login and card details stay on PayPal’s secure checkout.</p>
         </div>
         <span class="pay-secure-mark"><?= icon('lock', 18) ?> Protected checkout</span>
       </div>
 
-      <div class="pay-confirmation<?= $paymentNotice ? ($paymentNotice['type'] === 'success' ? ' is-success' : ($paymentNotice['type'] === 'cancelled' ? ' is-cancelled' : ' is-error')) : '' ?>" id="tpt-payment-confirmation" role="status" aria-live="polite"<?= $paymentNotice ? '' : ' hidden' ?>>
-        <?php if ($paymentNotice && $paymentNotice['type'] === 'success'): ?>
-          <strong>Thank You, <?= esc($paymentNotice['name'] !== '' ? $paymentNotice['name'] : 'Customer') ?>! Your payment of $<?= esc($paymentNotice['amount']) ?> USD was successfully completed.</strong>
-          <span>Payment Reference: <code><?= esc($paymentNotice['reference']) ?></code></span>
-        <?php elseif ($paymentNotice): ?>
-          <strong><?= $paymentNotice['type'] === 'cancelled' ? 'Payment cancelled' : 'Payment not completed' ?></strong>
-          <span><?= esc($paymentNotice['message']) ?></span>
-        <?php endif; ?>
-      </div>
+      <div class="pay-confirmation" id="tpt-payment-confirmation" role="status" aria-live="polite" hidden></div>
 
-      <?php if ($anyGateway): ?>
-      <form id="payment-form" class="pay-layout" method="post" action="<?= esc(url($firstGateway)) ?>">
-        <?= csrfField() ?>
-        <input type="hidden" name="payment_action" value="start">
-
+      <?php if ($paypalReady): ?>
+      <form id="payment-form" class="pay-layout">
         <div class="pay-form-fields">
           <div class="pay-field">
             <label for="payment-name">Name / Business name <span aria-hidden="true">*</span></label>
@@ -107,28 +95,17 @@ require_once __DIR__ . '/includes/header.php';
           </div>
         </div>
 
-        <aside class="pay-checkout-options" aria-label="Choose a secure payment method">
+        <aside class="pay-checkout-options" aria-label="Pay with PayPal">
           <div class="pay-checkout-copy">
             <p class="eyebrow">Payment method</p>
-            <h3>Choose how to pay</h3>
-            <p>Your selected amount and service are sent securely to the provider. Our server confirms the final status before recording the payment.</p>
+            <h3>Pay with PayPal</h3>
+            <p>Enter your details first, then use the PayPal button to complete the payment on PayPal’s secure checkout.</p>
           </div>
           <div class="pay-gateway-actions">
-            <?php if ($paypalAvailable): ?>
-            <button class="pay-submit pay-submit-paypal" type="submit" name="payment_action" value="start" formaction="<?= esc(url('paypal-api')) ?>">
-              <span class="pay-submit-mark" aria-hidden="true"><?= icon('card', 19) ?></span>
-              <span class="pay-submit-label"><strong>Continue with PayPal</strong><small>Secure hosted checkout</small></span>
-              <span class="pay-submit-arrow" aria-hidden="true"><?= icon('arrow-r', 18) ?></span>
-            </button>
-            <?php endif; ?>
-            <?php if ($stripeAvailable): ?>
-            <button class="pay-submit pay-submit-stripe" type="submit" name="payment_action" value="start" formaction="<?= esc(url('stripe-api')) ?>">
-              <span class="pay-submit-mark" aria-hidden="true"><?= icon('card', 19) ?></span>
-              <span class="pay-submit-label"><strong>Pay by card</strong><small>Secure checkout by Stripe</small></span>
-              <span class="pay-submit-arrow" aria-hidden="true"><?= icon('arrow-r', 18) ?></span>
-            </button>
-            <?php endif; ?>
+            <div id="paypal-button-container" class="pay-paypal-buttons"></div>
+            <p class="pay-powered">Powered by PayPal</p>
           </div>
+          <p class="pay-err" data-err="pp" role="alert"></p>
           <p class="pay-terms-note">By continuing with your payment, you agree to our <a href="<?= esc($termsUrl) ?>" target="_blank" rel="noopener">Terms &amp; Conditions</a>.</p>
           <p class="pay-no-card"><?= icon('lock', 14) ?> No card or PayPal credentials are entered on this website.</p>
         </aside>
@@ -150,7 +127,7 @@ require_once __DIR__ . '/includes/header.php';
       <div class="founder-note">
         <p class="eyebrow">Payment support</p>
         <h2 id="payHelpHeading">Need help or having difficulties?</h2>
-        <p>If a payment does not go through or something looks wrong, stop before paying again and talk to us first. Quote the amount and any reference shown, and we will check the payment with the provider.</p>
+        <p>If a payment does not go through or something looks wrong, stop before paying again and talk to us first. Quote the amount and any PayPal reference shown, and we will check the payment with PayPal.</p>
         <span class="founder-sig">Email <a href="mailto:<?= esc($supportEmail) ?>"><?= esc($supportEmail) ?></a><?php if ($supportPhone !== ''): ?> · Call <a href="tel:<?= esc(preg_replace('/[^0-9+]/', '', $supportPhone)) ?>"><?= esc($supportPhone) ?></a><?php endif; ?></span>
       </div>
       <a class="btn btn-primary founder-book" href="<?= url('contact') ?>">Send us the details <?= icon('arrow-r', 18) ?></a>
@@ -180,4 +157,122 @@ require_once __DIR__ . '/includes/header.php';
     </div>
   </div>
 </section>
+
+<div class="pay-overlay" id="tpt-modal" aria-hidden="true">
+  <div class="pay-modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+    <div class="pay-tick" aria-hidden="true"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></div>
+    <h2 id="mTitle">Payment successful</h2>
+    <p class="pay-modal-sub">Thank you. Your payment has been confirmed.</p>
+    <dl>
+      <dt>Amount</dt><dd id="mAmount"></dd>
+      <dt>Service</dt><dd id="mService"></dd>
+      <dt>Provider</dt><dd id="mProvider"></dd>
+      <dt>Reference</dt><dd id="mRef"></dd>
+    </dl>
+    <button class="pay-modal-close" type="button" id="mClose">Close</button>
+  </div>
+</div>
+
+<?php if ($paypalReady): ?>
+<script src="<?= esc(piePayPalSdkUrl($paypalClientId)) ?>"></script>
+<script>
+/* Always convert objects to plain text so "[object Object]" can never appear. */
+function tptLabel(v){
+  if (v == null) return '';
+  if (typeof v === 'string' || typeof v === 'number') return String(v);
+  return String(v.name || v.title || v.label || v.description || '');
+}
+var shown = {}, lastFocus = null;
+var overlay = document.getElementById('tpt-modal');
+
+/* p = {provider, amount, service, reference} from PayPal's approved order */
+function showConfirmed(p){
+  if (shown[p.reference]) return;
+  shown[p.reference] = true;
+  var amount = '$' + Number(p.amount).toFixed(2) + ' USD';
+  var service = tptLabel(p.service);
+  var box = document.getElementById('tpt-payment-confirmation');
+  box.textContent = 'Payment of ' + amount + (service ? ' for ' + service : '') + ' is complete. Reference: ' + p.reference + '.';
+  box.hidden = false;
+  document.getElementById('mAmount').textContent = amount;
+  document.getElementById('mService').textContent = service || '-';
+  document.getElementById('mProvider').textContent = 'PayPal';
+  document.getElementById('mRef').textContent = p.reference;
+  lastFocus = document.activeElement;
+  overlay.classList.add('open');
+  overlay.setAttribute('aria-hidden', 'false');
+  document.getElementById('mClose').focus();
+}
+function closeModal(){
+  overlay.classList.remove('open');
+  overlay.setAttribute('aria-hidden', 'true');
+  if (lastFocus) lastFocus.focus();
+}
+document.getElementById('mClose').onclick = closeModal;
+overlay.addEventListener('click', function(e){ if (e.target === overlay) closeModal(); });
+document.addEventListener('keydown', function(e){
+  if (!overlay.classList.contains('open')) return;
+  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Tab'){ e.preventDefault(); document.getElementById('mClose').focus(); }
+});
+
+/* PayPal JavaScript SDK — the Client ID above comes from Admin → Payment Settings. */
+(function(){
+  var container = document.getElementById('paypal-button-container');
+  var errBox = document.querySelector('[data-err="pp"]');
+  if (!container || typeof paypal === 'undefined' || !paypal.Buttons) { return; }
+
+  function value(id){ var el = document.getElementById(id); return el ? String(el.value).trim() : ''; }
+  function fail(message){ if (errBox) { errBox.textContent = message || ''; } }
+  function amountValue(raw){
+    if (!/^\d{1,7}(\.\d{1,2})?$/.test(raw)) return '';
+    var amount = parseFloat(raw);
+    if (!isFinite(amount) || amount < 0.01 || amount > 1000000) return '';
+    return amount.toFixed(2);
+  }
+  function details(){
+    var name = value('payment-name');
+    var email = value('payment-email');
+    var service = value('payment-service');
+    var amount = amountValue(value('payment-amount'));
+    if (!name) { fail('Enter your name or business name.'); return null; }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { fail('Enter a valid email address.'); return null; }
+    if (!service) { fail('Choose a service from the list.'); return null; }
+    if (!amount) { fail('Enter an amount from $0.01 to $1,000,000.00 USD.'); return null; }
+    fail('');
+    return { name: name, service: service, amount: amount };
+  }
+
+  var pending = null;
+  paypal.Buttons({
+    style: { layout: 'vertical', shape: 'rect', label: 'paypal', height: 48 },
+    createOrder: function(data, actions){
+      pending = details();
+      if (!pending) { return actions.reject(); }
+      return actions.order.create({
+        purchase_units: [{
+          description: (pending.service + ' — ' + pending.name).slice(0, 127),
+          amount: { currency_code: 'USD', value: pending.amount }
+        }]
+      });
+    },
+    onApprove: function(data, actions){
+      return actions.order.capture().then(function(capture){
+        var purchase = (capture && capture.purchase_units && capture.purchase_units[0]) || {};
+        var captures = (purchase.payments && purchase.payments.captures) || [];
+        var amount = (captures[0] && captures[0].amount && captures[0].amount.value) || (pending ? pending.amount : '');
+        showConfirmed({
+          provider: 'paypal',
+          amount: amount,
+          service: pending ? pending.service : '',
+          reference: (captures[0] && captures[0].id) || (data && data.orderID) || ''
+        });
+      });
+    },
+    onCancel: function(){ fail('PayPal checkout was cancelled. You can try again whenever you are ready.'); },
+    onError: function(){ fail('PayPal could not complete the payment. Please try again or contact us before paying twice.'); }
+  }).render('#paypal-button-container');
+})();
+</script>
+<?php endif; ?>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

@@ -1,6 +1,6 @@
 <?php
 /**
- * Migration 002 — notification system, email templates, payment details.
+ * Migration 002 — notification system and email templates.
  * Every statement is rerunnable (MySQL DDL auto-commits).
  */
 return function (PDO $pdo) {
@@ -8,7 +8,7 @@ return function (PDO $pdo) {
         id INT AUTO_INCREMENT PRIMARY KEY,
         email VARCHAR(150) NOT NULL,
         is_active TINYINT(1) NOT NULL DEFAULT 1,
-        categories VARCHAR(255) NOT NULL DEFAULT 'contact,payment,lead,chatbot,system,security',
+        categories VARCHAR(255) NOT NULL DEFAULT 'contact,lead,chatbot,system,security',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE KEY uniq_notification_email (email)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
@@ -22,8 +22,4 @@ return function (PDO $pdo) {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         UNIQUE KEY uniq_template_key (template_key)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
-
-    /* Payment form details (Task 3): phone + service captured with each payment. */
-    Migrations::column($pdo, 'payments', 'phone', "VARCHAR(30) NOT NULL DEFAULT ''");
-    Migrations::column($pdo, 'payments', 'service', "VARCHAR(100) NOT NULL DEFAULT ''");
 };
