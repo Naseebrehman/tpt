@@ -298,88 +298,49 @@ blockquote,pre,table{max-width:100%}
 
 /* Pay Online: predictable layout and containers for the admin's custom code. */
 .payment-layout{grid-template-columns:minmax(0,1.25fr) minmax(240px,.75fr)}
-.pay-custom-code{min-width:0;max-width:100%}
-.pay-custom-code + .pay-custom-code{margin-top:28px}
 @media(max-width:720px){.payment-layout{grid-template-columns:minmax(0,1fr)}}
 
-/* Keep Alia above the sticky navigation and inside narrow safe areas. */
-.chatbot{z-index:1200;right:max(18px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom))}
-.chatbot-window{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:94px;z-index:1201;max-height:calc(100dvh - 120px)}
-@media(max-width:480px){
-  .chatbot{right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom))}
-  .chatbot-window{position:fixed;right:12px;bottom:calc(78px + env(safe-area-inset-bottom));width:calc(100vw - 24px);height:min(640px,calc(100dvh - 100px));max-height:calc(100dvh - 100px);border-radius:18px}
-}
-/* Testimonials: use a single-column, tightly padded card on phones. */
-@media(max-width:480px){
-  .testimonial-swiper,.testimonial-swiper .swiper-wrapper,.testimonial-swiper .swiper-slide{width:100%;max-width:100%;min-width:0}
-  .testimonial-card{padding:16px 13px;gap:12px}
-  .testimonial-quote{font-size:.94rem;line-height:1.52}
-  .testimonial-stars{font-size:.88rem;letter-spacing:3px}
-  .testimonial-who{gap:9px}
-}
-
-/* =====================================================================
-   Contact modal — the existing #contactForm, opened from "Start Project"
-   ===================================================================== */
-.contact-modal{position:fixed;inset:0;z-index:1400;display:flex;align-items:center;justify-content:center;padding:clamp(12px,3vw,40px);opacity:0;visibility:hidden;transition:opacity .28s var(--ease),visibility .28s}
-.contact-modal.open{opacity:1;visibility:visible}
-.contact-modal__overlay{position:absolute;inset:0;background:rgba(12,13,17,.78);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
-.contact-modal__panel{
-  position:relative;z-index:1;width:min(760px,100%);max-height:calc(100dvh - clamp(24px,6vw,80px));
-  overflow-y:auto;overscroll-behavior:contain;
-  background:var(--surface);border:1px solid var(--line-strong);border-radius:22px;
-  padding:clamp(20px,3.4vw,38px);box-shadow:0 50px 120px -40px rgba(0,0,0,.7);
-  transform:translateY(14px) scale(.985);transition:transform .28s var(--ease);
-}
-.contact-modal.open .contact-modal__panel{transform:none}
-.contact-modal__close{
-  position:absolute;top:clamp(12px,2vw,20px);right:clamp(12px,2vw,20px);width:40px;height:40px;border-radius:50%;
-  display:grid;place-items:center;border:1px solid var(--line-strong);background:rgba(255,255,255,.04);color:var(--muted);
-}
-.contact-modal__close:hover{color:#fff;border-color:var(--violet);background:rgba(124,58,237,.2)}
-.contact-modal__head{padding-right:52px;margin-bottom:18px}
-.contact-modal__head .eyebrow{margin-bottom:10px}
-.contact-modal__head h2{font-size:clamp(1.4rem,2.6vw,2rem);letter-spacing:-.03em}
-.contact-modal__lead{color:var(--muted);font-size:.92rem;margin-top:8px;max-width:56ch}
-.contact-modal__body .contact-panel{padding:0;border:0;background:none;border-radius:0}
-.contact-modal__body h2,.contact-modal__body .sub{display:none}
-.contact-modal__body .contact-side{display:none}
-.contact-modal__loading{color:var(--muted);font-size:.92rem;padding:26px 0;text-align:center}
-.contact-modal__loading a{color:var(--violet-soft);text-decoration:underline}
-body.modal-open{overflow:hidden}
-@media(max-width:640px){
-  .contact-modal{padding:0}
-  .contact-modal__panel{width:100%;height:100dvh;max-height:100dvh;border-radius:0;border:0;padding:20px 16px 28px}
-  .contact-modal__head h2{font-size:1.35rem}
-  .contact-modal__body .form-grid{grid-template-columns:1fr}
-}
-
-/* =====================================================================
-   Pay Online — compact, centred, side-by-side where it helps
-   ===================================================================== */
-.pay-hero{padding-block:clamp(48px,7vw,86px) clamp(20px,3vw,34px)}
-.pay-hero h1{font-size:clamp(1.9rem,4.6vw,3.1rem);letter-spacing:-.035em}
-.pay-hero .lead{margin-top:14px;color:var(--muted);font-size:clamp(.98rem,1.4vw,1.1rem);line-height:1.7;max-width:62ch}
-.pay-badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
-.pay-badges li{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:999px;border:1px solid var(--line-strong);background:rgba(255,255,255,.03);color:var(--muted);font-size:.8rem;letter-spacing:.01em}
-.pay-badges svg{color:var(--violet-soft);flex:none}
-.pay-section{padding-block:clamp(24px,3.4vw,44px)}
-.pay-shell{display:grid;grid-template-columns:minmax(0,1fr);gap:clamp(20px,3vw,36px);align-items:start}
-.pay-panel{padding:clamp(22px,3.2vw,40px);border-radius:22px;width:100%}
-.pay-panel-head h2{font-size:clamp(1.3rem,2.4vw,1.75rem)}
-.pay-panel-head .sub{margin-bottom:18px}
+/* ---------------------------------------------------------------------
+   Pay Online — one two-column block per provider (PayPal / Stripe).
+   LEFT: "Make a Payment", the buyer's fields and the shared Terms line.
+   RIGHT: the gateway's own buttons, vertically centred, with the
+   "Powered by" line underneath. The bridge only reveals the grid after it
+   has MOVED the administrator's real nodes into it, so nothing is copied,
+   rewritten or executed twice and the code below keeps working on its own.
+   --------------------------------------------------------------------- */
 .pay-providers{display:grid;grid-template-columns:minmax(0,1fr);gap:clamp(20px,2.8vw,32px)}
-.pay-providers.is-split{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
-/* Full-width panels: give the provider forms room to breathe, side by side. */
-.pay-providers.is-split .pay-custom-code form,
-.pay-providers.is-split .pay-custom-code .paypal-pay-form,
-.pay-providers.is-split .pay-custom-code .stripe-pay-form{max-width:100%}
+/* Both gateways enabled: full-width blocks stacked (PayPal first, Stripe
+   below) with a thin divider and their own label. */
+.pay-providers.is-split .pay-provider + .pay-provider{border-top:1px solid var(--line);margin-top:clamp(20px,2.8vw,30px);padding-top:clamp(20px,2.8vw,30px)}
 .pay-provider{min-width:0}
-.pay-provider-label{margin-bottom:10px;font-size:.68rem}
-.pay-providers.is-split .pay-provider + .pay-provider{border-left:1px solid var(--line);padding-left:clamp(18px,2.6vw,28px)}
-.pay-custom-code{min-width:0;max-width:100%}
-.pay-custom-code + .pay-custom-code{margin-top:0}
-.pay-terms-note{margin-top:20px;font-size:.82rem;line-height:1.65;color:var(--muted-2)}
+.pay-provider-label{margin-bottom:14px;font-size:.68rem;display:flex;align-items:center;flex-wrap:wrap;gap:10px}
+.pay-provider-mode{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;border:1px solid rgba(34,197,94,.35);background:rgba(34,197,94,.1);color:#a7f3d0;font-size:.66rem;letter-spacing:.02em;text-transform:none}
+.pay-provider-mode svg{color:#6ee7b7;flex:none}
+
+.pay-split{display:none;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:clamp(20px,3.2vw,46px);align-items:center;width:100%;min-width:0;grid-column:1/-1}
+.pay-provider.is-split-ready .pay-split{display:grid}
+.pay-split-form{min-width:0;max-width:100%}
+.pay-split-title{margin-bottom:16px;font-size:clamp(1.15rem,2.2vw,1.6rem);letter-spacing:-.02em}
+.pay-split-fields{display:grid;gap:16px;min-width:0;max-width:100%}
+.pay-split-fields>*{min-width:0;max-width:100%}
+.pay-split-fields input,.pay-split-fields select,.pay-split-fields textarea{max-width:100%}
+.pay-split-actions{display:flex;flex-direction:column;justify-content:center;align-items:stretch;gap:12px;min-width:0;max-width:100%}
+.pay-split-buttons{display:flex;flex-direction:column;gap:12px;min-width:0;max-width:100%}
+.pay-split-buttons iframe,.pay-split-buttons button,.pay-split-buttons .btn,.pay-split-buttons [id$="-button-container"]{max-width:100%}
+.pay-split-buttons .field{min-width:0;max-width:100%}
+.pay-powered-by{margin:0;text-align:center;font-size:.74rem;letter-spacing:.02em;color:var(--muted-2)}
+.pay-powered-by strong{color:var(--muted);font-weight:600}
+/* Wide gateway code (iframes, inputs, tables) never overflows the panel. */
+.pay-custom-code{min-width:0;max-width:100%;overflow-x:auto}
+.pay-custom-code iframe{max-width:100%}
+@media (max-width:820px){
+  /* Mobile: stack the columns — form and Terms first, buttons below. */
+  .pay-provider.is-split-ready .pay-split{grid-template-columns:minmax(0,1fr);align-items:stretch}
+  .pay-split-actions{padding-top:8px}
+  .pay-split-buttons{align-items:stretch}
+}
+.pay-custom-code + .pay-custom-code{margin-top:28px}
+.pay-terms-note{margin-top:18px;font-size:.82rem;line-height:1.65;color:var(--muted-2)}
 .pay-terms-note a{color:var(--violet-soft);text-decoration:underline}
 .pay-terms-note + .pay-terms-note{display:none}
 .pay-confirmation{display:none;margin-bottom:20px;padding:18px 20px;border-radius:14px;border:1px solid rgba(34,197,94,.4);background:rgba(34,197,94,.1);color:#d1fae5;font-size:.95rem;line-height:1.7}
@@ -391,6 +352,34 @@ body.modal-open{overflow:hidden}
 .pay-custom-code input[type="text"],.pay-custom-code input[type="email"],.pay-custom-code input[type="number"],
 .pay-custom-code select,.pay-custom-code textarea{background:rgba(16,16,23,.9);color:var(--text);border:1px solid var(--line-strong)}
 .pay-custom-code fieldset{border-color:var(--line)}
+
+/* ---------------------------------------------------------------------
+   Confirmed-payment popup — shown once, only after a real confirmation.
+   Accessible dialog: role="dialog", aria-modal, focus trap, Esc to close.
+   --------------------------------------------------------------------- */
+.pay-modal{position:fixed;inset:0;z-index:1500;display:flex;align-items:center;justify-content:center;padding:clamp(14px,3vw,40px);opacity:0;visibility:hidden;transition:opacity .24s var(--ease),visibility .24s}
+.pay-modal.open{opacity:1;visibility:visible}
+.pay-modal__overlay{position:absolute;inset:0;background:rgba(12,13,17,.8);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.pay-modal__panel{
+  position:relative;z-index:1;width:min(520px,100%);max-height:calc(100dvh - clamp(24px,6vw,80px));overflow-y:auto;overscroll-behavior:contain;
+  background:var(--surface);border:1px solid var(--line-strong);border-radius:22px;padding:clamp(24px,3.4vw,38px);
+  text-align:center;box-shadow:0 50px 120px -40px rgba(0,0,0,.7);
+  transform:translateY(14px) scale(.985);transition:transform .28s var(--ease);
+}
+.pay-modal.open .pay-modal__panel{transform:none}
+.pay-modal__check{display:inline-grid;place-items:center;width:62px;height:62px;margin-bottom:16px;border-radius:50%;background:rgba(34,197,94,.14);border:1px solid rgba(34,197,94,.45);color:#4ade80}
+.pay-modal__title{font-size:clamp(1.35rem,2.6vw,1.8rem);letter-spacing:-.03em}
+.pay-modal__lead{margin-top:10px;color:var(--muted);font-size:.92rem;line-height:1.65}
+.pay-modal__facts{display:grid;gap:1px;margin:22px 0;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--line);text-align:left}
+.pay-modal__fact{display:flex;align-items:baseline;justify-content:space-between;gap:14px;padding:12px 16px;background:var(--surface)}
+.pay-modal__fact dt{color:var(--muted-2);font-size:.72rem;letter-spacing:.04em;text-transform:uppercase}
+.pay-modal__fact dd{margin:0;font-size:.92rem;font-weight:600;text-align:right;word-break:break-word}
+.pay-modal__close{width:100%}
+@media (max-width:520px){
+  .pay-modal{padding:0}
+  .pay-modal__panel{width:100%;max-height:100dvh;border-radius:18px;padding:26px 18px 28px}
+  .pay-modal__fact{padding:11px 13px}
+}
 .pay-faq-section{padding-block:clamp(14px,2.2vw,26px) clamp(48px,6.4vw,80px)}
 .pay-faq-wrap{max-width:100%;margin-inline:0}
 .pay-faq-head{margin-bottom:clamp(18px,2.4vw,26px)}
@@ -431,8 +420,6 @@ body.modal-open{overflow:hidden}
   .pay-shell{grid-template-columns:minmax(0,1fr)}
 }
 @media(max-width:720px){
-  .pay-providers.is-split{grid-template-columns:minmax(0,1fr)}
-  .pay-providers.is-split .pay-provider + .pay-provider{border-left:0;padding-left:0;border-top:1px solid var(--line);padding-top:20px}
   .pay-custom-code{overflow-x:auto}
 }
 

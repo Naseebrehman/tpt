@@ -108,7 +108,9 @@ async function handlePhp(req, res, url, target) {
 	const response = await php.runStream({
 		/* entry.php installs the optional data layer, then runs the real script. */
 		scriptPath: path.join(ROOT, 'tests/harness/entry.php'),
-		relativeUri: url.pathname,
+		/* The query string must travel with the URI: php-wasm parses $_GET from
+		   it, and every filtered/paginated admin screen depends on $_GET. */
+		relativeUri: url.pathname + (url.search || ''),
 		method: req.method,
 		headers: req.headers,
 		body: body.length ? body : undefined,

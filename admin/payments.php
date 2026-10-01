@@ -8,23 +8,29 @@
  *  forms, validation). Each code block is stored exactly as provided — never
  *  sanitised, escaped, rewritten or restructured — and the public Pay Online
  *  page renders it verbatim. Gateways are independently enabled/disabled.
- *  No gateway API calls or secret keys exist anywhere in this project.
  *
  *  Two dashboard values feed that code without the administrator ever editing
  *  it, and the service dropdown comes from the EXISTING Services system below
  *  (there is no second Services manager):
  *
- *      paypal_client_id   PayPal Client ID        → {{PAYPAL_CLIENT_ID}}
- *      paypal_secret      PayPal Secret           → server-side only (never
- *                                                   rendered to a browser)
- *      paypal_env         live / sandbox PayPal environment for the REST calls
- *      terms_url          Terms & Conditions URL  → {{TERMS_URL}} (shared)
- *      payment_services   Services               → {{SERVICES_OPTIONS}}
+ *      paypal_client_id      PayPal Client ID     → {{PAYPAL_CLIENT_ID}}
+ *      paypal_secret         PayPal Secret        → server-side only (never
+ *                                                    rendered to a browser)
+ *      paypal_env            live / sandbox PayPal environment for REST calls
+ *      stripe_secret_key     Stripe Secret Key    → server-side only
+ *      stripe_webhook_secret Stripe Webhook Secret → server-side only
+ *      terms_url             Terms & Conditions URL → {{TERMS_URL}} (shared)
+ *      payment_services      Services             → {{SERVICES_OPTIONS}}
  *
- *  The PayPal Secret is used for ONE thing: creating and capturing/verifying
- *  orders on the server (core/PayPal.php + paypal-api.php). It is never echoed
- *  in this dashboard, never placed in HTML/JavaScript and never returned by any
+ *  Both secrets are used for ONE thing: creating and confirming/verifying
+ *  payments on the server (core/PayPal.php + paypal-api.php, core/Stripe.php +
+ *  stripe-api.php + stripe-webhook.php). They are never echoed in this
+ *  dashboard, never placed in HTML/JavaScript and never returned by any
  *  endpoint — the dashboard only ever shows whether one is stored.
+ *
+ *  Confirmed payments are listed under Admin → Payments → Payment records
+ *  (admin/payment-records.php), with search, filters, totals, delete, bulk
+ *  delete and a CSV export.
  * ---------------------------------------------------------------------------
  */
 
@@ -168,6 +174,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($paymentAction === 'save_stripe' || $paymentAction === 'save_all_gateways') {
         $stripeEnabled = !empty($_POST['stripe_enabled']) ? '1' : '0';
         $stripeCode    = paymentCodeFromRequest('stripe_sdk_code');
+        /* Server-side credentials are never sent back to the browser: an empty
+           field keeps the stored value, the explicit button clears it. */
+        $stripeSecretInput  = isset($_POST['stripe_secret_key']) ? paymentCleanValue($_POST['stripe_secret_key']) : '';
+        $clearStripeSecret  = !empty($_POST['stripe_secret_clear']) && $stripeSecretInput === '';
+        $stripeWebhookInput = isset($_POST['stripe_webhook_secret']) ? paymentCleanValue($_POST['stripe_webhook_secret']) : '';
+        $clearStripeWebhook = !empty($_POST['stripe_webhook_secret_clear']) && $stripeWebhookInput === '';
+
+        /* Validate before anything is written, so a typo can never overwrite
+           the saved implementation or a stored credential. */
+        if ($stripeSecretInput !== '' && !pieIsValidStripeSecret($stripeSecretInput)) {
+            setFlash('err', 'That Stripe Secret Key does not look valid (it starts with sk_ or rk_ and includes _live_ or _test_). Nothing was changed.');
+            paymentServicesRedirect();
+        }
+        if ($stripeWebhookInput !== '' && !pieIsValidStripeWebhookSecret($stripeWebhookInput)) {
+            setFlash('err', 'That Stripe Webhook Secret does not look valid (it starts with whsec_). Nothing was changed.');
+            paymentServicesRedirect();
+        }
 
         dbExec(
             'INSERT INTO settings (setting_key, setting_value) VALUES (?, ?)
@@ -179,9 +202,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)',
             array('stripe_sdk_code', $stripeCode)
         );
+        /* Write a credential only when a new one was typed, or clear it when
+           the administrator explicitly asked. Stored values are never shown. */
+        if ($stripeSecretInput !== '') {
+            savePaymentSetting('stripe_secret_key', $stripeSecretInput);
+        } elseif ($clearStripeSecret) {
+            dbExec('DELETE FROM settings WHERE setting_key = ?', array('stripe_secret_key'));
+        }
+        if ($stripeWebhookInput !== '') {
+            savePaymentSetting('stripe_webhook_secret', $stripeWebhookInput);
+        } elseif ($clearStripeWebhook) {
+            dbExec('DELETE FROM settings WHERE setting_key = ?', array('stripe_webhook_secret'));
+        }
         settingsCache(true);
         if ($paymentAction === 'save_stripe') {
-            setFlash('ok', 'Stripe payment code saved — stored exactly as provided.');
+            setFlash('ok', 'Stripe settings saved — payment code stored exactly as provided'
+                . ($stripeSecretInput !== '' ? ', and the Secret Key is stored server-side only.' : '.'));
             paymentServicesRedirect();
         }
     }
@@ -256,6 +292,11 @@ $paypalClientId = piePayPalClientId();
 $paypalEnv      = piePayPalEnv();
 $paypalSecretSet = piePayPalSecretConfigured();
 $paypalServerReady = piePayPalServerReady();
+$stripeSecretSet   = pieStripeSecretConfigured();
+$stripeWebhookSet  = pieStripeWebhookSecretConfigured();
+$stripeServerReady = pieStripeServerReady();
+$stripeMode        = pieStripeKeyMode();
+$stripeWebhookUrl  = rtrim(SITE_URL, '/') . url('stripe-webhook');
 $termsUrl       = getSetting('terms_url', '');
 $idConflicts    = piePaymentIdConflicts(array('paypal' => $paypalSdkCode, 'stripe' => $stripeSdkCode));
 $unlinkedSelects = array_merge(
@@ -272,11 +313,12 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
         <div>
             <h2>Payment Gateways &amp; Custom Code</h2>
-            <p class="hint">Paste your complete PayPal and Stripe implementations — HTML, CSS, JavaScript, SDK script tags, buttons, forms and validation. Saved code is stored exactly as you provide it and rendered verbatim on the Pay Online page. This site never makes gateway API calls and holds no secret keys.</p>
+            <p class="hint">Paste your complete PayPal and Stripe implementations — HTML, CSS, JavaScript, SDK script tags, buttons, forms and validation. Saved code is stored exactly as you provide it and rendered verbatim on the Pay Online page. Payments are confirmed <strong>server-side</strong> whenever the matching secret credential (PayPal Secret, Stripe Secret Key) is stored here; a provider without one keeps working in the browser exactly as before. Secrets are never printed, rendered or returned by any endpoint — the dashboard only ever shows whether one is stored.</p>
         </div>
-        <div style="display:flex;gap:10px;align-items:center;">
-            <span>PayPal: <span class="badge <?= $paypalEnabled ? 'active' : 'inactive' ?>"><?= $paypalEnabled ? 'Enabled' : 'Disabled' ?></span></span>
-            <span>Stripe: <span class="badge <?= $stripeEnabled ? 'active' : 'inactive' ?>"><?= $stripeEnabled ? 'Enabled' : 'Disabled' ?></span></span>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <span>PayPal: <span class="badge <?= $paypalEnabled ? 'active' : 'inactive' ?>"><?= $paypalEnabled ? 'Enabled' : 'Disabled' ?></span> <span class="badge <?= $paypalServerReady ? 'active' : 'inactive' ?>"><?= $paypalServerReady ? 'Server-verified' : 'Browser-only' ?></span></span>
+            <span>Stripe: <span class="badge <?= $stripeEnabled ? 'active' : 'inactive' ?>"><?= $stripeEnabled ? 'Enabled' : 'Disabled' ?></span> <span class="badge <?= $stripeServerReady ? 'active' : 'inactive' ?>"><?= $stripeServerReady ? 'Server-verified' : 'Browser-only' ?></span></span>
+            <a class="a-btn small" href="payment-records.php"><?= icon('chart', 15) ?> Payment records</a>
         </div>
     </div>
 </div>
@@ -395,6 +437,13 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
     </div>
     <p class="hint">Paste your <strong>complete</strong> self-contained Stripe page/component code: <code>&lt;style&gt;</code> blocks, HTML, <code>&lt;form&gt;</code>s, input fields, the Stripe SDK <code>&lt;script&gt;</code>, Elements, buttons, validation and any other frontend code. Everything is kept exactly as provided and executes once when the Pay Online page loads.</p>
 
+    <?php if ($stripeEnabled && !$stripeSecretSet): ?>
+        <p class="hint" style="color:#fcd34d">Stripe has no Secret Key saved, so the payment is confirmed in the browser (<code>window.TPT_STRIPE.serverVerification</code> is false). Add the Secret Key below — plus the Webhook Secret — to switch on server-side confirmation (recommended).</p>
+    <?php endif; ?>
+    <?php if ($stripeServerReady && !$stripeWebhookSet): ?>
+        <p class="hint" style="color:#fcd34d">Server-side confirmation is active, but no Webhook Secret is stored: payments are still recorded when the buyer stays on the page, but a payment completed after the tab was closed would be missed. Add the Webhook Secret and register <code><?= esc($stripeWebhookUrl) ?></code> in Stripe → Developers → Webhooks.</p>
+    <?php endif; ?>
+
     <form method="post">
         <?= csrfField() ?>
         <input type="hidden" name="payment_action" value="save_stripe">
@@ -404,6 +453,43 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
             <span class="track" aria-hidden="true"></span>
             <span><strong>Enable / Disable</strong> — when enabled, your saved Stripe code is rendered on the Pay Online page.</span>
         </label>
+
+        <div class="a-field">
+            <label for="stripe_secret_key">Stripe Secret Key <span style="color:var(--muted)">(server-side only — never sent to a browser)</span></label>
+            <?php if ($stripeSecretSet): ?>
+            <div class="a-toolbar" style="margin:0 0 8px">
+                <span class="badge active"><?= icon('lock', 14) ?> A Secret Key is stored</span>
+                <span class="badge <?= $stripeServerReady ? 'active' : 'inactive' ?>"><?= $stripeServerReady ? 'Server-side confirmation active' : 'Not active' ?></span>
+                <span class="badge <?= $stripeMode === 'test' ? 'inactive' : 'active' ?>"><?= $stripeMode === 'test' ? 'Test credentials' : 'Live credentials' ?></span>
+            </div>
+            <?php endif; ?>
+            <input id="stripe_secret_key" name="stripe_secret_key" type="password" value="" placeholder="<?= $stripeSecretSet ? 'Enter a new Secret Key to replace the stored one' : 'Your Stripe secret API key (sk_… / rk_…)' ?>" autocomplete="new-password" spellcheck="false">
+            <div class="hint">
+                Used only on the server: PaymentIntents are created and confirmed with Stripe’s REST API in <code>core/Stripe.php</code>, and the key is never printed, logged, escaped into the page or returned by any endpoint. Leave this field empty to keep the stored key.
+            </div>
+            <?php if ($stripeSecretSet): ?>
+            <label class="a-check" style="margin-top:8px"><input type="checkbox" name="stripe_secret_clear" value="1"> Remove the stored Secret Key (falls back to browser-side confirmation)</label>
+            <?php endif; ?>
+            <?php if ($stripeServerReady): ?>
+            <div class="hint" style="margin-top:8px">Browser-and-server flow: the page asks this site to create the PaymentIntent (the amount and USD are set server-side), Stripe.js confirms the card, and this site then verifies <strong>status = succeeded</strong>, the amount and the currency with Stripe before anything is shown as successful. The administrator’s own code can use <code>window.TPT_STRIPE.createIntent()</code> / <code>window.TPT_STRIPE.confirm()</code>.</div>
+            <?php endif; ?>
+        </div>
+
+        <div class="a-field">
+            <label for="stripe_webhook_secret">Stripe Webhook Secret <span style="color:var(--muted)">(server-side only — verifies Stripe-Signature)</span></label>
+            <?php if ($stripeWebhookSet): ?>
+            <div class="a-toolbar" style="margin:0 0 8px">
+                <span class="badge active"><?= icon('lock', 14) ?> A Webhook Secret is stored</span>
+            </div>
+            <?php endif; ?>
+            <input id="stripe_webhook_secret" name="stripe_webhook_secret" type="password" value="" placeholder="<?= $stripeWebhookSet ? 'Enter a new Webhook Secret to replace the stored one' : 'The signing secret shown for your webhook endpoint (whsec_…)' ?>" autocomplete="new-password" spellcheck="false">
+            <div class="hint">
+                Register this endpoint in Stripe → Developers → Webhooks and subscribe to <code>payment_intent.succeeded</code> and <code>checkout.session.completed</code> — <code><?= esc($stripeWebhookUrl) ?></code>. Every delivery is signature-verified before it is read, and the same Stripe payment id is never recorded twice.
+            </div>
+            <?php if ($stripeWebhookSet): ?>
+            <label class="a-check" style="margin-top:8px"><input type="checkbox" name="stripe_webhook_secret_clear" value="1"> Remove the stored Webhook Secret (the webhook endpoint stops accepting events)</label>
+            <?php endif; ?>
+        </div>
 
         <div class="a-field">
             <label for="stripe_sdk_code">Stripe payment code (HTML / CSS / JavaScript)</label>

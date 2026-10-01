@@ -46,6 +46,7 @@ $expectations = array(
     'settings'     => array('Payments', 'Send Test Email', 'Email Templates', 'Notification recipients', 'AI / Alia', 'CAPTCHA', 'Active provider'),
     'index'        => array('Dashboard'),
     'payments'     => array('Payments'),
+    'payment-records' => array('Payments', 'Export CSV'),
     'submissions'  => array('Contact Submissions'),
     'leads'        => array('Lead'),
     'blog'         => array('Blog Manager'),
@@ -61,7 +62,8 @@ $expectations = array(
 );
 
 $smokeArgs = isset($argv[1]) ? (string) $argv[1] : (string) getenv('TPT_HARNESS_ARGS');
-$smokePage = trim($smokeArgs) !== '' ? preg_replace('/[^a-z_]/', '', trim($smokeArgs)) : 'settings';
+/* Hyphens are kept: some admin screens are named payment-records.php etc. */
+$smokePage = trim($smokeArgs) !== '' ? preg_replace('/[^a-z_-]/', '', trim($smokeArgs)) : 'settings';
 if (!isset($expectations[$smokePage])) {
     fwrite(STDOUT, "FAIL unknown admin page '$smokePage'\n");
     exit(1);

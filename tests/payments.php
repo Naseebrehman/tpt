@@ -231,6 +231,13 @@ check(strpos($bridge, 'TPT_PAYMENT_SERVICES') !== false, 'the bridge exposes the
 check(strpos($bridge, 'data-tpt-terms') !== false, 'the bridge applies the shared Terms URL');
 check(strpos($bridge, '"providers":["paypal","stripe"]') !== false, 'the bridge only wires the rendered providers');
 check(strpos($bridge, '</script>') === false || strpos($bridge, '<\/script>') !== false || strpos($bridge, 'json_encode') === false, 'the bridge never breaks out of its script tag');
+/* The two-column placement must always be able to run: a container is never
+   moved into itself, and the "Powered by" search never picks one of the
+   bridge's own columns (which would throw a HierarchyRequestError and leave
+   the block in its stacked fallback layout). */
+check(strpos($bridge, 'node.contains(column)') !== false, 'the bridge refuses to move a container into one of its own children');
+check(strpos($bridge, 'data-tpt-split], [data-tpt-form]') !== false, 'the "Powered by" search skips the bridge\'s own grid and columns');
+check(strpos($bridge, '[data-tpt-powered]') !== false, 'the bridge\'s own "Powered by" line is never moved');
 setFakeServices(array(array('id' => 9, 'name' => 'Evil</script><script>alert(1)</script>', 'sort_order' => 1, 'is_active' => 1)));
 $hostileBridge = piePaymentBridge(array('paypal'));
 check(strpos($hostileBridge, '</script><script>alert(1)') === false, 'service names cannot break out of the bridge script');
@@ -279,7 +286,14 @@ check(preg_match('/name="paypal_secret"[^>]*type="password"|type="password"[^>]*
 check(!preg_match('/name="paypal_secret"[^>]*value="<\?=/', $admin), 'the stored Secret is never written back into the field');
 check(!preg_match('/esc\(\$paypalSecret\)|esc\(piePayPalSecret/', $admin), 'the stored Secret is never printed anywhere in the dashboard');
 check(strpos($admin, 'paypal_secret_clear') !== false, 'an empty Secret field keeps the stored value until it is explicitly removed');
-check(!preg_match('/name="stripe_secret"|secret_key/i', $admin), 'no other gateway secret is stored or displayed');
+check(strpos($admin, 'name="stripe_secret_key"') !== false, 'the dashboard stores the Stripe Secret Key');
+check(strpos($admin, 'name="stripe_webhook_secret"') !== false, 'the dashboard stores the Stripe Webhook Secret');
+check(preg_match('/name="stripe_secret_key"[^>]*type="password"|type="password"[^>]*name="stripe_secret_key"/', $admin) === 1, 'the Stripe Secret Key field is a password field');
+check(preg_match('/name="stripe_webhook_secret"[^>]*type="password"|type="password"[^>]*name="stripe_webhook_secret"/', $admin) === 1, 'the Stripe Webhook Secret field is a password field');
+check(!preg_match('/name="stripe_secret_key"[^>]*value="<\?=/', $admin) && !preg_match('/name="stripe_webhook_secret"[^>]*value="<\?=/', $admin), 'stored Stripe credentials are never written back into their fields');
+check(!preg_match('/esc\(\$stripeSecret|esc\(pieStripeSecret|esc\(pieStripeWebhookSecret/', $admin), 'stored Stripe credentials are never printed anywhere in the dashboard');
+check(strpos($admin, 'stripe_secret_clear') !== false && strpos($admin, 'stripe_webhook_secret_clear') !== false, 'empty Stripe credential fields keep the stored values until they are explicitly removed');
+check(strpos($admin, 'stripe-webhook') !== false, 'the dashboard shows the webhook URL that must be registered in Stripe');
 $paypalCore = source('core/PayPal.php');
 check(strpos($paypalCore, 'SERVER-SIDE ONLY') !== false, 'core/PayPal.php marks the Secret as server-side only');
 check(strpos(source('paypal-api.php'), 'piePayPalSecret') === false, 'the public endpoint never touches the Secret directly');

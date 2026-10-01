@@ -126,5 +126,7 @@ INSERT IGNORE INTO settings (setting_key, setting_value) VALUES
 ('paypal_client_id', ''),
 ('paypal_secret', ''),
 ('paypal_env', 'live'),
+('stripe_secret_key', ''),
+('stripe_webhook_secret', ''),
 ('terms_url', '');
 TPT_SEED_SQL;
