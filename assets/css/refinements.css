@@ -294,6 +294,14 @@ blockquote,pre,table{max-width:100%}
 }
 
 /* Pay Online — compact centered checkout, no third-party browser SDK panels. */
+.pay-hero .pay-badges{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:20px 0 0;padding:0;list-style:none}
+.pay-badges li{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border:1px solid var(--line-strong);border-radius:999px;background:rgba(255,255,255,.035);color:var(--muted);font-size:.76rem;font-weight:600;line-height:1;white-space:nowrap}
+.pay-badges li svg{flex:none;width:14px;height:14px}
+.pay-badges li:first-child{border-color:rgba(124,58,237,.5);background:rgba(124,58,237,.12);color:var(--violet-soft)}
+.pay-badges li:nth-child(2){border-color:rgba(74,222,128,.35);background:rgba(74,222,128,.08);color:#bbf7d0}
+.pay-badges li:last-child{border-color:rgba(34,211,238,.3);background:rgba(34,211,238,.07);color:#a5f3fc}
+@media (max-width:480px){.pay-badges li{font-size:.72rem;padding:6px 11px}}
+
 .pay-section{padding-block:clamp(24px,3.8vw,48px) clamp(34px,5vw,62px)}
 .pay-panel{
   width:min(100%,1120px);margin-inline:auto;padding:clamp(22px,3.2vw,38px);
@@ -325,7 +333,10 @@ blockquote,pre,table{max-width:100%}
 .pay-field select option{background:#17171f;color:#f4f4f8}
 .pay-field textarea{min-height:94px;resize:vertical}
 .pay-field small{color:var(--muted-2);font-size:.7rem;line-height:1.45}
-.pay-field-notes{grid-column:1/-1}
+.pay-field-wide{grid-column:1/-1}
+.pay-terms-inline{grid-column:1/-1;margin:2px 0 0;color:var(--muted-2);font-size:.76rem;line-height:1.6}
+.pay-terms-inline a{color:#c4b5fd;text-decoration:underline;text-decoration-color:rgba(196,181,253,.5);text-underline-offset:3px}
+.pay-terms-inline a:hover{color:#fff}
 .pay-amount-input{position:relative;min-width:0}
 .pay-amount-input>span{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#a5f3fc;font-weight:700;pointer-events:none}
 .pay-amount-input input{padding-left:31px}
@@ -340,13 +351,7 @@ blockquote,pre,table{max-width:100%}
 .pay-gateway-actions{display:grid;gap:10px;margin-top:22px}
 .pay-paypal-buttons{width:100%;min-height:48px}
 .pay-paypal-buttons .paypal-buttons{display:block}
-.pay-powered{margin:0;text-align:center;color:var(--muted-2);font-size:.74rem;letter-spacing:.01em}
 .pay-err{margin:12px 0 0;color:#fca5a5;font-size:.8rem;line-height:1.5;min-height:1.2em}
-.pay-terms-note{margin:17px 0 0;color:var(--muted-2);font-size:.74rem;line-height:1.65}
-.pay-terms-note a{color:#c4b5fd;text-decoration:underline;text-decoration-color:rgba(196,181,253,.5);text-underline-offset:3px}
-.pay-terms-note a:hover{color:#fff}
-.pay-no-card{display:flex;align-items:flex-start;gap:7px;margin:12px 0 0;color:var(--muted-2);font-size:.7rem;line-height:1.5}
-.pay-no-card svg{flex:none;margin-top:1px;color:#67e8f9}
 .pay-overlay{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(4,5,10,.72)}
 .pay-overlay.open{display:flex}
 .pay-modal{width:100%;max-width:420px;padding:32px;border:1px solid var(--line);border-radius:18px;background:var(--panel);text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.6)}
@@ -380,7 +385,6 @@ blockquote,pre,table{max-width:100%}
   .pay-panel-head{display:block;margin-bottom:22px}
   .pay-secure-mark{margin-top:14px}
   .pay-form-fields{grid-template-columns:minmax(0,1fr);gap:14px}
-  .pay-field-notes{grid-column:auto}
   .pay-field input,.pay-field select,.pay-field textarea{min-height:48px;font-size:16px}
   .pay-field textarea{min-height:92px}
   .pay-checkout-options{padding:19px 16px}

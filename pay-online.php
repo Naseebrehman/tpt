@@ -26,9 +26,6 @@ $paymentFaq = array(
     array('q' => 'Which currency are payments taken in?', 'a' => 'Payments are taken in US dollars (USD). The amount you enter is the amount charged.'),
     array('q' => 'Is my payment secure?', 'a' => 'Yes. You pay on PayPal’s own secure checkout. Your PayPal login and card details are never entered on, or stored by, this website.'),
     array('q' => 'How do I know my payment went through?', 'a' => 'PayPal shows its own payment confirmation, and this page then displays a success message with the amount, service and PayPal reference. Keep the reference for your records.'),
-    array('q' => 'What can I pay for?', 'a' => 'Choose a service from the list. If you select “Others”, describe your payment in the notes field.'),
-    array('q' => 'Which terms apply to my payment?', 'a' => 'By continuing with your payment you agree to our Terms & Conditions, linked below the payment button and in the site footer.'),
-    array('q' => 'What if something looks wrong?', 'a' => 'Do not submit another payment if you are unsure. Contact our team with the amount and any PayPal reference so we can check it with you.'),
 );
 
 require_once __DIR__ . '/includes/header.php';
@@ -63,17 +60,9 @@ require_once __DIR__ . '/includes/header.php';
       <?php if ($paypalReady): ?>
       <form id="payment-form" class="pay-layout">
         <div class="pay-form-fields">
-          <div class="pay-field">
+          <div class="pay-field pay-field-wide">
             <label for="payment-name">Name / Business name <span aria-hidden="true">*</span></label>
             <input id="payment-name" name="name" type="text" maxlength="150" autocomplete="name" placeholder="Your name or business name" required>
-          </div>
-          <div class="pay-field">
-            <label for="payment-email">Email address <span aria-hidden="true">*</span></label>
-            <input id="payment-email" name="email" type="email" maxlength="150" autocomplete="email" placeholder="you@example.com" required>
-          </div>
-          <div class="pay-field">
-            <label for="payment-phone">Phone <span class="optional">Optional</span></label>
-            <input id="payment-phone" name="phone" type="tel" maxlength="30" autocomplete="tel" placeholder="Phone number">
           </div>
           <div class="pay-field">
             <label for="payment-service">Service <span aria-hidden="true">*</span></label>
@@ -89,10 +78,7 @@ require_once __DIR__ . '/includes/header.php';
             <div class="pay-amount-input"><span aria-hidden="true">$</span><input id="payment-amount" name="amount" type="number" min="0.01" max="1000000" step="0.01" inputmode="decimal" placeholder="500.00" required></div>
             <small>Enter an amount between $0.01 and $1,000,000.00.</small>
           </div>
-          <div class="pay-field pay-field-notes">
-            <label for="payment-notes">Notes <span class="optional">Optional</span></label>
-            <textarea id="payment-notes" name="notes" maxlength="2000" rows="3" placeholder="Add an invoice, project or payment note"></textarea>
-          </div>
+          <p class="pay-terms-inline">By continuing with your payment, you agree to our <a href="<?= esc($termsUrl) ?>" target="_blank" rel="noopener">Terms &amp; Conditions</a>.</p>
         </div>
 
         <aside class="pay-checkout-options" aria-label="Pay with PayPal">
@@ -103,11 +89,8 @@ require_once __DIR__ . '/includes/header.php';
           </div>
           <div class="pay-gateway-actions">
             <div id="paypal-button-container" class="pay-paypal-buttons"></div>
-            <p class="pay-powered">Powered by PayPal</p>
           </div>
           <p class="pay-err" data-err="pp" role="alert"></p>
-          <p class="pay-terms-note">By continuing with your payment, you agree to our <a href="<?= esc($termsUrl) ?>" target="_blank" rel="noopener">Terms &amp; Conditions</a>.</p>
-          <p class="pay-no-card"><?= icon('lock', 14) ?> No card or PayPal credentials are entered on this website.</p>
         </aside>
       </form>
       <?php else: ?>
@@ -237,11 +220,9 @@ document.addEventListener('keydown', function(e){
   }
   function details(){
     var name = value('payment-name');
-    var email = value('payment-email');
     var service = value('payment-service');
     var amount = amountValue(value('payment-amount'));
     if (!name) { fail('Enter your name or business name.'); return null; }
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { fail('Enter a valid email address.'); return null; }
     if (!service) { fail('Choose a service from the list.'); return null; }
     if (!amount) { fail('Enter an amount from $0.01 to $1,000,000.00 USD.'); return null; }
     fail('');

@@ -33,9 +33,11 @@ function dbOne($sql, $params = array())
 function dbExec($sql, $params = array()) { return 1; }
 function dbInsert($sql, $params = array()) { return 1; }
 
+$GLOBALS['paymentRenderChecks'] = 0;
 function paymentRenderCheck($condition, $message)
 {
     if (!$condition) { throw new RuntimeException('FAIL: ' . $message); }
+    $GLOBALS['paymentRenderChecks']++;
     echo 'PASS: ' . $message . PHP_EOL;
 }
 
@@ -57,12 +59,16 @@ paymentRenderCheck(strpos($html, 'id="payment-form"') !== false && strpos($html,
 paymentRenderCheck(strpos($html, 'id="paypal-button-container"') !== false, 'the single PayPal SDK button container renders');
 paymentRenderCheck(strpos($html, 'https://www.paypal.com/sdk/js?client-id=' . $clientId . '&amp;currency=USD') !== false, 'the PayPal JavaScript SDK is loaded with the saved Client ID');
 paymentRenderCheck(stripos($html, 'stripe') === false, 'the payment page contains no Stripe markup, script or option');
-paymentRenderCheck(strpos($html, 'name="phone"') !== false && strpos($html, 'name="service"') !== false && strpos($html, 'name="amount"') !== false, 'the existing customer, Services and amount fields render');
+paymentRenderCheck(strpos($html, 'id="payment-name"') !== false && strpos($html, 'name="service"') !== false && strpos($html, 'name="amount"') !== false, 'the name, Services and amount fields render');
+paymentRenderCheck(strpos($html, 'name="email"') === false && strpos($html, 'name="phone"') === false && strpos($html, 'name="notes"') === false, 'the email, phone and notes fields are removed');
+preg_match('/<form id="payment-form".*?<\/form>/s', $html, $formBlock);
+$formHtml = $formBlock ? $formBlock[0] : '';
+paymentRenderCheck(strpos($formHtml, 'Terms &amp; Conditions') !== false
+    && strpos($formHtml, 'name="amount"') < strpos($formHtml, 'Terms &amp; Conditions'), 'the Terms & Conditions link sits in the payment form below the amount');
+paymentRenderCheck(strpos($html, 'Powered by PayPal') === false, 'the payment method panel has no duplicate PayPal/terms/security notes');
 paymentRenderCheck(strpos($html, 'AI Optimization') !== false && strpos($html, 'Web Development') !== false, 'active Services from the existing system render in the form');
 paymentRenderCheck(stripos($html, 'paypal_secret') === false && stripos($html, 'client_secret') === false && stripos($html, 'sk_live') === false && stripos($html, 'sk_test') === false, 'no PayPal secret, Stripe key or server credential appears in the HTML');
-preg_match('/<form id="payment-form".*?<\/form>/s', $html, $formMatch);
-$paymentForm = $formMatch ? $formMatch[0] : '';
-paymentRenderCheck($paymentForm !== '' && stripos($paymentForm, 'csrf') === false && stripos($paymentForm, 'action=') === false && stripos($paymentForm, 'paypal-api') === false, 'the payment form posts nowhere and needs no CSRF field');
+paymentRenderCheck($formHtml !== '' && stripos($formHtml, 'csrf') === false && stripos($formHtml, 'action=') === false && stripos($formHtml, 'paypal-api') === false, 'the payment form posts nowhere and needs no CSRF field');
 paymentRenderCheck((bool) preg_match('/id="tpt-payment-confirmation"[^>]*\shidden/', $html) && strpos($styles, '.pay-confirmation[hidden]{display:none}') !== false, 'the confirmation notice stays hidden until PayPal approves the payment');
 paymentRenderCheck(strpos($html, 'id="tpt-modal"') !== false && strpos($html, 'id="mRef"') !== false, 'the PayPal success popup markup renders');
 paymentRenderCheck(strpos($html, 'refinements.css') !== false && strpos($html, 'pay-layout') !== false, 'rendered payment form uses the responsive checkout stylesheet/classes');
@@ -74,4 +80,4 @@ $noIdHtml = renderPaymentPage();
 paymentRenderCheck(strpos($noIdHtml, 'Online payments are currently unavailable.') !== false, 'an empty Client ID shows the unavailable notice');
 paymentRenderCheck(strpos($noIdHtml, 'paypal.com/sdk/js') === false && strpos($noIdHtml, 'id="paypal-button-container"') === false, 'no PayPal SDK or button is loaded without a Client ID');
 
-echo PHP_EOL . '12 payment page render checks passed.' . PHP_EOL;
+echo PHP_EOL . $GLOBALS['paymentRenderChecks'] . ' payment page render checks passed.' . PHP_EOL;
