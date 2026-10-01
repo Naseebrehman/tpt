@@ -18,10 +18,10 @@
  * ---------------------------------------------------------------------------
  */
 require_once dirname(__DIR__) . '/includes/init.php';
+requireAdmin();
 require_once BASE_PATH . '/core/Schema.php';
 require_once BASE_PATH . '/core/PaymentRecords.php';
 Schema::ensure();
-requireAdmin();
 
 $adminPage  = 'payment-records';
 $adminTitle = 'Payments';
@@ -194,6 +194,7 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
                     <td class="td-main">
                         <?= esc($record['payer_name'] !== '' ? $record['payer_name'] : '—') ?>
                         <div class="td-sub"><?= esc($record['payer_email'] !== '' ? $record['payer_email'] : '') ?></div>
+                        <?php if (($record['payer_phone'] ?? '') !== ''): ?><div class="td-sub"><?= esc($record['payer_phone']) ?></div><?php endif; ?>
                     </td>
                     <td><?= esc($record['service'] !== '' ? $record['service'] : '—') ?></td>
                     <td class="mono">$<?= esc(number_format((float) $record['amount'], 2)) ?> <span class="td-sub"><?= esc(strtoupper((string) $record['currency'])) ?></span></td>
@@ -245,7 +246,9 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
                 <tr><th>Gateway payment id</th><td class="mono"><?= esc($record['provider_transaction_id']) ?></td></tr>
                 <tr><th>Raw reference</th><td class="mono"><?= esc($record['raw_reference']) ?></td></tr>
                 <tr><th>Payer</th><td><?= esc($record['payer_name'] !== '' ? $record['payer_name'] : '—') ?><?php if ($record['payer_email'] !== ''): ?><div class="td-sub"><?= esc($record['payer_email']) ?></div><?php endif; ?></td></tr>
+                <tr><th>Phone</th><td><?= esc(($record['payer_phone'] ?? '') !== '' ? $record['payer_phone'] : '—') ?></td></tr>
                 <tr><th>Service</th><td><?= esc($record['service'] !== '' ? $record['service'] : '—') ?></td></tr>
+                <tr><th>Notes</th><td><?= nl2br(esc($record['notes'] ?? '—')) ?></td></tr>
                 <tr><th>Amount</th><td>$<?= esc(number_format((float) $record['amount'], 2)) ?> <?= esc(strtoupper((string) $record['currency'])) ?></td></tr>
                 <tr><th>Status</th><td><?= esc(ucfirst((string) $record['status'])) ?></td></tr>
                 <tr><th>IP address</th><td class="mono"><?= esc($record['ip_address'] !== '' ? $record['ip_address'] : '—') ?></td></tr>

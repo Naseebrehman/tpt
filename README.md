@@ -88,13 +88,13 @@ blocked from web requests by the included `.htaccess`.
 
 ### Admin (`/admin/`)
 `login.php` (bcrypt + 5-attempt/15-min lockout + CSRF), `index.php` (stat cards, 30-day line
-chart, service bar chart, recent table, quick links, system status), `submissions.php`
+chart, service bar chart, recent submissions and confirmed payments, quick links, system status), `submissions.php`
 (filters, bulk actions, CSV export, detail modal with notes + status), `blog.php` +
 `blog-edit.php` (TinyMCE, uploads, SEO fields, auto slug + reading time), `resources.php`,
 `portfolio.php` + `portfolio-edit.php` (Sortable.js reorder, stats/chart JSON editors),
 `team.php` (drag-and-drop order), `testimonials.php`, `subscribers.php`,
 `chats.php` (Alia conversations: full transcript, status, edit, delete),
-`payments.php` (paste the complete custom PayPal/Stripe payment implementation — HTML/CSS/JS — with enable/disable toggle, Save/Edit/Clear controls; rendered verbatim on Pay Online, with the admin's PayPal Client ID, the shared Terms & Conditions URL and the shared Services list injected through `{{PLACEHOLDERS}}`),
+`payments.php` (separate server-side PayPal and Stripe hosted-checkout settings; encrypted credentials, Sandbox/Live selection, shared Terms URL, existing Services manager and recent confirmed payment records; see [docs/PAYMENTS.md](docs/PAYMENTS.md)), `payment-records.php` (confirmed payment audit list and CSV export),
 `settings.php` (SMTP / AI providers / notifications / email templates / Site / Social /
 Maintenance tabs with live test buttons),
 `password.php`, `actions.php` (AJAX router), `export.php` (CSV).
@@ -118,12 +118,14 @@ contains safe defaults and computes the paths automatically.
 |---|---|
 | `APP_ENV` | `production` hides PHP errors (default). Use `development` while debugging. |
 | `DB_*` | MySQL host, database name, username, and password. |
+| `PAYMENT_ENCRYPTION_KEY` | Optional private key used to encrypt payment credentials at rest. Keep it stable and out of Git. |
 | `SITE_URL` | Canonical domain for SEO/OG/sitemap. |
 | `PRETTY_URLS` | `true` = extension-less links (needs the bundled `.htaccess`). Set `false` on hosts without mod_rewrite. |
 | `BASE_URL` | Auto-detected, so sub-folder installs work too. |
 
-Everything else (SMTP, Gemini, agency info, socials, analytics, maintenance mode, founder
-name, default SEO tags) lives in the **settings table**, editable from the dashboard.
+Other site settings (SMTP, Gemini, agency info, socials, analytics, maintenance mode, founder
+name and default SEO tags) live in the **settings table**. PayPal/Stripe credentials and the
+shared Terms URL are managed separately in Admin → Payments.
 
 ---
 

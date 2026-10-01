@@ -1,84 +1,34 @@
 <?php
-/** Customer-owned payment page. The page renders the custom PayPal / Stripe
- * code saved by the administrator in Admin → Payments (verbatim, exactly once
- * on load) and keeps the existing gateway IDs, toggles, Services list and the
- * ONE shared Terms & Conditions URL.
- *
- * When a PayPal Client ID AND Secret are stored, the shared bridge behind this
- * page routes the PayPal order through the server (paypal-api.php) so the
- * payment is verified with PayPal on the server before it is ever reported as
- * successful. The Secret is never rendered into this HTML or its JavaScript.
- *
- * The only values substituted into the administrator's code are the documented
- * integration points — PayPal Client ID, shared Terms URL and shared Services
- * list (see core/Payments.php). Everything else is echoed exactly as saved. */
+/** Pay Online. The form posts directly to an independent server-side gateway
+ * endpoint; no PayPal/Stripe browser SDK, payment JavaScript or success callback
+ * is loaded on this page.
+ */
 require_once __DIR__ . '/includes/init.php';
 require_once __DIR__ . '/includes/payments.php';
 
 $pageTitle = 'Pay Online — The Pie Technologies';
-$metaDesc = 'Complete your payment securely through our online payment provider.';
+$metaDesc = 'Pay securely through PayPal or Stripe. Every payment is confirmed by our server.';
 $activeNav = 'pay';
 
-$paypalEnabled = pieIsPayPalEnabled();
-$stripeEnabled = pieIsStripeEnabled();
-$paypalSdkCode = piePayPalSdkCode();
-$stripeSdkCode = pieStripeSdkCode();
+$paymentStorageAvailable = piePaymentStorageReady();
+$paypalAvailable = $paymentStorageAvailable && pieIsPayPalEnabled() && piePayPalServerReady();
+$stripeAvailable = $paymentStorageAvailable && pieIsStripeEnabled() && pieStripeServerReady();
+$anyGateway = $paypalAvailable || $stripeAvailable;
+$firstGateway = $paypalAvailable ? 'paypal-api' : 'stripe-api';
+$termsUrl = pieTermsUrl();
+$supportEmail = getSetting('site_email', 'info@thepietechnologies.com');
+$supportPhone = getSetting('site_phone', '');
+$paymentNotice = piePaymentConsumeNotice();
+$paymentServices = piePaymentServices();
 
-/* Render a provider block only when it is enabled AND has saved code.
- * Both enabled → both complete code blocks render; both disabled (or no
- * code saved) → the unavailable message. The saved code is echoed exactly
- * as stored — never escaped, sanitised or rewritten — apart from the
- * documented {{PLACEHOLDER}} integration points. */
-$paypalBlock = $paypalEnabled && $paypalSdkCode !== '';
-$stripeBlock = $stripeEnabled && $stripeSdkCode !== '';
-$anyBlock    = ($paypalBlock || $stripeBlock);
-
-/* Providers actually rendered, so the shared bridge only wires what exists. */
-$renderedProviders = array();
-if ($paypalBlock) { $renderedProviders[] = 'paypal'; }
-if ($stripeBlock) { $renderedProviders[] = 'stripe'; }
-
-$bothProviders = ($paypalBlock && $stripeBlock);
-/* Server-verified mode is decided PER PROVIDER: PayPal needs a Client ID AND
-   Secret, Stripe needs a Secret Key. Whichever providers run server-side, the
-   badge is shown when at least one of the RENDERED providers does — and each
-   provider without credentials keeps working exactly as it does today
-   (browser-only SDK confirmation). */
-$paypalServerMode = ($paypalBlock && piePayPalServerReady());
-$stripeServerMode = ($stripeBlock && pieStripeServerReady());
-$serverVerified   = ($paypalServerMode || $stripeServerMode);
-$termsUrl      = pieTermsUrl();
-$supportEmail  = getSetting('site_email', 'info@thepietechnologies.com');
-$supportPhone  = getSetting('site_phone', '');
 $paymentFaq = array(
-    array(
-        'q' => 'Which payment methods can I use?',
-        'a' => 'PayPal and Stripe. Both are managed from the TPT dashboard, so the options shown on this page are the ones currently enabled for online payment.',
-    ),
-    array(
-        'q' => 'Which currency are payments taken in?',
-        'a' => 'Every payment on this page is processed in US dollars (USD). The amount you enter is the amount charged.',
-    ),
-    array(
-        'q' => 'Is my payment secure?',
-        'a' => 'Yes. You pay on your provider’s own secure checkout — PayPal or Stripe. Card and PayPal details are never entered on, or stored by, this website.',
-    ),
-    array(
-        'q' => 'How do I know my payment went through?',
-        'a' => 'Once the payment is confirmed you will see a thank-you message on this page with the amount and a payment reference. Nothing is shown as successful before that confirmation arrives.',
-    ),
-    array(
-        'q' => 'What can I pay for?',
-        'a' => 'Any service in the list above — the same list our team manages in the dashboard. If your item is not listed, choose “Others” and describe it in the project notes.',
-    ),
-    array(
-        'q' => 'Which terms apply to my payment?',
-        'a' => 'By continuing with your payment you agree to our Terms & Conditions. They are linked under the payment form and in the site footer.',
-    ),
-    array(
-        'q' => 'What if something looks wrong?',
-        'a' => 'Contact the team before paying again, quoting any reference shown above. We will check the payment with the provider and confirm it with you.',
-    ),
+    array('q' => 'Which payment methods can I use?', 'a' => 'Use PayPal or a card through Stripe. Only payment methods currently enabled in our secure server-side checkout are shown.'),
+    array('q' => 'Which currency are payments taken in?', 'a' => 'Payments are processed in US dollars (USD). The amount you enter is sent to the selected payment provider by our server.'),
+    array('q' => 'Is my payment secure?', 'a' => 'Your payment is completed on PayPal or Stripe’s secure hosted checkout. This website does not load their payment SDKs or collect your card details.'),
+    array('q' => 'How do I know my payment went through?', 'a' => 'Our server confirms the payment with the provider before showing a thank-you message and payment reference. A click or redirect alone is never treated as success.'),
+    array('q' => 'What can I pay for?', 'a' => 'Choose a service from the list managed by our team in Admin → Payments. If you select “Others”, describe your payment in the notes field.'),
+    array('q' => 'Which terms apply to my payment?', 'a' => 'By continuing with your payment you agree to our Terms & Conditions, linked below the payment options and in the site footer.'),
+    array('q' => 'What if something looks wrong?', 'a' => 'Do not submit another payment if you are unsure. Contact our team with the amount and any payment reference so we can check with the provider.'),
 );
 
 require_once __DIR__ . '/includes/header.php';
@@ -86,104 +36,113 @@ require_once __DIR__ . '/includes/header.php';
 <section class="page-hero pay-hero">
   <div class="container">
     <p class="eyebrow crumbs"><a href="<?= url('') ?>">Home</a> &nbsp;/&nbsp; Pay Online</p>
-    <h1>Make a payment.</h1>
-    <p class="lead">Complete your payment securely in USD through PayPal or Stripe — processed by the provider, confirmed by our server.</p>
+    <h1>Pay online, securely.</h1>
+    <p class="lead">A straightforward checkout, server-verified through PayPal or Stripe.</p>
     <ul class="pay-badges" aria-label="Payment facts">
-      <?php if ($paypalBlock): ?><li><?= icon('check', 14) ?> PayPal</li><?php endif; ?>
-      <?php if ($stripeBlock): ?><li><?= icon('check', 14) ?> Stripe</li><?php endif; ?>
+      <?php if ($paypalAvailable): ?><li><?= icon('check', 14) ?> PayPal</li><?php endif; ?>
+      <?php if ($stripeAvailable): ?><li><?= icon('check', 14) ?> Stripe</li><?php endif; ?>
       <li><?= icon('check', 14) ?> USD</li>
-      <?php if ($serverVerified): ?><li><?= icon('lock', 14) ?> Server-verified payment</li><?php endif; ?>
+      <li><?= icon('lock', 14) ?> Server-confirmed</li>
     </ul>
   </div>
 </section>
 
-<section class="section pay-section">
+<section class="section pay-section" aria-labelledby="paymentHeading">
   <div class="container">
-    <!-- Payment details: full container width on every screen. -->
     <div class="contact-panel pay-panel">
       <div class="pay-panel-head">
-        <h2>Payment details</h2>
-        <p class="sub">Choose your provider, enter the amount, and pay. Payment communication happens on the provider’s own secure checkout — this site never sees or stores your card or PayPal credentials.</p>
+        <div>
+          <p class="eyebrow">Secure checkout</p>
+          <h2 id="paymentHeading">Payment details</h2>
+          <p class="sub">Enter your details once, then choose a provider. Card and PayPal credentials stay on the provider’s hosted checkout.</p>
+        </div>
+        <span class="pay-secure-mark"><?= icon('lock', 18) ?> Protected checkout</span>
       </div>
 
-      <!-- Confirmed payments only: filled in after the server has verified the capture. -->
-      <div class="pay-confirmation" id="tpt-payment-confirmation" role="status" aria-live="polite" hidden></div>
+      <div class="pay-confirmation<?= $paymentNotice ? ($paymentNotice['type'] === 'success' ? ' is-success' : ($paymentNotice['type'] === 'cancelled' ? ' is-cancelled' : ' is-error')) : '' ?>" id="tpt-payment-confirmation" role="status" aria-live="polite"<?= $paymentNotice ? '' : ' hidden' ?>>
+        <?php if ($paymentNotice && $paymentNotice['type'] === 'success'): ?>
+          <strong>Thank You, <?= esc($paymentNotice['name'] !== '' ? $paymentNotice['name'] : 'Customer') ?>! Your payment of $<?= esc($paymentNotice['amount']) ?> USD was successfully completed.</strong>
+          <span>Payment Reference: <code><?= esc($paymentNotice['reference']) ?></code></span>
+        <?php elseif ($paymentNotice): ?>
+          <strong><?= $paymentNotice['type'] === 'cancelled' ? 'Payment cancelled' : 'Payment not completed' ?></strong>
+          <span><?= esc($paymentNotice['message']) ?></span>
+        <?php endif; ?>
+      </div>
 
-      <?php if ($anyBlock): ?>
-        <?php
-        /* One shared bridge, emitted before the first payment block so the
-           PayPal SDK is intercepted before it loads. It publishes the shared
-           Services list, applies the shared Terms URL, replaces the Terms
-           checkbox with the small legal line, forces NO_SHIPPING, verifies
-           the capture on the server and reports the confirmed payment. */
-        echo piePaymentBridge($renderedProviders);
-        ?>
-        <?php
-        /* One complete provider block per enabled gateway. When both are
-           enabled they stack (PayPal first, Stripe below) full-width with a
-           thin divider and their own label; with one enabled that provider is
-           shown full-width on its own.
+      <?php if ($anyGateway): ?>
+      <form id="payment-form" class="pay-layout" method="post" action="<?= esc(url($firstGateway)) ?>">
+        <?= csrfField() ?>
+        <input type="hidden" name="payment_action" value="start">
 
-           Each block is a two-column grid: the buyer's fields and the shared
-           Terms line on the LEFT, the gateway's own buttons (and the
-           "Powered by" line) on the RIGHT, vertically centred. The shared
-           bridge MOVES the administrator's existing field groups and button
-           containers into those columns — no node is copied, rewritten or
-           executed twice, so their ids, names and bindings keep working. Under
-           820px the columns stack (form first, buttons below). */
-        $providerBlocks = array();
-        if ($paypalBlock) {
-            $providerBlocks[] = array(
-                'key'   => 'paypal',
-                'label' => 'Pay with PayPal',
-                'mode'  => $paypalServerMode,
-            );
-        }
-        if ($stripeBlock) {
-            $providerBlocks[] = array(
-                'key'   => 'stripe',
-                'label' => 'Pay by card (Stripe)',
-                'mode'  => $stripeServerMode,
-            );
-        }
-        ?>
-        <div class="pay-providers<?= $bothProviders ? ' is-split' : '' ?>">
-          <?php foreach ($providerBlocks as $providerBlockItem): $providerKey = $providerBlockItem['key']; ?>
-            <div class="pay-provider" data-provider="<?= esc($providerKey) ?>">
-              <p class="pay-provider-label eyebrow"><?= icon('card', 14) ?> <?= esc($providerBlockItem['label']) ?><?php if ($providerBlockItem['mode']): ?> <span class="pay-provider-mode"><?= icon('lock', 12) ?> Server-verified</span><?php endif; ?></p>
-              <div class="pay-split" data-tpt-split="<?= esc($providerKey) ?>">
-                <div class="pay-split-form" data-tpt-form>
-                  <h3 class="pay-split-title" data-tpt-title>Make a Payment</h3>
-                  <div class="pay-split-fields" data-tpt-fields></div>
-                  <!-- Small legal line (the Terms checkbox is gone), wired to the ONE shared Terms URL. -->
-                  <p class="pay-terms-note" data-tpt-terms-page="1">By continuing with your payment, you agree to our <a href="<?= esc($termsUrl) ?>" data-tpt-terms="1" target="_blank" rel="noopener">Terms &amp; Conditions</a>.</p>
-                </div>
-                <div class="pay-split-actions" data-tpt-actions>
-                  <div class="pay-split-buttons" data-tpt-buttons></div>
-                  <p class="pay-powered-by" data-tpt-powered="1">Powered by <strong><?= $providerKey === 'stripe' ? 'Stripe' : 'PayPal' ?></strong></p>
-                </div>
-              </div>
-              <?php if ($providerKey === 'paypal'): ?>
-              <!-- Administrator's complete PayPal implementation — rendered verbatim, executed once. -->
-              <div class="pay-custom-code" id="paypal-payment-code" data-payment-provider="paypal"><?= pieRenderPaymentCode($paypalSdkCode, 'paypal') ?></div>
-              <?php else: ?>
-              <!-- Administrator's complete Stripe implementation — rendered verbatim, executed once. -->
-              <div class="pay-custom-code" id="stripe-payment-code" data-payment-provider="stripe"><?= pieRenderPaymentCode($stripeSdkCode, 'stripe') ?></div>
-              <?php endif; ?>
-            </div>
-          <?php endforeach; ?>
+        <div class="pay-form-fields">
+          <div class="pay-field">
+            <label for="payment-name">Name / Business name <span aria-hidden="true">*</span></label>
+            <input id="payment-name" name="name" type="text" maxlength="150" autocomplete="name" placeholder="Your name or business name" required>
+          </div>
+          <div class="pay-field">
+            <label for="payment-email">Email address <span aria-hidden="true">*</span></label>
+            <input id="payment-email" name="email" type="email" maxlength="150" autocomplete="email" placeholder="you@example.com" required>
+          </div>
+          <div class="pay-field">
+            <label for="payment-phone">Phone <span class="optional">Optional</span></label>
+            <input id="payment-phone" name="phone" type="tel" maxlength="30" autocomplete="tel" placeholder="Phone number">
+          </div>
+          <div class="pay-field">
+            <label for="payment-service">Service <span aria-hidden="true">*</span></label>
+            <select id="payment-service" name="service" required>
+              <option value="">Choose a service</option>
+              <?php foreach ($paymentServices as $serviceName): ?>
+                <option value="<?= esc($serviceName) ?>"><?= esc($serviceName) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <div class="pay-field">
+            <label for="payment-amount">Amount (USD) <span aria-hidden="true">*</span></label>
+            <div class="pay-amount-input"><span aria-hidden="true">$</span><input id="payment-amount" name="amount" type="number" min="0.01" max="1000000" step="0.01" inputmode="decimal" placeholder="500.00" required></div>
+            <small>Enter an amount between $0.01 and $1,000,000.00.</small>
+          </div>
+          <div class="pay-field pay-field-notes">
+            <label for="payment-notes">Notes <span class="optional">Optional</span></label>
+            <textarea id="payment-notes" name="notes" maxlength="2000" rows="3" placeholder="Add an invoice, project or payment note"></textarea>
+          </div>
         </div>
+
+        <aside class="pay-checkout-options" aria-label="Choose a secure payment method">
+          <div class="pay-checkout-copy">
+            <p class="eyebrow">Payment method</p>
+            <h3>Choose how to pay</h3>
+            <p>Your selected amount and service are sent securely to the provider. Our server confirms the final status before recording the payment.</p>
+          </div>
+          <div class="pay-gateway-actions">
+            <?php if ($paypalAvailable): ?>
+            <button class="pay-submit pay-submit-paypal" type="submit" name="payment_action" value="start" formaction="<?= esc(url('paypal-api')) ?>">
+              <span class="pay-submit-mark" aria-hidden="true"><?= icon('card', 19) ?></span>
+              <span class="pay-submit-label"><strong>Continue with PayPal</strong><small>Secure hosted checkout</small></span>
+              <span class="pay-submit-arrow" aria-hidden="true"><?= icon('arrow-r', 18) ?></span>
+            </button>
+            <?php endif; ?>
+            <?php if ($stripeAvailable): ?>
+            <button class="pay-submit pay-submit-stripe" type="submit" name="payment_action" value="start" formaction="<?= esc(url('stripe-api')) ?>">
+              <span class="pay-submit-mark" aria-hidden="true"><?= icon('card', 19) ?></span>
+              <span class="pay-submit-label"><strong>Pay by card</strong><small>Secure checkout by Stripe</small></span>
+              <span class="pay-submit-arrow" aria-hidden="true"><?= icon('arrow-r', 18) ?></span>
+            </button>
+            <?php endif; ?>
+          </div>
+          <p class="pay-terms-note">By continuing with your payment, you agree to our <a href="<?= esc($termsUrl) ?>" target="_blank" rel="noopener">Terms &amp; Conditions</a>.</p>
+          <p class="pay-no-card"><?= icon('lock', 14) ?> No card or PayPal credentials are entered on this website.</p>
+        </aside>
+      </form>
       <?php else: ?>
-        <div class="form-status show" style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:#fca5a5;padding:16px 18px;border-radius:12px;margin:16px 0;">
-          <strong style="display:block;margin-bottom:6px;font-size:1rem;color:#fecaca;">Online payments are currently unavailable.</strong>
-          <span>Please contact our team at <a href="mailto:<?= esc($supportEmail) ?>" style="color:#a78bfa;text-decoration:underline;"><?= esc($supportEmail) ?></a><?php if ($supportPhone !== ''): ?> or call <a href="tel:<?= esc(preg_replace('/[^0-9+]/', '', $supportPhone)) ?>" style="color:#a78bfa;text-decoration:underline;"><?= esc($supportPhone) ?></a><?php endif; ?> to arrange alternative payment.</span>
-        </div>
+      <div class="pay-unavailable" role="status">
+        <strong>Online payments are currently unavailable.</strong>
+        <p>Please contact our team at <a href="mailto:<?= esc($supportEmail) ?>"><?= esc($supportEmail) ?></a><?php if ($supportPhone !== ''): ?> or call <a href="tel:<?= esc(preg_replace('/[^0-9+]/', '', $supportPhone)) ?>"><?= esc($supportPhone) ?></a><?php endif; ?> to arrange payment.</p>
+      </div>
       <?php endif; ?>
     </div>
   </div>
 </section>
 
-<!-- ================= PAYMENT SUPPORT (founder-note layout) ================= -->
 <section class="section pay-help-section" aria-labelledby="payHelpHeading">
   <div class="container">
     <div class="founder-card founder-compact pay-help-card" data-aos="fade-up">
@@ -191,7 +150,7 @@ require_once __DIR__ . '/includes/header.php';
       <div class="founder-note">
         <p class="eyebrow">Payment support</p>
         <h2 id="payHelpHeading">Need help or having difficulties?</h2>
-        <p>If a payment does not go through, something looks wrong, or you are not sure which option to choose — stop before paying again and talk to us first. Quote the amount and any reference shown, and we will check the payment with the provider for you.</p>
+        <p>If a payment does not go through or something looks wrong, stop before paying again and talk to us first. Quote the amount and any reference shown, and we will check the payment with the provider.</p>
         <span class="founder-sig">Email <a href="mailto:<?= esc($supportEmail) ?>"><?= esc($supportEmail) ?></a><?php if ($supportPhone !== ''): ?> · Call <a href="tel:<?= esc(preg_replace('/[^0-9+]/', '', $supportPhone)) ?>"><?= esc($supportPhone) ?></a><?php endif; ?></span>
       </div>
       <a class="btn btn-primary founder-book" href="<?= url('contact') ?>">Send us the details <?= icon('arrow-r', 18) ?></a>
@@ -199,7 +158,6 @@ require_once __DIR__ . '/includes/header.php';
   </div>
 </section>
 
-<!-- ===================== COMPACT PAYMENT FAQ ===================== -->
 <section class="section pay-faq-section" aria-labelledby="paymentFaqHeading">
   <div class="container">
     <div class="pay-faq-wrap">
@@ -214,9 +172,7 @@ require_once __DIR__ . '/includes/header.php';
             <span class="acc-title"><?= esc($faqItem['q']) ?></span>
             <span class="acc-icon"><?= icon('plus', 16) ?></span>
           </button>
-          <div class="acc-body" inert>
-            <p class="acc-copy"><?= esc($faqItem['a']) ?></p>
-          </div>
+          <div class="acc-body" inert><p class="acc-copy"><?= esc($faqItem['a']) ?></p></div>
         </div>
         <?php endforeach; ?>
       </div>

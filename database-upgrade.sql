@@ -30,7 +30,9 @@ CREATE TABLE IF NOT EXISTS payment_records (
   provider_transaction_id VARCHAR(150) DEFAULT NULL,
   payer_name VARCHAR(191) NOT NULL DEFAULT '',
   payer_email VARCHAR(191) NOT NULL DEFAULT '',
+  payer_phone VARCHAR(30) NOT NULL DEFAULT '',
   service VARCHAR(191) NOT NULL DEFAULT '',
+  notes TEXT,
   amount DECIMAL(10,2) NOT NULL DEFAULT 0,
   currency VARCHAR(10) NOT NULL DEFAULT 'USD',
   status VARCHAR(30) NOT NULL DEFAULT 'succeeded',
@@ -49,6 +51,8 @@ CREATE TABLE IF NOT EXISTS payments (
   token VARCHAR(64) UNIQUE NOT NULL,
   name VARCHAR(150),
   email VARCHAR(150),
+  phone VARCHAR(30) NOT NULL DEFAULT '',
+  service VARCHAR(191) NOT NULL DEFAULT '',
   reference VARCHAR(150),
   amount_usd DECIMAL(10,2) DEFAULT 0,
   notes TEXT,
@@ -119,16 +123,15 @@ WHERE NOT EXISTS (SELECT 1 FROM blog_posts WHERE slug = 'local-seo-what-moves-ma
 -- except where they still equal the old shipped defaults.
 INSERT INTO settings (setting_key, setting_value) SELECT 'alia_enabled', '1' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'alia_enabled');
 
--- Payment integration: one PayPal Client ID and one shared Terms & Conditions
--- URL. Both are consumed by the saved PayPal/Stripe code through placeholders,
--- so the administrator never edits the payment code to change them.
+-- Server-side PayPal and Stripe credentials and one shared Terms URL. Secrets
+-- are encrypted at rest by migration 010 and never sent to customer browsers.
+INSERT INTO settings (setting_key, setting_value) SELECT 'paypal_enabled', '0' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'paypal_enabled');
 INSERT INTO settings (setting_key, setting_value) SELECT 'paypal_client_id', '' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'paypal_client_id');
 INSERT INTO settings (setting_key, setting_value) SELECT 'terms_url', '' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'terms_url');
 INSERT INTO settings (setting_key, setting_value) SELECT 'paypal_secret', '' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'paypal_secret');
 INSERT INTO settings (setting_key, setting_value) SELECT 'paypal_env', 'live' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'paypal_env');
--- Server-side Stripe credentials (never rendered to a browser): the Secret
--- Key switches Stripe to server-verified mode, the Webhook Secret verifies
--- the Stripe-Signature on /stripe-webhook.
+-- Stripe Secret Key and optional Webhook Secret are used only by PHP.
+INSERT INTO settings (setting_key, setting_value) SELECT 'stripe_enabled', '0' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'stripe_enabled');
 INSERT INTO settings (setting_key, setting_value) SELECT 'stripe_secret_key', '' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'stripe_secret_key');
 INSERT INTO settings (setting_key, setting_value) SELECT 'stripe_webhook_secret', '' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM settings WHERE setting_key = 'stripe_webhook_secret');
 

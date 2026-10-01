@@ -123,9 +123,11 @@ INSERT IGNORE INTO settings (setting_key, setting_value) VALUES
 ('youtube_url', 'https://youtube.com/@thepietechnologies'),
 ('maintenance_mode', '0'),
 ('maintenance_ip', ''),
+('paypal_enabled', '0'),
 ('paypal_client_id', ''),
 ('paypal_secret', ''),
 ('paypal_env', 'live'),
+('stripe_enabled', '0'),
 ('stripe_secret_key', ''),
 ('stripe_webhook_secret', ''),
 ('terms_url', '');

@@ -1,6 +1,9 @@
 <?php
 require_once dirname(__DIR__) . '/includes/init.php';
 requireAdmin();
+require_once BASE_PATH . '/core/Schema.php';
+require_once BASE_PATH . '/core/PaymentRecords.php';
+Schema::ensure();
 
 $adminPage  = 'dashboard';
 $adminTitle = 'Dashboard';
@@ -43,6 +46,11 @@ foreach ($byService as $row) { $svcLabels[] = $row['s']; $svcValues[] = (int) $r
 
 /* --------------------------- recent submissions ------------------------- */
 $recent = dbAll('SELECT * FROM contact_submissions ORDER BY created_at DESC LIMIT 10');
+
+/* ----------------------- confirmed payment records ----------------------- */
+$paymentFilters = piePaymentRecordFilters(array('status' => 'succeeded'));
+$paymentTotals = piePaymentRecordTotals($paymentFilters);
+$recentPayments = piePaymentRecordList($paymentFilters, 5, 0);
 
 /* ----------------------------- system status ---------------------------- */
 $smtpOk    = getSetting('smtp_host') !== '';
@@ -95,6 +103,37 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
     </div>
 </div>
 
+<div class="a-card dashboard-payment-card">
+    <div class="a-toolbar">
+        <div>
+            <h3 style="margin-bottom:4px">Recent confirmed payments</h3>
+            <p class="hint" style="margin:0">Verified with PayPal or Stripe · <?= (int) $paymentTotals['count'] ?> records · $<?= esc(number_format((float) $paymentTotals['total_usd'], 2)) ?> USD</p>
+        </div>
+        <span class="spacer"></span>
+        <a class="a-btn" href="payment-records.php"><?= icon('chart', 15) ?> All payment records</a>
+    </div>
+    <div class="a-table-wrap">
+        <table class="a-table">
+            <thead><tr><th>Recorded</th><th>Provider</th><th>Customer</th><th>Service</th><th>Amount</th><th>Reference</th></tr></thead>
+            <tbody>
+            <?php if (!$recentPayments): ?>
+                <tr><td colspan="6" class="text-muted">No provider-confirmed payments have been recorded yet.</td></tr>
+            <?php endif; ?>
+            <?php foreach ($recentPayments as $payment): ?>
+            <tr>
+                <td class="td-sub"><?= esc(formatDate($payment['created_at'], 'j M Y, H:i')) ?></td>
+                <td><span class="badge <?= $payment['provider'] === 'paypal' ? 'active' : 'inactive' ?>"><?= esc(piePaymentProviderLabel($payment['provider'])) ?></span></td>
+                <td><?= esc($payment['payer_name'] !== '' ? $payment['payer_name'] : '—') ?><div class="td-sub"><?= esc($payment['payer_email'] ?? '') ?></div></td>
+                <td><?= esc($payment['service'] !== '' ? $payment['service'] : '—') ?></td>
+                <td class="mono">$<?= esc(number_format((float) $payment['amount'], 2)) ?> <?= esc(strtoupper((string) $payment['currency'])) ?></td>
+                <td class="mono td-sub" title="<?= esc($payment['provider_transaction_id']) ?>"><?= esc(mb_strimwidth((string) $payment['provider_transaction_id'], 0, 24, '…')) ?></td>
+            </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+
 <div class="a-card">
     <h3>Quick links</h3>
     <div class="quick-grid">
@@ -102,6 +141,7 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
         <a href="media.php"><?= icon('image', 20) ?>Media Library</a>
         <a href="admins.php"><?= icon('shield', 20) ?>Admin Management</a>
         <a href="payments.php"><?= icon('card', 20) ?>Payment Settings</a>
+        <a href="payment-records.php"><?= icon('chart', 20) ?>Payment Records</a>
         <a href="settings.php"><?= icon('cpu', 20) ?>Settings</a>
     </div>
 </div>

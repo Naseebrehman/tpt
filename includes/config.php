@@ -40,6 +40,10 @@ define('DB_HOST', (string) $pieConfigValue('DB_HOST', 'TPT_DB_HOST', 'localhost'
 define('DB_NAME', (string) $pieConfigValue('DB_NAME', 'TPT_DB_NAME', 'your_database'));
 define('DB_USER', (string) $pieConfigValue('DB_USER', 'TPT_DB_USER', 'your_username'));
 define('DB_PASS', (string) $pieConfigValue('DB_PASS', 'TPT_DB_PASS', 'your_password'));
+/* Optional dedicated at-rest encryption key for payment credentials. When
+   omitted, the payment module derives a stable key from the private database
+   credentials and site URL; the key is never stored in the database. */
+define('PAYMENT_ENCRYPTION_KEY', (string) $pieConfigValue('PAYMENT_ENCRYPTION_KEY', 'TPT_PAYMENT_ENCRYPTION_KEY', ''));
 
 /* ------------------------- Site ------------------------------------------ */
 define('SITE_URL', rtrim((string) $pieConfigValue('SITE_URL', 'TPT_SITE_URL', 'https://thepietechnologies.com'), '/'));

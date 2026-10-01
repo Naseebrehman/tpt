@@ -191,19 +191,23 @@ setFakeSetting('ai_provider2_model', 'bad model!!');
 $result = AIProviders::chat(array(array('role' => 'user', 'content' => 'hi')), '');
 check(!$result['ok'] && $result['error'] === 'model', 'invalid model name rejected before any network call');
 
-/* --------------------- provider integration removal ------------------- */
-check(function_exists('piePaymentServices'), 'admin-managed payment service list remains available');
-check(!function_exists('piePaymentProviders') && !function_exists('piePayPalOrder') && !function_exists('pieStripeCheckout'), 'gateway backend helpers are removed');
-check(!function_exists('pieStripeIntent'), 'gateway intent helper is removed');
-/* The PayPal Client ID is a public, client-side value the dashboard feeds into
-   the saved PayPal code through {{PAYPAL_CLIENT_ID}}. The PayPal Secret is the
-   opposite: it is stored in Admin → Payments and used ONLY on the server, so it
-   has a helper here but is never rendered into a page, script or API response. */
-check(function_exists('piePayPalClientId') && piePayPalClientId() === '', 'PayPal Client ID is an admin setting with no default value');
-check(function_exists('piePayPalSecret') && piePayPalSecret() === '', 'the PayPal Secret is an admin setting with no default value');
-check(!function_exists('pieStripeSecretKey'), 'no Stripe secret helper exists');
-check(!function_exists('piePayPalSecretValue') && !function_exists('piePayPalSecretPublic'), 'the Secret is never exposed through a "public" helper');
-check(function_exists('piePayPalServerReady') && piePayPalServerReady() === false, 'server-side PayPal capture stays off until a Secret is saved');
+/* ---------------------- server-side payment integration ----------------- */
+check(function_exists('piePaymentServices'), 'the existing Admin Services list remains available');
+check(function_exists('piePaymentValidateSubmission') && function_exists('piePaymentCreateAttempt') && function_exists('piePaymentCompleteAttempt'), 'shared payment validation, pending attempts and confirmed completion are available');
+check(function_exists('piePayPalCreateOrder') && function_exists('piePayPalCaptureOrder') && function_exists('pieStripeCreateCheckoutSession') && function_exists('pieStripeConfirmCheckoutSession'), 'PayPal and Stripe have separate server-side checkout/confirmation helpers');
+check(!function_exists('pieRenderPaymentCode') && !function_exists('piePaymentBridge') && !function_exists('piePayPalSdkCode') && !function_exists('pieStripeSdkCode'), 'legacy browser-code renderers and SDK-code settings are removed');
+check(pieIsPayPalEnabled() === false && pieIsStripeEnabled() === false, 'both new-install gateway toggles default off');
+check(piePayPalClientId() === '' && piePayPalSecret() === '' && pieStripeSecret() === '', 'gateway credentials are absent until configured');
+$testPayPalSecret = 'Paypal-' . str_repeat('xY9', 10);
+setFakeSetting('paypal_client_id', 'Axxxxxxxxxxxxxxxxxxxxxxxx');
+setFakeSetting('paypal_secret', piePaymentCredentialEncrypt($testPayPalSecret));
+check(piePayPalServerReady() && piePayPalSecret() === $testPayPalSecret, 'PayPal Secret is encrypted in settings and decrypted only by the server helper');
+$testStripeSecret = 'sk_test_' . str_repeat('a1B2', 6);
+setFakeSetting('stripe_secret_key', piePaymentCredentialEncrypt($testStripeSecret));
+check(pieStripeServerReady() && pieStripeSecret() === $testStripeSecret, 'Stripe Secret Key is encrypted in settings and decrypted only by the server helper');
+check(!function_exists('piePayPalSecretValue') && !function_exists('piePayPalSecretPublic') && !function_exists('pieStripeSecretPublic'), 'there is no public/browser credential helper');
+$adminPayments = file_get_contents(BASE_PATH . '/admin/payments.php');
+check(strpos($adminPayments, 'paypal_sdk_code') === false && strpos($adminPayments, 'stripe_sdk_code') === false, 'Admin no longer contains custom payment-code editors');
 
 /* -------------------------------- done ---------------------------------- */
 echo "\n$count checks passed.\n";

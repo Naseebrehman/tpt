@@ -1,172 +1,84 @@
-# Payments: server-verified confirmation, records dashboard and success popup
+# Pay Online — server-side checkout
 
-Everything below extends the existing payment integration. The administrator's
-saved PayPal/Stripe code is still rendered verbatim and executed exactly once —
-no code block is rewritten, duplicated or executed twice.
+This is the existing TPT payment system. PayPal and Stripe are separate hosted-checkout providers; the Pay Online page uses one ordinary server-posted form and does not load either provider's JavaScript SDK.
 
-## What runs where
+## Security and checkout flow
 
-| Piece | Mode |
-| --- | --- |
-| `paypal_client_id` + `paypal_secret` stored | PayPal = **server-verified** (`core/PayPal.php`, `paypal-api.php`) |
-| only `paypal_client_id` stored | PayPal = browser-only, exactly as before |
-| `stripe_secret_key` stored | Stripe = **server-verified** (`core/Stripe.php`, `stripe-api.php`, `stripe-webhook.php`) |
-| no `stripe_secret_key` | Stripe = browser-only, exactly as before (the saved code is untouched) |
+1. The customer enters their name, email, optional phone/notes, an active service from Admin → Payments, and a USD amount.
+2. The selected PHP endpoint checks the session-bound CSRF token, rate limit, active service, email and amount. Amounts must be from $0.01 to $1,000,000.00 USD with no more than two decimal places.
+3. The server creates a `pending` row in the existing `payments` table, then creates a PayPal Order or Stripe Checkout Session with the matching amount and a random server-generated token.
+4. The browser is redirected to PayPal or Stripe. No provider secret, API authorization header, PaymentIntent client secret, SDK configuration or browser success callback is sent to the public page.
+5. On return, PHP retrieves/captures the payment directly from the provider and checks the provider status, amount, USD currency, transaction reference, and the attempt token/metadata.
+6. Only a matching provider-confirmed payment is written to `payment_records` as `succeeded`, and its original `payments` row is marked `paid`. A failed or cancelled attempt never becomes a successful record. A signed Stripe webhook can independently record a completed Stripe payment if the customer closes the return page.
+7. After the server confirmation, the Pay Online page shows exactly: `Thank You, [Name]! Your payment of $[Amount] USD was successfully completed.` and `Payment Reference: [Transaction ID]`. Failures and cancellations show a non-success notice.
 
-The two providers decide independently. The "Server-verified payment" badge on
-the Pay Online page appears when at least one **rendered** provider runs in
-server mode.
+`payment_records` is the existing Admin audit list. A successful record stores provider, provider transaction ID, customer name/email/phone, service, notes, amount, currency, status, verification mode, provider reference, IP address and recorded time. The existing Admin Dashboard shows recent confirmed payments and totals; Admin → Payments and Admin → Payment records provide the full list/export. Provider transaction IDs are unique per provider, making webhook/return retries idempotent.
 
-## Files
+## Configure credentials
 
-Created:
+Run the database upgrade first (see below), then sign in and open **Admin → Payments**.
 
-| File | Why |
-| --- | --- |
-| `core/Stripe.php` | Stripe REST client: settings, key/webhook-secret helpers, `pieStripeServerReady()`, PaymentIntent create/retrieve, confirmation rules (succeeded + amount + USD), `Stripe-Signature` verification, scrubbing. |
-| `stripe-api.php` | Browser-facing endpoint (`action=create` / `confirm` / `status`): POST + CSRF, creates PaymentIntents server-side, verifies with the Secret Key, records the payment once. |
-| `stripe-webhook.php` | Signature-verified webhook for `payment_intent.succeeded` / `checkout.session.completed`; records payments completed after the tab closed. |
-| `core/PaymentRecords.php` | `payment_records` data layer: idempotent `piePaymentRecord()`, dashboard filters/where/totals/list, deletes, CSV rows. |
-| `admin/payment-records.php` | Admin → Payments dashboard: newest-first list, search, filters, totals, pagination, per-row delete with confirmation, bulk select + delete. |
-| `admin/payment-records-export.php` | CSRF-protected CSV export of every record matching the current filters (formula-injection safe). |
-| `database/migrations/009_stripe_server_and_payment_records.php` | The `payment_records` table + the two Stripe credential settings. |
-| `tests/stripe-server.php`, `tests/payment-records.php` | Dependency-free tests for the server-side Stripe flow, the webhook, the duplicate protection and the dashboard. |
+### PayPal
 
-Changed:
+- Create a PayPal REST app in PayPal Developer Dashboard.
+- Set Client ID, Secret and **Sandbox** or **Live** in the PayPal panel. Use matching Sandbox app credentials for tests.
+- Enable PayPal and save. The Secret is accepted by PHP, encrypted at rest, and never rendered back into an input or customer page. To rotate it, enter a new Secret; to remove it, use the explicit remove checkbox.
 
-| File | Why |
-| --- | --- |
-| `pay-online.php` | One two-column provider block per enabled gateway (fields + Terms left, buttons + "Powered by" right), stacked PayPal-first with a divider when both are enabled, per-provider server-mode badge. |
-| `core/Payments.php` | Bridge: places the administrator's own nodes into the two columns (moves, never clones), exposes `window.TPT_STRIPE`, shows the accessible "Payment successful" popup once per payment, keeps filling `#tpt-payment-confirmation`. |
-| `assets/css/refinements.css` | Two-column/stacked layout, 820px stack breakpoint, overflow guards for gateway iframes, popup styles. |
-| `admin/payments.php` | Stripe Secret Key + Webhook Secret fields (password, never echoed, explicit remove), mode badges, webhook URL, warnings when a credential is missing. |
-| `includes/admin-header.php` | "Payments" now points at the records dashboard; the settings screen is "Payment Settings". |
-| `app/routes.php` | `/stripe-api`, `/api/stripe/*`, `/stripe-webhook`, `/api/stripe/webhook`. |
-| `includes/init.php` | Payment webhooks are exempt from the browser-facing POST rate limit (they authenticate by signature, and a dropped delivery would lose a payment). |
-| `core/Installer.php` | `payment_records` is an application table (fresh installs and the installer's table check). |
-| `database.sql`, `database/schema-mysql.sql`, `database-upgrade.sql`, `database/seed.php` | Ship the table + the Stripe settings for new installs and upgrades. |
-| `tests/admin-smoke.php`, `tests/harness/server.mjs` | Smoke-test the new screen (hyphenated page names) and forward the query string so admin filters/pagination work in the local preview. |
+### Stripe
 
-## SQL (migration 009, also in `database/schema-mysql.sql`)
+- Enter a Stripe **Secret Key** (`sk_test_…` for test mode or `sk_live_…` for live mode), enable Stripe, and save.
+- A publishable key is not required: Checkout is hosted by Stripe and created by PHP.
+- The optional Webhook Secret (`whsec_…`) enables signature-verified fallback recording if the customer does not return to the site. Register the URL shown in the Stripe panel and subscribe to `checkout.session.completed`, `checkout.session.async_payment_succeeded`, and `payment_intent.succeeded`. All accepted payment events are re-fetched from Stripe before a record is written.
 
-```sql
-CREATE TABLE IF NOT EXISTS payment_records (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  provider VARCHAR(20) NOT NULL DEFAULT '',
-  provider_transaction_id VARCHAR(150) DEFAULT NULL,
-  payer_name VARCHAR(191) NOT NULL DEFAULT '',
-  payer_email VARCHAR(191) NOT NULL DEFAULT '',
-  service VARCHAR(191) NOT NULL DEFAULT '',
-  amount DECIMAL(10,2) NOT NULL DEFAULT 0,
-  currency VARCHAR(10) NOT NULL DEFAULT 'USD',
-  status VARCHAR(30) NOT NULL DEFAULT 'succeeded',
-  verification_mode VARCHAR(20) NOT NULL DEFAULT 'server',
-  raw_reference VARCHAR(255) NOT NULL DEFAULT '',
-  ip_address VARCHAR(45) NOT NULL DEFAULT '',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY uniq_provider_transaction (provider, provider_transaction_id),
-  KEY idx_payment_records_provider (provider),
-  KEY idx_payment_records_status (status),
-  KEY idx_payment_records_created (created_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+PayPal and Stripe can be enabled independently or together. A gateway is shown to customers only when its toggle is on and the server credentials are valid. Both use the same existing Services list and shared Terms & Conditions URL. Services, records, and the payment form have not been replaced with a second system.
 
-INSERT IGNORE INTO settings (setting_key, setting_value) VALUES
-  ('stripe_secret_key', ''),
-  ('stripe_webhook_secret', '');
+### Credential-encryption key
+
+Set a private random `PAYMENT_ENCRYPTION_KEY` in `config/config.local.php` or the `TPT_PAYMENT_ENCRYPTION_KEY` server environment variable before migrating (see `config/config.local.php.example`). Keep it out of Git and outside the web root. If not set, TPT derives a stable encryption key from the existing private database connection settings and site URL. Keep the key stable: changing it makes already encrypted credentials unreadable; re-enter those credentials in Admin → Payments after a key change.
+
+Stored values use the `enc:v1:` AES-256-GCM format and live in the existing `settings` table. Admin forms show only that a credential is present, never the value. Provider errors are scrubbed before they reach logs or visitors.
+
+## Database upgrade
+
+Run from the application root with the deployment's PHP/database configuration loaded:
+
+```sh
+php bin/cli.php migrate
 ```
 
-Apply with `php bin/cli.php migrate` (or re-run `database-upgrade.sql`).
+Migration `010_server_side_payment_checkout.php` is re-runnable and:
 
-## Stripe webhook endpoint(s) to register
+- adds missing `payments.phone` and `payments.service` compatibility columns;
+- adds `payer_phone` and `notes` to the existing `payment_records` table;
+- seeds disabled gateway toggles without overwriting current settings;
+- removes old custom SDK-code and unused publishable-key settings;
+- encrypts any legacy plaintext PayPal/Stripe credential rows in place.
 
-Stripe → Developers → Webhooks → Add endpoint:
+New-install schema files and `database/seed.php` include the compatible payment fields. The Services table and Admin payment-record dashboard remain shared with the rest of the site.
 
-```
-https://YOUR-DOMAIN/stripe-webhook
-```
+## Routes and implementation
 
-`https://YOUR-DOMAIN/api/stripe/webhook` is an alias of the same handler.
-Subscribe to:
+- `pay-online.php` — shared form and server-set PRG notice.
+- `paypal-api.php` — PayPal form POST, approval return/cancel, capture and confirmation.
+- `stripe-api.php` — Stripe form POST, Checkout Session return/cancel, retrieval and confirmation.
+- `stripe-webhook.php` — optional signed Stripe webhook, with provider re-fetch before recording.
+- `core/Payments.php` — shared input validation, pending attempts, confirmed-record creation and notices.
+- `core/PayPal.php`, `core/Stripe.php` — separate server-only provider clients.
+- `core/PaymentCredentials.php` — AES-256-GCM credential encryption/decryption.
+- `core/PaymentRecords.php` — existing Admin audit/list/export operations.
+- `assets/css/refinements.css` — centered, responsive Pay Online layout and aligned provider buttons.
 
-* `payment_intent.succeeded`
-* `checkout.session.completed`
+The application router exposes `/paypal-api`, `/stripe-api`, and `/stripe-webhook` (also `/api/stripe/webhook`). No custom payment-code editor, browser SDK injection, client-side capture handler, or publishable-key field is part of the new flow.
 
-Copy the endpoint's signing secret (`whsec_…`) into **Admin → Payments →
-Stripe Webhook Secret**. Without it the endpoint answers `503` and records
-nothing; with a wrong signature it answers `400`.
+## Staging verification
 
-## The success message
+After the migration and credential setup, verify with provider test accounts only:
 
-Two things happen when (and only when) a provider confirms the payment — a
-PayPal capture the server verified, or a Stripe payment the server confirmed
-(also when the webhook records it after the tab was closed):
+1. **PayPal Sandbox:** enable PayPal only, use Sandbox app credentials, submit a valid amount/service, approve with a Sandbox buyer, and verify the exact server-confirmed message plus capture reference. Test user cancellation and a rejected/failed order; neither should be recorded as succeeded.
+2. **Stripe test mode:** enable Stripe with an `sk_test_…` key, use Stripe's test card `4242 4242 4242 4242` with a future expiry and any CVC, then verify the message and PaymentIntent reference. Test a declined test card and return/cancel path; neither should show success.
+3. Inspect Admin → Payments and Admin → Payment records: verify provider, customer name/email/phone, service, amount, USD, unique transaction reference, `succeeded` status and time. Confirm the legacy `payments` attempt is `paid` only after provider confirmation.
+4. Test both providers enabled, each provider disabled, invalid/hidden service, malformed amount, bad CSRF, provider network failure and duplicate Stripe webhook delivery.
+5. Check desktop, tablet and narrow-mobile widths. Inspect page source and browser requests: no `sk_`, `rk_`, PayPal Secret, OAuth token, Stripe client secret, PayPal/Stripe SDK, or browser payment callback should appear.
+6. If using Stripe webhooks, confirm an invalid/missing signature is rejected, a valid event is verified against the Stripe API, and a duplicate event does not create a second record.
 
-1. **The popup** — `#tpt-pay-modal` is built by the bridge and opened by
-   `window.TPT_PAYMENT_UI.showConfirmation()`: green check icon, **“Payment
-   successful”**, `Thank you, <name>. Your payment has been confirmed by
-   PayPal/Stripe.`, then a fact list with **Amount** (`$250.00 USD`),
-   **Service**, **Provider** and **Payment reference**, and a **Close** button.
-   It is a real dialog (`role="dialog"`, `aria-modal="true"`, labelled and
-   described), focus moves to Close, `Esc`, the Close button and the overlay
-   all close it, and focus returns to the page afterwards. It is responsive
-   down to 390px.
-2. **The confirmation area** — the existing `#tpt-payment-confirmation` box is
-   filled with “Thank You, <name>! Your payment of $X USD was successfully
-   completed. Payment Reference: …” and stays visible after the popup closes,
-   so the buyer still has the receipt on the page.
-
-The popup opens **once per payment**: the bridge remembers
-`provider:reference`, so a re-rendered button, a duplicated SDK callback or a
-replayed confirmation can never show it twice, and nothing is ever declared
-successful before the server has verified it. A failed or cancelled payment
-shows the gateway’s own message instead (`reportProblem` writes an explanatory
-line next to the payment buttons) and records nothing.
-
-Screenshots of the running preview are in `preview-shots/` (workspace root,
-not in the repository): `success-popup.png`, `success-popup-mobile.png`,
-`confirmation-area.png`, `providers-both.png`, `payment-records.png`.
-
-## Test steps
-
-1. **PayPal only** — Admin → Payments: enable PayPal, keep the Client ID +
-   Secret, disable Stripe. Pay Online shows one full-width PayPal block; pay
-   with a sandbox buyer account. The popup appears only after the server has
-   captured and verified the order, and the row appears in Admin → Payments.
-2. **Stripe only** — enable Stripe, save the Secret Key (`sk_test_…`) and the
-   Webhook Secret, disable PayPal. Pay by card with `4242 4242 4242 4242`; the
-   popup shows the PaymentIntent reference (`pi_…`) and the row appears in the
-   dashboard. Remove the Secret Key and the page falls back to browser-only
-   mode without any other change.
-3. **Both enabled** — PayPal on top, Stripe below, each full width with its own
-   label and divider; the badge "Server-verified payment" is shown. Narrow the
-   window below 820px: fields + Terms first, buttons below.
-4. **Failed / cancelled payment** — a cancelled PayPal window or a declined
-   card (`4000 0000 0000 0002`) must not open the popup and must not create a
-   record; the buyer sees the gateway's own message.
-5. **Duplicate webhook** — in Stripe → Webhooks → the endpoint → *Send test
-   webhook* or *Resend* the same `payment_intent.succeeded` event: the response
-   says `"duplicate": true` and the dashboard still shows one row.
-6. **Dashboard** — search by name/reference/service, filter by provider,
-   status and date range, check the totals line, delete one record (confirm
-   prompt) and bulk-delete several, then Export CSV with a filter applied and
-   confirm the file only contains the filtered rows.
-
-Run the offline suites with:
-
-```bash
-node tests/harness/cli.mjs tests/harness/lint.php
-node tests/harness/cli.mjs tests/payments.php
-node tests/harness/cli.mjs tests/paypal-server.php
-node tests/harness/cli.mjs tests/stripe-server.php
-node tests/harness/cli.mjs tests/payment-records.php
-node tests/harness/cli.mjs tests/admin-smoke.php payment-records
-```
-
-## Secrets
-
-`paypal_secret`, `stripe_secret_key` and `stripe_webhook_secret` are read only
-on the server (`core/PayPal.php`, `core/Stripe.php`). They are never rendered
-into HTML/JavaScript, never returned by an endpoint, never written to a log and
-never shown in the dashboard (only "a secret is stored"). Log lines and API
-error messages pass through `pieStripeScrub()`, which removes the stored values
-and any key-shaped or `whsec_`-shaped token.
+Local dependency-free checks are `php tests/payments.php`, `php tests/paypal-server.php`, `php tests/stripe-server.php`, and `php tests/payment-records.php`. They do not perform live provider requests. Run the real Sandbox/test-mode checklist on staging before enabling Live credentials. No live gateway transaction is part of the code-only test suite.

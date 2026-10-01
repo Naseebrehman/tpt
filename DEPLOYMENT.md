@@ -32,11 +32,14 @@ Apache needs mod_rewrite, AllowOverride and the existing Options permissions.
    php bin/cli.php migrate
    php tests/regression.php
    ```
-   This adds columns to chatbot_leads/contact_submissions and creates
-   payment_events/schema_migrations. It does **not** import or rewrite content,
-   admin accounts, settings, transactions or lead records. Migration operations
-   check existing columns, so interrupted DDL can be retried. MySQL DDL is not
-   transactional. `GET_LOCK` prevents two migration runners from colliding.
+   This adds missing chatbot/contact and payment compatibility columns, creates
+   `payment_records`/`schema_migrations`, and adds the server-checkout fields.
+   It does **not** import content or rewrite admin accounts, existing payment
+   rows, contact leads or submissions. The payment migration deliberately
+   encrypts legacy PayPal/Stripe credentials in the settings table and removes
+   obsolete browser-payment-code settings. Migration operations check existing
+   columns, so interrupted DDL can be retried. MySQL DDL is not transactional.
+   `GET_LOCK` prevents two migration runners from colliding.
 7. Complete the staging acceptance checks below before publishing.
 
 **Never re-import database.sql, database-upgrade.sql, schema-mysql.sql or seed.php
@@ -100,21 +103,7 @@ credentials in a public web form. A hosting operator with CLI access is required
   Configured SMTP failures no longer silently fall back to PHP mail. Success means
   the SMTP server accepted the message, not guaranteed inbox delivery; configure
   SPF/DKIM/DMARC and check spam folders. Admin sees the SMTP failure stage/response.
-- **Payments:** the Pay Online page renders the admin's saved custom payment
-  code — the complete PayPal and/or Stripe HTML, CSS and JavaScript pasted in
-  Admin → Payments — stored and output byte-for-byte, once, on load. Three
-  admin values are substituted into that code through `{{PLACEHOLDERS}}` and
-  nothing else is rewritten: the PayPal Client ID (`{{PAYPAL_CLIENT_ID}}`, also
-  applied to any `paypal.com/sdk/js` URL), the ONE shared Terms & Conditions URL
-  (`{{TERMS_URL}}`, used by both gateways) and the service list from the
-  existing Services system (`{{SERVICES_OPTIONS}}`). PayPal orders are created
-  with `shipping_preference: 'NO_SHIPPING'` — this is a digital/service
-  payment, so no shipping address, field or charge exists. PayPal and Stripe may
-  be enabled together; the dashboard flags duplicate element ids and the two
-  blocks are wrapped in unique containers. This project does not include
-  gateway credentials (a PayPal Client ID is public by design; no secret is ever
-  stored), provider API routes, or payment processing. Services remain editable
-  in Admin → Payments and are the single source of truth for both dropdowns.
+- **Payments:** existing Admin → Payments services and payment records are kept. PayPal Orders and Stripe hosted Checkout are separate server-side flows; the Pay Online page has no browser SDKs, custom payment-code editors, or frontend success callbacks. Both providers validate the form and create a pending row first. The server confirms amount/currency/status/reference directly with the provider before writing a successful record. Secrets are encrypted in the existing settings table and never rendered to customer HTML. See [docs/PAYMENTS.md](docs/PAYMENTS.md) for credential setup, migration and Sandbox/test-mode checks.
 
 ## API compatibility
 
@@ -123,7 +112,7 @@ POST `/api/contact`, `/api/lead`, `/api/newsletter` accept existing form fields 
   a flat JSON object with `csrf_token`. Obtain the token from the rendered
   session-bound form. `/api/lead` shares contact validation and stores in
   `contact_submissions` (minimum message length 10). These are same-site APIs,
-  not public cross-origin integrations. There is no payment API endpoint.
+  not public cross-origin integrations. Payment checkout uses the separate `/paypal-api` and `/stripe-api` routes; the optional Stripe webhook is `/stripe-webhook` and is authenticated by its signature.
 
 POST `/api/chat` accepts the current Alia JSON payload plus `csrf_token`; it uses
 an authenticated session token for lead ownership, not client-provided session_id.
@@ -150,23 +139,22 @@ rather than letting arbitrary X-Forwarded-For bypass limits.
   new leads/settings/content screens and migrations run twice without data loss.
 - Contact/newsletter/chat success, invalid input, invalid CSRF, throttling,
   database outage, SMTP accepted/rejected credentials, no secrets in public HTML.
-- Payment page states for all four toggle combinations: PayPal only, Stripe
-  only, both, and the unavailable message when both are disabled. Saved code is
-  rendered verbatim apart from the documented placeholders, with no built-in
-  payment form. Changing the PayPal Client ID, the shared Terms URL or the
-  Services list (add / remove / reorder / hide) must be reflected on the public
-  page without editing the saved code, and both forms must load together with no
-  duplicate-id or JavaScript conflicts. No gateway API call or payment capture is
-  expected from this project, and no shipping address is ever requested.
+- On staging, run the PayPal Sandbox and Stripe test-mode acceptance checklist
+  in [docs/PAYMENTS.md](docs/PAYMENTS.md): successful, failed and cancelled
+  checkout; provider-confirmed amount/service/reference; admin record and
+  duplicate-webhook behavior; responsive layout; no gateway secrets or SDKs in
+  page source or browser requests. The local unit tests do not charge a card or
+  contact a live gateway.
 - Generated canonical/OG/Twitter/JSON-LD/sitemap and noindex overrides.
 
 ## Verified here and remaining scope
 
-`tests/payments.php`: dependency-free checks for the payment integration layer —
-the existing Services system as the single source of truth, placeholder-only
-substitution of the PayPal Client ID / shared Terms URL / Services list,
-duplicate-id detection between the two implementations, PayPal shipping disabled,
-lossless textarea escaping and MEDIUMTEXT storage of complete implementations.
+The payment tests are dependency-free unit/security checks for input validation,
+credential encryption, gateway confirmation rules, webhook signatures, payment
+record idempotency, existing Services integration, Admin protections, and the
+absence of client-side SDK/code injection. They do not perform live provider
+transactions; PayPal Sandbox and Stripe test mode must still be verified on
+staging before Live credentials are enabled.
 
 `tests/regression.php`: 78 passing route/security/helper/PHP syntax checks under
 PHP 8.5 WebAssembly (development tooling outside the repository). JavaScript

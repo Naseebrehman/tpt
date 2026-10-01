@@ -10,8 +10,8 @@
  *   provider_transaction_id  the gateway's own payment id (capture id / pi_…)
  *                            UNIQUE together with provider → duplicate
  *                            deliveries of the same payment are ignored
- *   payer_name / payer_email  buyer details when the gateway reports them
- *   service                  what the payment was for (Admin Services list)
+ *   payer_name / email / phone  customer details from the server-created attempt
+ *   service / notes          what the payment was for and any customer note
  *   amount / currency        always as the gateway reported them (USD)
  *   status                   the gateway's status, lower-case ('succeeded')
  *   verification_mode        'server' | 'browser'
@@ -94,7 +94,9 @@ function piePaymentRecordNormalize(array $record)
         'provider_transaction_id' => mb_substr(trim((string) ($record['provider_transaction_id'] ?? '')), 0, 150),
         'payer_name'              => mb_substr(trim((string) ($record['payer_name'] ?? '')), 0, 191),
         'payer_email'             => mb_substr(trim((string) ($record['payer_email'] ?? '')), 0, 191),
+        'payer_phone'             => mb_substr(trim((string) ($record['payer_phone'] ?? '')), 0, 30),
         'service'                 => mb_substr(trim((string) ($record['service'] ?? '')), 0, 191),
+        'notes'                   => mb_substr(sanitizeMultiline((string) ($record['notes'] ?? '')), 0, 2000),
         'amount'                  => number_format($amount, 2, '.', ''),
         'currency'                => strtoupper(mb_substr(trim((string) ($record['currency'] ?? 'USD')), 0, 10)) ?: 'USD',
         'status'                  => mb_substr($status !== '' ? $status : 'succeeded', 0, 30),
@@ -142,14 +144,16 @@ function piePaymentRecord(array $record)
 
         $id = dbInsert(
             'INSERT INTO payment_records
-                (provider, provider_transaction_id, payer_name, payer_email, service, amount, currency, status, verification_mode, raw_reference, ip_address)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                (provider, provider_transaction_id, payer_name, payer_email, payer_phone, service, notes, amount, currency, status, verification_mode, raw_reference, ip_address)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             array(
                 $clean['provider'],
                 $clean['provider_transaction_id'],
                 $clean['payer_name'],
                 $clean['payer_email'],
+                $clean['payer_phone'],
                 $clean['service'],
+                $clean['notes'],
                 $clean['amount'],
                 $clean['currency'],
                 $clean['status'],
@@ -227,9 +231,9 @@ function piePaymentRecordWhere(array $filters)
     $params = array();
 
     if (($filters['q'] ?? '') !== '') {
-        $where[] = '(payer_name LIKE ? OR provider_transaction_id LIKE ? OR raw_reference LIKE ? OR service LIKE ? OR payer_email LIKE ?)';
+        $where[] = '(payer_name LIKE ? OR provider_transaction_id LIKE ? OR raw_reference LIKE ? OR service LIKE ? OR payer_email LIKE ? OR payer_phone LIKE ? OR notes LIKE ?)';
         $like    = '%' . str_replace(array('%', '_'), array('\\%', '\\_'), (string) $filters['q']) . '%';
-        for ($i = 0; $i < 5; $i++) { $params[] = $like; }
+        for ($i = 0; $i < 7; $i++) { $params[] = $like; }
     }
     if (($filters['provider'] ?? '') !== '') {
         $where[]  = 'provider = ?';
@@ -349,7 +353,9 @@ function piePaymentRecordCsvRow(array $row)
         (string) ($row['provider_transaction_id'] ?? ''),
         (string) ($row['payer_name'] ?? ''),
         (string) ($row['payer_email'] ?? ''),
+        (string) ($row['payer_phone'] ?? ''),
         (string) ($row['service'] ?? ''),
+        (string) ($row['notes'] ?? ''),
         number_format((float) ($row['amount'] ?? 0), 2, '.', ''),
         strtoupper((string) ($row['currency'] ?? 'USD')),
         (string) ($row['status'] ?? ''),
@@ -363,6 +369,6 @@ function piePaymentRecordCsvRow(array $row)
 /** CSV header row for the export. */
 function piePaymentRecordCsvHeaders()
 {
-    return array('ID', 'Provider', 'Transaction ID', 'Payer name', 'Payer email', 'Service',
+    return array('ID', 'Provider', 'Transaction ID', 'Payer name', 'Payer email', 'Payer phone', 'Service', 'Notes',
         'Amount', 'Currency', 'Status', 'Verification', 'Reference', 'IP address', 'Recorded at');
 }

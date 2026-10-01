@@ -1,167 +1,143 @@
 <?php
-/**
- * ---------------------------------------------------------------------------
- *  The Pie Technologies — server-side PayPal endpoint
- * ---------------------------------------------------------------------------
- *  POST only. Called by the Pay Online page (window.TPT_PAYPAL) so that an
- *  approved PayPal order is CREATED and CAPTURED on the server with the PayPal
- *  Secret from Admin → Payments. The Secret never leaves this server.
- *
- *  Actions
- *    action=create   → creates an order for the amount the buyer entered
- *                      (shipping_preference is always NO_SHIPPING)
- *    action=capture  → captures AND verifies an approved order; the amount is
- *                      read from PayPal's response (never from the browser)
- *    action=status   → reports whether server-side verification is configured
- *
- *  Answers are always JSON: {"success":bool, "message":string, ...}. A payment
- *  is only reported as confirmed when PayPal itself reports a COMPLETED
- *  capture — nothing here trusts the visitor's browser.
- *
- *  Output never contains the PayPal Secret, an API key or a stack trace.
+/** PayPal server-side checkout endpoint.
+ * POST creates an Order and redirects to PayPal. PayPal's return is captured
+ * and verified here with the Secret before an Admin payment record is created.
  */
-
-if (!defined('DB_OK')) {
-    require_once __DIR__ . '/includes/init.php';
-}
+require_once __DIR__ . '/includes/init.php';
 require_once __DIR__ . '/includes/payments.php';
-require_once __DIR__ . '/core/PaymentRecords.php';
 
-header('Content-Type: application/json; charset=utf-8');
-header('Cache-Control: no-store');
+header('Cache-Control: no-store, private');
 header('X-Content-Type-Options: nosniff');
-/* Buffer everything so a stray notice can never corrupt the JSON answer. */
-ob_start();
 
-/** JSON answer + exit. */
-function piePayPalApiRespond($ok, $message, array $extra = array())
+function piePayPalCheckoutFail($message, $status = 400)
 {
-    while (ob_get_level() > 0) {
-        ob_end_clean();
+    http_response_code((int) $status);
+    piePaymentSetNotice('error', $message);
+    piePaymentRedirectToForm();
+}
+
+function piePayPalCheckoutSuccess(array $attempt, $transactionId, $amount)
+{
+    piePaymentSetNotice('success', '', array(
+        'name' => (string) ($attempt['name'] ?? ''),
+        'amount' => (string) $amount,
+        'reference' => (string) $transactionId,
+    ));
+    piePaymentRedirectToForm();
+}
+
+function piePayPalCheckoutStart()
+{
+    if (!validateCSRF()) { piePayPalCheckoutFail('Your session expired. Refresh the page and try again.', 403); }
+    if (!pieIsPayPalEnabled() || !piePayPalServerReady()) {
+        piePayPalCheckoutFail('PayPal is not currently available. Please choose another payment option or contact us.', 503);
     }
-    if (!headers_sent()) {
-        header('Content-Type: application/json; charset=utf-8');
+    if (class_exists('Ratelimit') && !Ratelimit::allow('paypal-checkout:' . pieClientIp(), 10, 600)) {
+        piePayPalCheckoutFail('Too many payment attempts. Please wait a few minutes and try again.', 429);
     }
-    echo json_encode(array_merge(array('success' => (bool) $ok, 'message' => (string) $message), $extra));
+    $validated = piePaymentValidateSubmission($_POST);
+    if (!$validated['ok']) { piePayPalCheckoutFail($validated['error'], 422); }
+    if (!piePaymentStorageReady()) {
+        piePayPalCheckoutFail('Payments are temporarily unavailable. Please contact our team before trying again.', 503);
+    }
+
+    $createdAttempt = piePaymentCreateAttempt('paypal', $validated['data']);
+    if (!$createdAttempt['ok']) { piePayPalCheckoutFail($createdAttempt['error'], 503); }
+    $attempt = $createdAttempt['attempt'];
+
+    $endpointUrl = rtrim(SITE_URL, '/') . url('paypal-api');
+    $returnUrl = $endpointUrl . '?flow=return';
+    $cancelUrl = $endpointUrl . '?flow=cancel&payment_token=' . rawurlencode($attempt['token']);
+    $order = piePayPalCreateOrder(
+        $attempt['amount_usd'],
+        $attempt['service'],
+        $attempt['name'],
+        $attempt['email'],
+        $returnUrl,
+        $cancelUrl,
+        $attempt['token']
+    );
+    if (!$order['ok']) {
+        piePaymentMarkAttempt($attempt, 'failed');
+        piePayPalCheckoutFail('PayPal could not start your checkout. Please try again or contact our team.', 502);
+    }
+    if (!piePaymentSetAttemptReference($attempt, $order['id'])) {
+        piePaymentMarkAttempt($attempt, 'failed');
+        piePayPalCheckoutFail('The PayPal checkout could not be linked to your payment record. Please contact our team.', 503);
+    }
+
+    header('Location: ' . $order['approval_url'], true, 303);
     exit;
 }
 
-if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
-    http_response_code(405);
-    header('Allow: POST');
-    piePayPalApiRespond(false, 'This endpoint only accepts POST requests.');
-}
-
-/* The page posts JSON; classic form posts are accepted too. */
-$rawBody = file_get_contents('php://input');
-$payload = json_decode((string) $rawBody, true);
-if (!is_array($payload)) {
-    $payload = $_POST;
-}
-$action       = isset($payload['action']) ? strtolower(trim((string) $payload['action'])) : '';
-$csrfToken    = isset($payload['csrf_token']) ? (string) $payload['csrf_token'] : '';
-$orderId      = isset($payload['order_id']) ? trim((string) $payload['order_id']) : '';
-$expectedAmt  = isset($payload['expected_amount']) ? (string) $payload['expected_amount'] : '';
-$service      = isset($payload['service']) ? mb_substr(sanitize($payload['service']), 0, 127) : '';
-$buyerName    = isset($payload['name']) ? mb_substr(sanitize($payload['name']), 0, 150) : '';
-$buyerEmail   = isset($payload['email']) ? mb_substr(sanitize($payload['email']), 0, 150) : '';
-$buyerPhone   = isset($payload['phone']) ? mb_substr(sanitize($payload['phone']), 0, 30) : '';
-
-if (!in_array($action, array('create', 'capture', 'status'), true)) {
-    piePayPalApiRespond(false, 'Unknown payment action.');
-}
-
-if ($action === 'status') {
-    piePayPalApiRespond(true, 'PayPal server-side verification is ' . (piePayPalServerReady() ? 'available.' : 'not configured.'), array(
-        'serverVerification' => piePayPalServerReady(),
-        'currency'           => 'USD',
-    ));
-}
-
-/* Every money-moving action requires this session's CSRF token. */
-if (!validateCSRF($csrfToken)) {
-    http_response_code(403);
-    piePayPalApiRespond(false, 'Your session expired. Please refresh the page and try again.');
-}
-
-if (!piePayPalServerReady()) {
-    piePayPalApiRespond(false, 'Server-side PayPal verification is not configured yet. Add the PayPal Client ID and Secret in Admin → Payments.');
-}
-
-/* Bound how often one visitor can hit PayPal through this endpoint. */
-if (class_exists('Ratelimit') && !Ratelimit::allow('paypal:' . pieClientIp(), 40, 600)) {
-    http_response_code(429);
-    piePayPalApiRespond(false, 'Too many payment attempts. Please wait a few minutes and try again.');
-}
-
-if ($action === 'create') {
-    $amount = piePayPalAmount($expectedAmt);
-    if ($amount === '') {
-        piePayPalApiRespond(false, 'Enter an amount greater than zero.');
+function piePayPalCheckoutReturn()
+{
+    $orderId = trim((string) ($_GET['token'] ?? ''));
+    if (!preg_match('/^[A-Za-z0-9-]{6,50}$/D', $orderId)) {
+        piePayPalCheckoutFail('PayPal returned an invalid payment reference. No successful payment was recorded.', 400);
     }
-    $created = piePayPalCreateOrder($amount, $service, $buyerName, $buyerEmail);
-    if (!$created['ok']) {
-        piePayPalApiRespond(false, $created['error'] !== '' ? $created['error'] : 'PayPal could not start this payment.');
+    $attempt = piePaymentFindAttemptByReference('paypal', $orderId);
+    if (!$attempt) {
+        piePayPalCheckoutFail('We could not match the PayPal return to a payment request. Please contact us before trying again.', 404);
     }
-    piePayPalApiRespond(true, 'Order created.', array('order_id' => $created['id'], 'amount' => $amount, 'currency' => 'USD'));
+    if ((string) ($attempt['status'] ?? '') === 'paid' && !empty($attempt['provider_ref'])) {
+        piePayPalCheckoutSuccess($attempt, $attempt['provider_ref'], $attempt['amount_usd']);
+    }
+    if ((string) ($attempt['status'] ?? '') !== 'pending') {
+        piePayPalCheckoutFail('This PayPal payment request is no longer active. No successful payment was recorded.', 409);
+    }
+    if (!piePayPalServerReady()) {
+        piePayPalCheckoutFail('PayPal confirmation is temporarily unavailable. Please contact us with your PayPal order reference.', 503);
+    }
+
+    $capture = piePayPalCaptureOrder($orderId, $attempt['amount_usd'] ?? '', $attempt['token'] ?? '');
+    if (!$capture['ok'] || empty($capture['confirmation']['confirmed'])) {
+        piePayPalCheckoutFail('PayPal did not confirm this payment. No successful payment was recorded. You may try again or contact our team.', 402);
+    }
+    $confirmation = $capture['confirmation'];
+    if ((string) ($confirmation['order_id'] ?? '') !== $orderId
+        || strtoupper((string) ($confirmation['currency'] ?? '')) !== 'USD') {
+        piePayPalCheckoutFail('PayPal returned a payment that did not match this order. No successful payment was recorded.', 402);
+    }
+
+    $completed = piePaymentCompleteAttempt($attempt, 'paypal', $confirmation, $orderId);
+    if (!$completed['ok']) {
+        piePayPalCheckoutFail($completed['error'], 503);
+    }
+    piePayPalCheckoutSuccess($attempt, $confirmation['reference'], $confirmation['amount']);
 }
 
-/* action=capture — verify an approved order and report the confirmed payment. */
-if ($orderId === '') {
-    piePayPalApiRespond(false, 'PayPal did not return an order id for this payment.');
+function piePayPalCheckoutCancel()
+{
+    $attempt = null;
+    $paymentToken = strtolower(trim((string) ($_GET['payment_token'] ?? '')));
+    if ($paymentToken !== '') {
+        $attempt = piePaymentFindAttemptByToken($paymentToken);
+    }
+    if (!$attempt && !empty($_GET['token'])) {
+        $attempt = piePaymentFindAttemptByReference('paypal', (string) $_GET['token']);
+    }
+    if ($attempt && strtolower((string) ($attempt['method'] ?? '')) === 'paypal') {
+        piePaymentMarkAttempt($attempt, 'cancelled');
+    }
+    piePaymentSetNotice('cancelled', 'Your PayPal payment was cancelled. No successful payment was recorded. You can try again whenever you are ready.');
+    piePaymentRedirectToForm();
 }
 
-$capture = piePayPalCaptureOrder($orderId, $expectedAmt);
-if (!$capture['ok']) {
-    piePayPalApiRespond(false, $capture['error'] !== '' ? $capture['error'] : 'The payment could not be verified.');
+$method = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
+if ($method === 'POST') {
+    if (strtolower(trim((string) ($_POST['payment_action'] ?? ''))) !== 'start') {
+        piePayPalCheckoutFail('This PayPal endpoint only accepts a payment form submission.', 405);
+    }
+    piePayPalCheckoutStart();
+}
+if ($method === 'GET') {
+    $flow = strtolower(trim((string) ($_GET['flow'] ?? '')));
+    if ($flow === 'return') { piePayPalCheckoutReturn(); }
+    if ($flow === 'cancel') { piePayPalCheckoutCancel(); }
 }
 
-$confirmation = piePayPalConfirmation($capture['data']);
-if (!$confirmation['confirmed']) {
-    /* PENDING and other non-final states are NOT reported as successful. */
-    piePayPalApiRespond(false, 'PayPal has not completed this payment yet (status: ' . ($confirmation['status'] !== '' ? strtolower($confirmation['status']) : 'unknown') . ').', array(
-        'confirmed' => false,
-        'status'    => $confirmation['status'],
-    ));
-}
-
-$displayName = $confirmation['name'] !== '' ? $confirmation['name'] : ($buyerName !== '' ? $buyerName : 'there');
-$message = 'Thank You, ' . $displayName . '! Your payment of $' . $confirmation['amount'] . ' ' . $confirmation['currency']
-    . ' was successfully completed. Payment Reference: ' . $confirmation['reference'];
-
-/* Existing tables, best effort — a logging failure never affects the buyer. */
-piePayPalRecord($capture['data'], $service, $displayName, $buyerEmail, $buyerPhone);
-
-/* The dashboard's payment record, written EXACTLY ONCE per PayPal capture
-   (the same capture id is never recorded twice, whatever the browser sends).
-   The payer email PayPal itself reports is preferred over the typed one. */
-$recordEmail = $buyerEmail;
-if ($recordEmail === '' && !empty($capture['data']['payer']['email_address'])) {
-    $recordEmail = mb_substr(sanitize($capture['data']['payer']['email_address']), 0, 150);
-}
-$recordId = piePaymentRecord(array(
-    'provider'                => 'paypal',
-    'provider_transaction_id' => $confirmation['reference'],
-    'payer_name'              => $displayName,
-    'payer_email'             => $recordEmail,
-    'service'                 => $service,
-    'amount'                  => $confirmation['amount'],
-    'currency'                => $confirmation['currency'],
-    'status'                  => 'succeeded',
-    'verification_mode'       => 'server',
-    'raw_reference'           => $orderId,
-    'ip_address'              => pieClientIp(),
-));
-
-piePayPalApiRespond(true, $message, array(
-    'confirmed' => true,
-    'name'      => $displayName,
-    'amount'    => $confirmation['amount'],
-    'currency'  => $confirmation['currency'],
-    'reference' => $confirmation['reference'],
-    'status'    => $confirmation['status'],
-    'service'   => $service,
-    'provider'  => 'paypal',
-    'record_id' => $recordId,
-    'details'   => $capture['data'],
-));
+http_response_code(405);
+header('Allow: POST, GET');
+piePaymentSetNotice('error', 'This PayPal endpoint is only used during checkout.');
+piePaymentRedirectToForm();

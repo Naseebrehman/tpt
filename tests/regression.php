@@ -43,8 +43,8 @@ check(Content::path('/about.php?utm_source=test') === '/about', 'canonical remov
 check(Content::path('/index.php') === '/', 'canonical home');
 check($router->resolve('POST', '/api/payment')['status'] === 404, 'legacy payment API removed');
 check($router->resolve('POST', '/api/webhooks/stripe')['status'] === 404, 'Stripe webhook API removed');
-check(isset($router->resolve('POST', '/paypal-api')['handler']), 'server-side PayPal endpoint routed');
-check($router->resolve('GET', '/paypal-api')['status'] === 405, 'the PayPal endpoint refuses GET');
+check(isset($router->resolve('POST', '/paypal-api')['handler']) && isset($router->resolve('GET', '/paypal-api')['handler']), 'PayPal endpoint routes form POSTs and provider return GETs');
+check(isset($router->resolve('POST', '/stripe-api')['handler']) && isset($router->resolve('GET', '/stripe-api')['handler']), 'Stripe endpoint routes form POSTs and provider return GETs');
 
 /* Short "Start a project" popup: opt-in per page, same contact endpoint. */
 $quick = (string) file_get_contents(BASE_PATH . '/includes/quick-contact.php');
@@ -116,7 +116,7 @@ foreach (array('notification_status', 'chatbot_leads', 'payment_events') as $mus
     if (strpos((string) file_get_contents(BASE_PATH . '/database/schema-mysql.sql'), $must) === false) { $bad++; }
 }
 check($bad === 0, 'fresh schema includes former migration-001 additions');
-foreach (array('notification_emails', 'email_templates', 'phone VARCHAR(30)', 'service VARCHAR(100)') as $must) {
+foreach (array('notification_emails', 'email_templates', 'phone VARCHAR(30)', 'service VARCHAR(191)') as $must) {
     if (strpos((string) file_get_contents(BASE_PATH . '/database/schema-mysql.sql'), $must) === false) { $bad++; }
 }
 check($bad === 0, 'fresh schema includes notification/template tables and payment details');
