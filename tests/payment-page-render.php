@@ -73,6 +73,24 @@ paymentRenderCheck((bool) preg_match('/id="tpt-payment-confirmation"[^>]*\shidde
 paymentRenderCheck(strpos($html, 'id="tpt-modal"') !== false && strpos($html, 'id="mRef"') !== false, 'the PayPal success popup markup renders');
 paymentRenderCheck(strpos($html, 'refinements.css') !== false && strpos($html, 'pay-layout') !== false, 'rendered payment form uses the responsive checkout stylesheet/classes');
 
+/* Empty and invalid fields must be pointed at exactly, never as a generic
+   PayPal failure. The client script is asserted here; the behaviour itself is
+   exercised against a stubbed PayPal SDK in development. */
+paymentRenderCheck(strpos($html, 'Please fill the required field: Name / Business name.') !== false
+    && strpos($html, 'Please fill the required field: Service.') !== false
+    && strpos($html, 'Please fill the required field: Amount (USD).') !== false, 'each required field has its own "fill the required field" message');
+paymentRenderCheck(strpos($html, 'onClick: function(data, actions){') !== false
+    && strpos($html, "if (!details()) { return actions.reject(); }") !== false, 'the PayPal click is validated before any order is created');
+paymentRenderCheck(strpos($html, "field.setAttribute('aria-invalid', 'true')") !== false
+    && strpos($html, "node.className = 'pay-field-error'") !== false
+    && strpos($html, "problems.forEach(function (problem) { setFieldError(problem.key, problem.message); });") !== false, 'every empty field is marked and its message printed under the input');
+paymentRenderCheck(strpos($html, "['input', 'change'].forEach") !== false, 'editing a field clears its own error');
+paymentRenderCheck(strpos($html, 'if (validationMessage) { fail(validationMessage); return; }') !== false, 'PayPal\'s error callback never overwrites a validation message');
+paymentRenderCheck(strpos($html, "'PayPal reported: ' + detail") !== false, 'a real PayPal error quotes PayPal\'s own message');
+paymentRenderCheck(strpos($html, "'Please enter a valid amount in USD (0.01 to 1,000,000.00).'") !== false, 'a zero amount is reported as an amount problem');
+paymentRenderCheck(strpos($styles, '.pay-field-error{') !== false
+    && strpos($styles, '.pay-field input[aria-invalid="true"]') !== false, 'the marked field and its message are styled');
+
 /* Without a saved Client ID the page asks visitors to contact the team. */
 $GLOBALS['fake_settings']['paypal_client_id'] = '';
 settingsCache(true);

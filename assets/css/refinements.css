@@ -352,6 +352,10 @@ blockquote,pre,table{max-width:100%}
 .pay-paypal-buttons{width:100%;min-height:48px}
 .pay-paypal-buttons .paypal-buttons{display:block}
 .pay-err{margin:12px 0 0;color:#fca5a5;font-size:.8rem;line-height:1.5;min-height:1.2em}
+/* Exact per-field validation: mark the input and print the message under it. */
+.pay-field input[aria-invalid="true"],.pay-field select[aria-invalid="true"]{border-color:rgba(239,68,68,.75);background:rgba(47,12,16,.35)}
+.pay-field input[aria-invalid="true"]:focus,.pay-field select[aria-invalid="true"]:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(239,68,68,.22)}
+.pay-field-error{margin:0;color:#fca5a5;font-size:.75rem;font-weight:600;line-height:1.45}
 .pay-overlay{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(4,5,10,.72)}
 .pay-overlay.open{display:flex}
 .pay-modal{width:100%;max-width:420px;padding:32px;border:1px solid var(--line);border-radius:18px;background:var(--panel);text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.6)}

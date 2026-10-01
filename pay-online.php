@@ -216,15 +216,79 @@ document.addEventListener('keydown', function(e){
     if (!isFinite(amount) || amount < 0.01 || amount > 1000000) return '';
     return amount.toFixed(2);
   }
+
+  /* ---------------------------------------------------------------------
+     Exact, per-field validation.
+
+     A missing field is marked where it is (red border + its own message
+     under the input) and the alert beside the PayPal button repeats the
+     first problem, so the visitor is never left guessing which field to
+     fill. The message set here is also what PayPal's onError must not
+     overwrite: when validation fails we reject the button click, and the
+     SDK may report that rejection as a generic PayPal error.
+     --------------------------------------------------------------------- */
+  var fields = {
+    name: document.getElementById('payment-name'),
+    service: document.getElementById('payment-service'),
+    amount: document.getElementById('payment-amount')
+  };
+  var validationMessage = '';
+
+  function fieldBox(field){
+    return field && field.closest ? field.closest('.pay-field') : null;
+  }
+  function clearFieldError(key){
+    var field = fields[key];
+    if (!field) return;
+    field.removeAttribute('aria-invalid');
+    var box = fieldBox(field);
+    var message = box ? box.querySelector('.pay-field-error') : null;
+    if (message) { message.parentNode.removeChild(message); }
+  }
+  function setFieldError(key, message){
+    var field = fields[key];
+    if (!field) return;
+    field.setAttribute('aria-invalid', 'true');
+    var box = fieldBox(field);
+    if (!box) return;
+    var node = box.querySelector('.pay-field-error');
+    if (!node) {
+      node = document.createElement('p');
+      node.className = 'pay-field-error';
+      box.appendChild(node);
+    }
+    node.textContent = message;
+  }
+  Object.keys(fields).forEach(function (key) {
+    var field = fields[key];
+    if (!field) return;
+    ['input', 'change'].forEach(function (eventName) {
+      field.addEventListener(eventName, function () { clearFieldError(key); });
+    });
+  });
+
+  /* Returns the payload, or null after reporting every empty/invalid field. */
   function details(){
+    ['name', 'service', 'amount'].forEach(clearFieldError);
     var name = value('payment-name');
-    var amountRaw = value('payment-amount');
     var service = value('payment-service');
-    if (!name) { fail('Please fill the required field: Name / Business name.'); return null; }
-    if (!service) { fail('Please fill the required field: Service.'); return null; }
-    if (!amountRaw) { fail('Please fill the required field: Amount (USD).'); return null; }
-    var amount = amountValue(amountRaw);
-    if (!amount) { fail('Please enter a valid amount in USD.'); return null; }
+    var amountRaw = value('payment-amount');
+    var problems = [];
+    if (!name) { problems.push({ key: 'name', message: 'Please fill the required field: Name / Business name.' }); }
+    if (!service) { problems.push({ key: 'service', message: 'Please fill the required field: Service.' }); }
+    if (!amountRaw) { problems.push({ key: 'amount', message: 'Please fill the required field: Amount (USD).' }); }
+    var amount = amountRaw ? amountValue(amountRaw) : '';
+    if (amountRaw && !amount) { problems.push({ key: 'amount', message: 'Please enter a valid amount in USD (0.01 to 1,000,000.00).' }); }
+    if (problems.length) {
+      problems.forEach(function (problem) { setFieldError(problem.key, problem.message); });
+      validationMessage = problems[0].message
+        + (problems.length > 1 ? ' Please complete the ' + problems.length + ' highlighted fields.' : '');
+      fail(validationMessage);
+      var first = fields[problems[0].key];
+      if (first && first.focus) { try { first.focus({ preventScroll: false }); } catch (error) { first.focus(); } }
+      return null;
+    }
+    validationMessage = '';
     fail('');
     return { name: name, service: service, amount: amount };
   }
@@ -232,6 +296,12 @@ document.addEventListener('keydown', function(e){
   var pending = null;
   paypal.Buttons({
     style: { layout: 'vertical', shape: 'rect', label: 'paypal', height: 48 },
+    /* Validate before an order is ever created: PayPal only opens once the
+       form is complete, and the visitor sees the exact field message. */
+    onClick: function(data, actions){
+      if (!details()) { return actions.reject(); }
+      return actions.resolve();
+    },
     createOrder: function(data, actions){
       pending = details();
       if (!pending) { return actions.reject(); }
@@ -257,7 +327,17 @@ document.addEventListener('keydown', function(e){
       });
     },
     onCancel: function(){ fail('PayPal checkout was cancelled. You can try again whenever you are ready.'); },
-    onError: function(){ fail('PayPal could not complete the payment. Please try again or contact us before paying twice.'); }
+    onError: function(err){
+      /* The rejected click above is a validation problem, not a PayPal one —
+         keep the exact field message instead of the generic wording. */
+      if (validationMessage) { fail(validationMessage); return; }
+      var detail = '';
+      if (err && (err.message || err.name)) { detail = String(err.message || err.name); }
+      if (detail.length > 160) { detail = detail.slice(0, 157) + '…'; }
+      fail(detail
+        ? 'PayPal reported: ' + detail + ' — please try again, or contact us before paying twice.'
+        : 'PayPal could not complete the payment. Please try again or contact us before paying twice.');
+    }
   }).render('#paypal-button-container');
 })();
 </script>
