@@ -32,12 +32,12 @@ Apache needs mod_rewrite, AllowOverride and the existing Options permissions.
    php bin/cli.php migrate
    php tests/regression.php
    ```
-   This adds missing chatbot/contact and payment compatibility columns, creates
-   `payment_records`/`schema_migrations`, and adds the server-checkout fields.
-   It does **not** import content or rewrite admin accounts, existing payment
-   rows, contact leads or submissions. The payment migration deliberately
-   encrypts legacy PayPal/Stripe credentials in the settings table and removes
-   obsolete browser-payment-code settings. Migration operations check existing
+   This adds missing chatbot/contact columns and creates `schema_migrations`
+   and the existing payment-services list. It does **not** import content or
+   rewrite admin accounts, contact leads or submissions. Migration 011 removes
+   the retired Stripe settings, server-side PayPal credentials, payment email
+   templates and the legacy `payments`/`payment_records` tables, keeping the
+   PayPal Client ID used by the browser SDK. Migration operations check existing
    columns, so interrupted DDL can be retried. MySQL DDL is not transactional.
    `GET_LOCK` prevents two migration runners from colliding.
 7. Complete the staging acceptance checks below before publishing.
@@ -103,7 +103,7 @@ credentials in a public web form. A hosting operator with CLI access is required
   Configured SMTP failures no longer silently fall back to PHP mail. Success means
   the SMTP server accepted the message, not guaranteed inbox delivery; configure
   SPF/DKIM/DMARC and check spam folders. Admin sees the SMTP failure stage/response.
-- **Payments:** existing Admin → Payments services and payment records are kept. PayPal Orders and Stripe hosted Checkout are separate server-side flows; the Pay Online page has no browser SDKs, custom payment-code editors, or frontend success callbacks. Both providers validate the form and create a pending row first. The server confirms amount/currency/status/reference directly with the provider before writing a successful record. Secrets are encrypted in the existing settings table and never rendered to customer HTML. See [docs/PAYMENTS.md](docs/PAYMENTS.md) for credential setup, migration and Sandbox/test-mode checks.
+- **Payments:** PayPal only. The Pay Online page loads the PayPal JavaScript SDK with the Client ID saved in Admin → Payment Settings (the existing settings table) and shows PayPal’s success popup after approval. There is no secret, server-side capture/confirmation, webhook, payment API, payment record or payment history. The existing admin services list still fills the payment form. See [docs/PAYMENTS.md](docs/PAYMENTS.md) for Client ID setup and Sandbox checks.
 
 ## API compatibility
 
@@ -112,7 +112,7 @@ POST `/api/contact`, `/api/lead`, `/api/newsletter` accept existing form fields 
   a flat JSON object with `csrf_token`. Obtain the token from the rendered
   session-bound form. `/api/lead` shares contact validation and stores in
   `contact_submissions` (minimum message length 10). These are same-site APIs,
-  not public cross-origin integrations. Payment checkout uses the separate `/paypal-api` and `/stripe-api` routes; the optional Stripe webhook is `/stripe-webhook` and is authenticated by its signature.
+  not public cross-origin integrations. Checkout has no server route: the PayPal JavaScript SDK completes the payment in the browser.
 
 POST `/api/chat` accepts the current Alia JSON payload plus `csrf_token`; it uses
 an authenticated session token for lead ownership, not client-provided session_id.
@@ -139,22 +139,21 @@ rather than letting arbitrary X-Forwarded-For bypass limits.
   new leads/settings/content screens and migrations run twice without data loss.
 - Contact/newsletter/chat success, invalid input, invalid CSRF, throttling,
   database outage, SMTP accepted/rejected credentials, no secrets in public HTML.
-- On staging, run the PayPal Sandbox and Stripe test-mode acceptance checklist
-  in [docs/PAYMENTS.md](docs/PAYMENTS.md): successful, failed and cancelled
-  checkout; provider-confirmed amount/service/reference; admin record and
-  duplicate-webhook behavior; responsive layout; no gateway secrets or SDKs in
-  page source or browser requests. The local unit tests do not charge a card or
-  contact a live gateway.
+- On staging, run the PayPal Sandbox checklist in
+  [docs/PAYMENTS.md](docs/PAYMENTS.md): successful, cancelled and failed
+  checkout; the saved Client ID being used by the SDK; the success popup with
+  amount/service/reference; changing the Client ID in the dashboard; responsive
+  layout; and no secret or server endpoint in page source or browser requests.
+  The local unit tests do not charge a card or contact a live gateway.
 - Generated canonical/OG/Twitter/JSON-LD/sitemap and noindex overrides.
 
 ## Verified here and remaining scope
 
-The payment tests are dependency-free unit/security checks for input validation,
-credential encryption, gateway confirmation rules, webhook signatures, payment
-record idempotency, existing Services integration, Admin protections, and the
-absence of client-side SDK/code injection. They do not perform live provider
-transactions; PayPal Sandbox and Stripe test mode must still be verified on
-staging before Live credentials are enabled.
+The payment tests are dependency-free render/settings checks: the page uses the
+saved PayPal Client ID, offers PayPal only, stores no secret, posts nowhere and
+keeps the existing services/customer fields. They do not perform live provider
+transactions; a PayPal Sandbox Client ID must still be verified on staging
+before a Live Client ID is saved.
 
 `tests/regression.php`: 78 passing route/security/helper/PHP syntax checks under
 PHP 8.5 WebAssembly (development tooling outside the repository). JavaScript
@@ -169,8 +168,8 @@ installation was performed.
 This is an **incremental architecture upgrade**, not completion of every item in
 the larger specification. Remaining work includes a full arbitrary-page/legal
 body and navigation editor, deeper service-section editing, unified contact/Alia
-lead list, invoice entities and non-USD currencies, PayPal webhooks, password-reset
-emails/workflow, payment success/failure email templates, CAPTCHA integration,
+lead list, invoice entities and non-USD currencies, password-reset
+emails/workflow, CAPTCHA integration,
 robots editing, and extraction of remaining legacy page SQL/handlers. Existing
 payment requests are not mislabeled as a new invoicing system, and empty duplicate
 schema tables were not added merely to match requested filenames.

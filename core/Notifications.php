@@ -4,7 +4,7 @@
  *  The Pie Technologies — centralized notification system (Tasks 6–9)
  * ---------------------------------------------------------------------------
  *  One service routes every website notification:
- *   - Category toggles (contact, payment, lead, chatbot, system, security).
+ *   - Category toggles (contact, lead, chatbot, system, security).
  *   - Configurable recipient list (notification_emails), never hard-coded.
  *   - Branded email templates (core/EmailTemplates.php) with {{variables}}.
  *   - Per-request duplicate suppression and event throttling.
@@ -25,7 +25,6 @@ class Notifications
     {
         return array(
             'contact'  => 'Contact Form',
-            'payment'  => 'Payment',
             'lead'     => 'Lead',
             'chatbot'  => 'Chatbot',
             'system'   => 'System',
@@ -175,7 +174,7 @@ class Notifications
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 email VARCHAR(150) NOT NULL,
                 is_active TINYINT(1) NOT NULL DEFAULT 1,
-                categories VARCHAR(255) NOT NULL DEFAULT 'contact,payment,lead,chatbot,system,security',
+                categories VARCHAR(255) NOT NULL DEFAULT 'contact,lead,chatbot,system,security',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE KEY uniq_notification_email (email)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");

@@ -28,6 +28,10 @@ $activeNav  = 'services';
 $bodyClass  = 'page-service page-service-' . $service['key'];
 $pageLibs   = array('chart' => !empty($service['chart']), 'swiper' => false);
 
+/* This page offers the short Start-a-project popup, pre-filled with the service. */
+$contactModalEnabled = true;
+$quickPrefillService = $svcMeta ? $svcMeta['name'] : $service['key'];
+
 require_once dirname(__DIR__) . '/includes/header.php';
 
 $svcName = $svcMeta ? $svcMeta['name'] : $service['key'];
@@ -48,7 +52,7 @@ if ($svcMeta) {
         <h1><?= esc($service['title']) ?></h1>
         <?php if (!empty($service['lead'])): ?><p class="lead"><?= esc($service['lead']) ?></p><?php endif; ?>
         <div class="page-hero-actions">
-            <a href="<?= url('contact') ?>?service=<?= rawurlencode($svcName) ?>" class="btn btn-primary btn-magnetic"><?= esc(isset($service['cta']['button']) ? $service['cta']['button'] : 'Start a Project') ?> <?= icon('arrow-r', 18) ?></a>
+            <a href="<?= url('contact') ?>?service=<?= rawurlencode($svcName) ?>" class="btn btn-primary btn-magnetic" data-contact-modal><?= esc(isset($service['cta']['button']) ? $service['cta']['button'] : 'Start a Project') ?> <?= icon('arrow-r', 18) ?></a>
             <a href="<?= url('portfolio') ?>" class="btn btn-ghost btn-magnetic">See related work</a>
         </div>
         <?php if (!empty($service['heroDesc'])): ?>
@@ -554,7 +558,7 @@ if ($relatedServices): ?>
         <h2 data-aos="fade-up"><?= esc(isset($service['cta']['title']) ? $service['cta']['title'] : 'Ready when you are.') ?></h2>
         <?php if (!empty($service['cta']['text'])): ?><p data-aos="fade-up" data-aos-delay="80"><?= esc($service['cta']['text']) ?></p><?php endif; ?>
         <div class="hero-ctas" data-aos="fade-up" data-aos-delay="140">
-            <a href="<?= url('contact') ?>?service=<?= rawurlencode($svcName) ?>" class="btn btn-primary btn-lg btn-magnetic"><?= esc(isset($service['cta']['button']) ? $service['cta']['button'] : 'Start a Project') ?> <?= icon('arrow-r', 18) ?></a>
+            <a href="<?= url('contact') ?>?service=<?= rawurlencode($svcName) ?>" class="btn btn-primary btn-lg btn-magnetic" data-contact-modal><?= esc(isset($service['cta']['button']) ? $service['cta']['button'] : 'Start a Project') ?> <?= icon('arrow-r', 18) ?></a>
             <?php $ctaPhone = preg_replace('/[^0-9+]/', '', (string) getSetting('site_phone', '+1 (213) 257 8242')); ?>
             <a href="tel:<?= esc($ctaPhone) ?>" class="btn btn-ghost btn-lg btn-magnetic"><?= icon('phone', 17) ?> <?= esc(getSetting('site_phone', '+1 (213) 257 8242')) ?></a>
         </div>

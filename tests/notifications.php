@@ -84,18 +84,19 @@ function setFakeSetting($key, $value) { $GLOBALS['fake_settings'][$key] = $value
 $vars = EmailTemplates::render('Hi {{name}} from {{site_name}}, {{unknown}}!', array('name' => 'Jo', 'site_name' => 'TPT'));
 check($vars === 'Hi Jo from TPT, !', 'template variables replaced; unknown blanked');
 $defaults = EmailTemplates::defaults();
-foreach (array('contact_admin', 'contact_confirm', 'payment_admin', 'payment_confirm', 'payment_request_admin', 'payment_request_confirm', 'lead_admin', 'password_reset', 'welcome', 'system', 'newsletter_welcome') as $key) {
+foreach (array('contact_admin', 'contact_confirm', 'lead_admin', 'password_reset', 'welcome', 'system', 'newsletter_welcome') as $key) {
     check(isset($defaults[$key]), 'template exists: ' . $key);
 }
 foreach (array_keys(EmailTemplates::keys()) as $key) {
     check(isset($defaults[$key]), 'template key has a default body: ' . $key);
 }
-$t = EmailTemplates::get('payment_confirm');
+$t = EmailTemplates::get('contact_confirm');
 check($t['source'] === 'default' && $t['is_active'], 'template falls back to built-in default without DB rows');
 check(EmailTemplates::get('nope')['source'] === 'missing', 'unknown template reported as missing');
-$composed = EmailTemplates::compose('payment_confirm', array('name' => 'Jo', 'amount' => '1,500.00'), array('table' => EmailTemplates::detailTable(array('Amount' => '$1,500.00'))));
-check($composed['sent'] && strpos($composed['subject'], '1,500.00') !== false, 'compose renders subject variables');
-check(strpos($composed['html'], 'Payment successful') !== false && strpos($composed['html'], 'The Pie Technologies') !== false, 'compose wraps content in the brand shell');
+$composed = EmailTemplates::compose('contact_confirm', array('name' => 'Jo', 'email' => 'jo@example.test'), array('table' => EmailTemplates::detailTable(array('Email' => 'jo@example.test'))));
+check($composed['sent'] && strpos($composed['subject'], 'Jo') !== false, 'compose renders subject variables');
+check(strpos($composed['html'], 'received your message') !== false && strpos($composed['html'], 'The Pie Technologies') !== false, 'compose wraps content in the brand shell');
+check(!isset(EmailTemplates::defaults()['payment_confirm']), 'no payment email templates remain');
 check(strpos(EmailTemplates::detailTable(array('<b>X</b>' => 'ok')), '<b>X</b>') === false, 'detail table escapes labels');
 $GLOBALS['fake_templates']['welcome'] = array('template_key' => 'welcome', 'subject' => 'Custom {{name}}', 'body' => 'Body', 'is_active' => 0);
 check(EmailTemplates::get('welcome')['source'] === 'database', 'database override is used when present');
@@ -104,36 +105,37 @@ check(!$disabled['sent'] && $disabled['reason'] === 'template_disabled', 'disabl
 check(EmailTemplates::save('brand_new', 's', 'b', true) === false, 'unknown template keys cannot be saved');
 
 /* ---------------------------- Notifications ---------------------------- */
-check(count(Notifications::categories()) === 6, 'six notification categories');
-check(Notifications::categoryEnabled('payment'), 'categories default to ON');
+check(count(Notifications::categories()) === 5, 'five notification categories (payment removed)');
+check(Notifications::categoryEnabled('contact'), 'categories default to ON');
 setFakeSetting('notify_cat_lead', '0');
 check(!Notifications::categoryEnabled('lead'), 'category toggle turns a category OFF');
-check(Notifications::recipientsFor('payment') === array('admin@example.test'), 'recipient list falls back to the site email');
-list($ok, $msg) = Notifications::addRecipient('not-an-email', array('payment'), true);
+check(Notifications::recipientsFor('contact') === array('admin@example.test'), 'recipient list falls back to the site email');
+list($ok, $msg) = Notifications::addRecipient('not-an-email', array('contact'), true);
 check(!$ok && strpos($msg, 'valid') !== false, 'invalid recipient email rejected');
 $GLOBALS['fake_recipients'] = array(
-    array('id' => 1, 'email' => 'accounts@example.test', 'is_active' => 1, 'categories' => 'payment,contact'),
-    array('id' => 2, 'email' => 'marketing@example.test', 'is_active' => 0, 'categories' => 'payment'),
+    array('id' => 1, 'email' => 'accounts@example.test', 'is_active' => 1, 'categories' => 'system,contact'),
+    array('id' => 2, 'email' => 'marketing@example.test', 'is_active' => 0, 'categories' => 'system'),
     array('id' => 3, 'email' => 'support@example.test', 'is_active' => 1, 'categories' => 'lead'),
 );
-$payRecipients = Notifications::recipientsFor('payment');
-check(in_array('accounts@example.test', $payRecipients, true) && !in_array('marketing@example.test', $payRecipients, true), 'disabled recipients are skipped');
-check(!in_array('support@example.test', $payRecipients, true), 'category filtering respects recipient category lists');
+$systemRecipients = Notifications::recipientsFor('system');
+check(in_array('accounts@example.test', $systemRecipients, true) && !in_array('marketing@example.test', $systemRecipients, true), 'disabled recipients are skipped');
+check(!in_array('support@example.test', $systemRecipients, true), 'category filtering respects recipient category lists');
 check(in_array('support@example.test', Notifications::recipientsFor('lead'), true), 'recipients receive their own categories');
-list($ok, $msg) = Notifications::addRecipient('accounts@example.test', array('payment'), true);
+list($ok, $msg) = Notifications::addRecipient('accounts@example.test', array('system'), true);
 check(!$ok, 'duplicate recipient rejected');
-list($ok, $msg) = Notifications::addRecipient('ops@example.test', array('payment', 'system'), true);
+list($ok, $msg) = Notifications::addRecipient('ops@example.test', array('contact', 'system'), true);
 check($ok, 'valid recipient accepted');
 check(is_bool(Notifications::removeRecipient(99)), 'removing a missing recipient does not crash');
 check(Notifications::setRecipientActive(1, false) !== false, 'recipient enable/disable supported');
 check(!Notifications::setRecipientCategories(1, array()), 'empty category list rejected');
-check(Notifications::setRecipientCategories(1, array('payment', 'nonsense')) !== false, 'recipient categories saved (unknown values dropped)');
+check(Notifications::setRecipientCategories(1, array('system', 'nonsense')) !== false, 'recipient categories saved (unknown values dropped)');
+check(Notifications::setRecipientCategories(1, array('payment')) === false, 'the removed payment category cannot be assigned');
 
 /* Duplicate suppression via a delivery probe (no real mail). */
 $GLOBALS['deliveries'] = array();
 Notifications::$onDeliver = function ($to, $subject) { $GLOBALS['deliveries'][] = $to . '|' . $subject; };
-Notifications::notifyAdmins('payment', 'payment_admin', array('name' => 'Jo', 'amount' => '1.00'));
-Notifications::notifyAdmins('payment', 'payment_admin', array('name' => 'Jo', 'amount' => '1.00'));
+Notifications::notifyAdmins('system', 'system', array('name' => 'Jo', 'subject' => 'Test', 'message' => 'Hello'));
+Notifications::notifyAdmins('system', 'system', array('name' => 'Jo', 'subject' => 'Test', 'message' => 'Hello'));
 check(count($GLOBALS['deliveries']) === 1, 'identical admin notification is not sent twice in one request');
 $GLOBALS['deliveries'] = array();
 check(!Notifications::notifyAdmins('lead', 'lead_admin', array('name' => 'Jo')), 'disabled category sends nothing');
@@ -191,23 +193,22 @@ setFakeSetting('ai_provider2_model', 'bad model!!');
 $result = AIProviders::chat(array(array('role' => 'user', 'content' => 'hi')), '');
 check(!$result['ok'] && $result['error'] === 'model', 'invalid model name rejected before any network call');
 
-/* ---------------------- server-side payment integration ----------------- */
+/* ------------------------- PayPal SDK payment page ---------------------- */
 check(function_exists('piePaymentServices'), 'the existing Admin Services list remains available');
-check(function_exists('piePaymentValidateSubmission') && function_exists('piePaymentCreateAttempt') && function_exists('piePaymentCompleteAttempt'), 'shared payment validation, pending attempts and confirmed completion are available');
-check(function_exists('piePayPalCreateOrder') && function_exists('piePayPalCaptureOrder') && function_exists('pieStripeCreateCheckoutSession') && function_exists('pieStripeConfirmCheckoutSession'), 'PayPal and Stripe have separate server-side checkout/confirmation helpers');
-check(!function_exists('pieRenderPaymentCode') && !function_exists('piePaymentBridge') && !function_exists('piePayPalSdkCode') && !function_exists('pieStripeSdkCode'), 'legacy browser-code renderers and SDK-code settings are removed');
-check(pieIsPayPalEnabled() === false && pieIsStripeEnabled() === false, 'both new-install gateway toggles default off');
-check(piePayPalClientId() === '' && piePayPalSecret() === '' && pieStripeSecret() === '', 'gateway credentials are absent until configured');
-$testPayPalSecret = 'Paypal-' . str_repeat('xY9', 10);
+check(function_exists('piePayPalClientId') && function_exists('piePayPalClientIdConfigured') && function_exists('piePayPalSdkUrl'), 'the stored PayPal Client ID helpers are available');
+check(!function_exists('piePaymentCreateAttempt') && !function_exists('piePaymentCompleteAttempt') && !function_exists('piePaymentValidateSubmission'), 'no pending payment attempts, server validation or confirmed completion remain');
+check(!function_exists('piePayPalCreateOrder') && !function_exists('piePayPalCaptureOrder') && !function_exists('pieStripeCreateCheckoutSession') && !function_exists('pieStripeConfirmCheckoutSession'), 'no server-side PayPal/Stripe checkout or confirmation helpers remain');
+check(!function_exists('piePaymentCredentialEncrypt') && !function_exists('piePayPalSecret') && !function_exists('pieStripeSecret'), 'no credential encryption or secret accessors remain');
 setFakeSetting('paypal_client_id', 'Axxxxxxxxxxxxxxxxxxxxxxxx');
-setFakeSetting('paypal_secret', piePaymentCredentialEncrypt($testPayPalSecret));
-check(piePayPalServerReady() && piePayPalSecret() === $testPayPalSecret, 'PayPal Secret is encrypted in settings and decrypted only by the server helper');
-$testStripeSecret = 'sk_test_' . str_repeat('a1B2', 6);
-setFakeSetting('stripe_secret_key', piePaymentCredentialEncrypt($testStripeSecret));
-check(pieStripeServerReady() && pieStripeSecret() === $testStripeSecret, 'Stripe Secret Key is encrypted in settings and decrypted only by the server helper');
-check(!function_exists('piePayPalSecretValue') && !function_exists('piePayPalSecretPublic') && !function_exists('pieStripeSecretPublic'), 'there is no public/browser credential helper');
+check(piePayPalClientId() === 'Axxxxxxxxxxxxxxxxxxxxxxxx' && piePayPalClientIdConfigured(), 'the Client ID is read from the settings system');
+check(piePayPalSdkUrl() === 'https://www.paypal.com/sdk/js?client-id=Axxxxxxxxxxxxxxxxxxxxxxxx&currency=USD&components=buttons', 'the PayPal SDK URL is built from the stored Client ID');
+setFakeSetting('paypal_client_id', 'not a valid id');
+check(!piePayPalClientIdConfigured() && piePayPalSdkUrl('') === 'https://www.paypal.com/sdk/js?client-id=not%20a%20valid%20id&currency=USD&components=buttons', 'an invalid Client ID is not treated as configured');
+setFakeSetting('paypal_client_id', '');
+check(!piePayPalClientIdConfigured(), 'an empty Client ID disables the PayPal button');
 $adminPayments = file_get_contents(BASE_PATH . '/admin/payments.php');
-check(strpos($adminPayments, 'paypal_sdk_code') === false && strpos($adminPayments, 'stripe_sdk_code') === false, 'Admin no longer contains custom payment-code editors');
+check(stripos($adminPayments, 'stripe') === false && stripos($adminPayments, 'paypal_secret') === false, 'Admin Payment Settings contains no Stripe or secret fields');
+check(stripos((string) file_get_contents(BASE_PATH . '/core/Payments.php'), 'stripe') === false, 'core/Payments.php contains no Stripe code');
 
 /* -------------------------------- done ---------------------------------- */
 echo "\n$count checks passed.\n";

@@ -683,10 +683,18 @@
   function initContactModal() {
     var triggers = document.querySelectorAll('[data-contact-modal]');
     if (!triggers.length) return;
+    /* Idempotent: if the dialog already exists (a second boot, a script
+       re-dispatched DOMContentLoaded, …) reuse it instead of stacking a
+       second empty overlay over the real one. */
+    if (document.getElementById('contactModal')) return;
 
     var quickHost = document.getElementById('tpt-quick-contact');
     var quickForm = document.getElementById('quickContactForm');
     var quickSuccess = document.getElementById('quickFormSuccess');
+    /* The popup form is rendered only on pages that opt in. Everywhere else a
+       [data-contact-modal] button stays an ordinary link to the Contact Us
+       page, so nothing is injected and no click is intercepted. */
+    if (!quickHost || !quickForm) return;
 
     var panel = document.createElement('div');
     panel.className = 'contact-modal';
@@ -816,8 +824,11 @@
 
     window.TPT_CONTACT_MODAL = { open: open, close: close };
 
-    /* Only explicit popup triggers — every other contact link navigates. */
+    /* Only explicit popup triggers — every other contact link navigates, and a
+       trigger on a page without the popup keeps its normal link behaviour. */
     triggers.forEach(function (trigger) {
+      if (trigger.getAttribute('data-modal-bound') === '1') return;
+      trigger.setAttribute('data-modal-bound', '1');
       trigger.addEventListener('click', function (event) {
         if (event.metaKey || event.ctrlKey || event.shiftKey || event.button) return;
         event.preventDefault();
@@ -950,28 +961,26 @@
   /* ---------------------------------------------------------------------
      Boot
      --------------------------------------------------------------------- */
+  /* Each initializer runs in isolation: if one widget fails on a device
+     (unavailable canvas/observer/library), navigation, forms and the
+     Start-a-project popup still initialize. */
+  function safeInit(init) {
+    try {
+      init();
+    } catch (error) {
+      if (window.console && typeof console.warn === 'function') {
+        console.warn('[TPT] ' + (init.name || 'init') + ' failed:', error);
+      }
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
-    initPreloader();
-    initCursor();
-    initMagnetic();
-    initNav();
-    initBackToTop();
-    initIndustryExplorer();
-    initAOS();
-    initTyped();
-    initParticles();
-    initAccordions();
-    initCounters();
-    initSystem();
-    initTestimonials();
-    initPortfolioFilter();
-    initLibraryFilter();
-    initCharts();
-    initContactForm();
-    initContactModal();
-    initNewsletterForms();
-    initIntlPhone();
-    initReadingProgress();
-    initVideoLoads();
+    [
+      initPreloader, initCursor, initMagnetic, initNav, initBackToTop,
+      initIndustryExplorer, initAOS, initTyped, initParticles, initAccordions,
+      initCounters, initSystem, initTestimonials, initPortfolioFilter, initLibraryFilter,
+      initCharts, initContactForm, initContactModal, initNewsletterForms, initIntlPhone,
+      initReadingProgress, initVideoLoads,
+    ].forEach(safeInit);
   });
 })();

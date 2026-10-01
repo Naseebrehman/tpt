@@ -25,6 +25,9 @@ $metaDesc  = $res['description'] !== '' ? $res['description'] : 'A free resource
 $noIndex = strpos($res['slug'], 'sample-') === 0;
 $activeNav = 'resources';
 
+/* This page offers the short Start-a-project popup. */
+$contactModalEnabled = true;
+
 $jsonLd = json_encode(array(
     '@context'      => 'https://schema.org',
     '@type'         => 'Article',
@@ -112,7 +115,7 @@ require_once __DIR__ . '/includes/header.php';
         <h2 data-aos="fade-up">Read it, or have us run it.</h2>
         <p data-aos="fade-up" data-aos-delay="80">The Growth Library is how we think. If you&rsquo;d rather have the system installed — tracking, campaigns, pages and the weekly rhythm — that&rsquo;s the whole job.</p>
         <div class="hero-ctas" data-aos="fade-up" data-aos-delay="140">
-            <a href="<?= url('contact') ?>" class="btn btn-primary btn-lg btn-magnetic">Start a Project <?= icon('arrow-r', 18) ?></a>
+            <a href="<?= url('contact') ?>" class="btn btn-primary btn-lg btn-magnetic" data-contact-modal>Start a Project <?= icon('arrow-r', 18) ?></a>
             <a href="<?= url('resources') ?>" class="btn btn-ghost btn-lg btn-magnetic">Back to the Library</a>
         </div>
     </div>

@@ -62,16 +62,9 @@ if (DB_OK && isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] ===
     }
 }
 
-/* Bound public mutations on both compatibility and new API entry points.
-   Payment webhooks are exempt: they authenticate with their provider's
-   signature (Stripe-Signature) instead of a session, and a delivery that is
-   rate-limited away would mean a confirmed payment never reaches the
-   dashboard. The signature check is the gate for those endpoints. */
+/* Bound public mutations on both compatibility and new API entry points. */
 require_once BASE_PATH . '/core/Ratelimit.php';
-$pieRequestPath = (string) parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
-$pieIsPaymentWebhook = strpos($pieRequestPath, 'stripe-webhook') !== false
-    || strpos($pieRequestPath, '/api/stripe/webhook') !== false;
-if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && !isAdminLoggedIn() && !$pieIsPaymentWebhook) {
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && !isAdminLoggedIn()) {
     foreach ($_POST as $fieldValue) {
         if (!is_scalar($fieldValue)) { http_response_code(422); header('Content-Type: application/json'); echo json_encode(array('success' => false, 'message' => 'Invalid form field.')); exit; }
     }

@@ -416,7 +416,7 @@ input,select,textarea{font:inherit}
 
 
 /* =====================================================================
-   Admin → Payments — server-side gateway settings and record summaries
+   Admin → Payment Settings — PayPal Client ID and payment-form services
    ===================================================================== */
 .payment-admin-overview{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:24px;align-items:center;padding:clamp(20px,2.8vw,30px);background:radial-gradient(ellipse at 0 0,rgba(124,58,237,.12),transparent 44%),var(--panel)}
 .payment-admin-overview .eyebrow{margin-bottom:6px;color:var(--violet-soft);font-size:.68rem;letter-spacing:.15em;text-transform:uppercase}
@@ -432,15 +432,8 @@ input,select,textarea{font:inherit}
 .payment-settings-title h3 .icon{color:var(--violet-soft)}
 .payment-settings-title .hint{margin:6px 0 0}
 .payment-admin-form{display:grid;gap:8px;margin-top:16px}
-.payment-admin-form .a-switch{align-items:flex-start;padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.018)}
-.payment-admin-form .a-switch .track{margin-top:2px}
-.payment-admin-form .a-switch>span:last-child{display:grid;gap:2px}
-.payment-admin-form .a-switch small{color:var(--muted-2);font-size:.74rem}
 .payment-admin-form .a-field{min-width:0}
-.payment-admin-form .a-field .badge{margin-bottom:8px}
 .payment-admin-form .a-field .hint{overflow-wrap:anywhere;line-height:1.55}
-.payment-clear-secret{margin-top:9px;color:#fca5a5;font-size:.78rem}
-.payment-secret-status{margin:0 0 9px}
 .payment-admin-form .a-toolbar{padding-top:4px}
 .payment-service-add{margin-top:10px}
 .payment-service-add-action{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding-bottom:16px}
@@ -448,8 +441,6 @@ input,select,textarea{font:inherit}
 .payment-service-edit>input[name="name"]{flex:1 1 190px;min-width:120px;background:#0c0c12;border:1px solid var(--line);border-radius:9px;padding:9px 11px;color:var(--text)}
 .payment-service-edit .a-check{white-space:nowrap;font-size:.77rem}
 .payment-service-action{display:inline-flex}
-.dashboard-payment-card .a-toolbar{margin-bottom:15px}
-.dashboard-payment-card .a-toolbar h3{margin:0}
 @media(max-width:980px){
   .payment-admin-overview{grid-template-columns:minmax(0,1fr)}
   .payment-admin-status{grid-template-columns:repeat(2,minmax(0,1fr));align-items:center}
@@ -465,6 +456,4 @@ input,select,textarea{font:inherit}
   .payment-service-add-action .a-btn{width:100%}
   .payment-service-edit{min-width:0}
   .payment-service-edit>input[name="name"]{flex-basis:100%}
-  .dashboard-payment-card>.a-toolbar{align-items:flex-start}
-  .dashboard-payment-card>.a-toolbar .a-btn{width:100%}
 }

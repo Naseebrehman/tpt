@@ -10,6 +10,9 @@ $metaDesc  = 'Explore the full TPT system: GROW (Meta Ads, Social, Google Ads, D
 $activeNav = 'services';
 $bodyClass = 'page-services-index';
 
+/* This page offers the short Start-a-project popup. */
+$contactModalEnabled = true;
+
 $jsonLd = json_encode(array(
     '@context' => 'https://schema.org',
     '@type'    => 'ItemList',
@@ -71,7 +74,7 @@ require_once __DIR__ . '/includes/header.php';
         <h2 data-aos="fade-up">Not sure which discipline is your bottleneck?</h2>
         <p data-aos="fade-up" data-aos-delay="80">Tell us the goal. We&rsquo;ll map the system — and say honestly which parts you need now and which can wait.</p>
         <div class="hero-ctas" data-aos="fade-up" data-aos-delay="140">
-            <a href="<?= url('contact') ?>" class="btn btn-primary btn-lg btn-magnetic">Start a Project <?= icon('arrow-r', 18) ?></a>
+            <a href="<?= url('contact') ?>" class="btn btn-primary btn-lg btn-magnetic" data-contact-modal>Start a Project <?= icon('arrow-r', 18) ?></a>
             <a href="<?= url('portfolio') ?>" class="btn btn-ghost btn-lg btn-magnetic">See the work</a>
         </div>
     </div>

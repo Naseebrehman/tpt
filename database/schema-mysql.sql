@@ -4,8 +4,8 @@
 --
 --  This file is the complete current schema: it already contains every column
 --  and table the /admin dashboard expects (including chatbot lead fields,
---  contact_submissions.notification_status and payment_events — formerly only
---  added by database/migrations/001_application.php on older installs).
+--  contact_submissions.notification_status — formerly only added by
+--  database/migrations/001_application.php on older installs).
 --
 --  Existing installations must NOT re-import this file; use:
 --      php bin/cli.php migrate
@@ -179,56 +179,6 @@ CREATE TABLE IF NOT EXISTS chatbot_leads (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS payments (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  token VARCHAR(64) UNIQUE NOT NULL,
-  name VARCHAR(150),
-  email VARCHAR(150),
-  phone VARCHAR(30) NOT NULL DEFAULT '',
-  service VARCHAR(191) NOT NULL DEFAULT '',
-  reference VARCHAR(150),
-  amount_usd DECIMAL(10,2) DEFAULT 0,
-  notes TEXT,
-  method ENUM('invoice','stripe','paypal') DEFAULT 'invoice',
-  status ENUM('requested','pending','paid','failed','cancelled') DEFAULT 'requested',
-  provider_ref VARCHAR(255) DEFAULT '',
-  ip_address VARCHAR(45) DEFAULT '',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS payment_events (
-  event_id VARCHAR(255) PRIMARY KEY,
-  payment_id INT NOT NULL,
-  event_type VARCHAR(100) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  KEY idx_payment_event (payment_id),
-  CONSTRAINT fk_event_payment FOREIGN KEY (payment_id)
-    REFERENCES payments (id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS payment_records (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  provider VARCHAR(20) NOT NULL DEFAULT '',
-  provider_transaction_id VARCHAR(150) DEFAULT NULL,
-  payer_name VARCHAR(191) NOT NULL DEFAULT '',
-  payer_email VARCHAR(191) NOT NULL DEFAULT '',
-  payer_phone VARCHAR(30) NOT NULL DEFAULT '',
-  service VARCHAR(191) NOT NULL DEFAULT '',
-  notes TEXT,
-  amount DECIMAL(10,2) NOT NULL DEFAULT 0,
-  currency VARCHAR(10) NOT NULL DEFAULT 'USD',
-  status VARCHAR(30) NOT NULL DEFAULT 'succeeded',
-  verification_mode VARCHAR(20) NOT NULL DEFAULT 'server',
-  raw_reference VARCHAR(255) NOT NULL DEFAULT '',
-  ip_address VARCHAR(45) NOT NULL DEFAULT '',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY uniq_provider_transaction (provider, provider_transaction_id),
-  KEY idx_payment_records_provider (provider),
-  KEY idx_payment_records_status (status),
-  KEY idx_payment_records_created (created_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 CREATE TABLE IF NOT EXISTS settings (
   id INT AUTO_INCREMENT PRIMARY KEY,
   setting_key VARCHAR(100) UNIQUE NOT NULL,
@@ -240,7 +190,7 @@ CREATE TABLE IF NOT EXISTS notification_emails (
   id INT AUTO_INCREMENT PRIMARY KEY,
   email VARCHAR(150) NOT NULL,
   is_active TINYINT(1) NOT NULL DEFAULT 1,
-  categories VARCHAR(255) NOT NULL DEFAULT 'contact,payment,lead,chatbot,system,security',
+  categories VARCHAR(255) NOT NULL DEFAULT 'contact,lead,chatbot,system,security',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uniq_notification_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

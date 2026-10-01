@@ -21,11 +21,6 @@ return array(
     'DB_NAME'    => 'YOUR_HOSTINGER_DATABASE_NAME',
     'DB_USER'    => 'YOUR_HOSTINGER_DATABASE_USER',
     'DB_PASS'    => 'YOUR_HOSTINGER_DATABASE_PASSWORD',
-    /* Optional but recommended: a private random value for encrypting payment
-       credentials at rest. Keep it outside Git. If omitted, a key is derived
-       from the database credentials above and the site URL. Do not rotate it
-       without re-saving stored gateway credentials. */
-    'PAYMENT_ENCRYPTION_KEY' => '',
     'SITE_URL'   => 'https://your-domain.com', // no trailing slash — used for links/canonicals
     'SITE_NAME'  => 'The Pie Technologies',
     'ADMIN_EMAIL'=> 'you@your-domain.com',

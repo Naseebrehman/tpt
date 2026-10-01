@@ -263,19 +263,17 @@
 - require_once __DIR__ . '/functions.php';
 - require_once __DIR__ . '/data.php';
 - require BASE_PATH . '/maintenance.php';
-## includes/payments.php
-268 lines; 2 database calls
+## core/Payments.php (legacy wrapper: includes/payments.php)
+PayPal SDK support only — the existing services list, the PayPal Client ID read
+from the settings table and the SDK URL.
 
-- require_once __DIR__ . '/init.php';
-- function piePaymentProviders()
-- function piePayRequest($url, $options)
-- function pieStripeCheckout($payment)
-- function pieStripeVerify($sessionId)
-- function piePayPalOrder($payment)
-- function piePayPalVerify($orderId)
-- function piePaymentByToken($token)
-- function piePaymentReconcile($payment)
-- function piePaymentNotify($payment)
+- function piePaymentServices()
+- function piePaymentServiceRows()
+- function piePayPalClientId()
+- function piePayPalClientIdConfigured()
+- function pieIsValidPayPalClientId($clientId)
+- function piePayPalSdkUrl($clientId = '')
+- function pieTermsUrl()
 ## includes/service-page.php
 559 lines; 0 database calls
 

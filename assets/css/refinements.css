@@ -294,6 +294,14 @@ blockquote,pre,table{max-width:100%}
 }
 
 /* Pay Online — compact centered checkout, no third-party browser SDK panels. */
+.pay-hero .pay-badges{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:20px 0 0;padding:0;list-style:none}
+.pay-badges li{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border:1px solid var(--line-strong);border-radius:999px;background:rgba(255,255,255,.035);color:var(--muted);font-size:.76rem;font-weight:600;line-height:1;white-space:nowrap}
+.pay-badges li svg{flex:none;width:14px;height:14px}
+.pay-badges li:first-child{border-color:rgba(124,58,237,.5);background:rgba(124,58,237,.12);color:var(--violet-soft)}
+.pay-badges li:nth-child(2){border-color:rgba(74,222,128,.35);background:rgba(74,222,128,.08);color:#bbf7d0}
+.pay-badges li:last-child{border-color:rgba(34,211,238,.3);background:rgba(34,211,238,.07);color:#a5f3fc}
+@media (max-width:480px){.pay-badges li{font-size:.72rem;padding:6px 11px}}
+
 .pay-section{padding-block:clamp(24px,3.8vw,48px) clamp(34px,5vw,62px)}
 .pay-panel{
   width:min(100%,1120px);margin-inline:auto;padding:clamp(22px,3.2vw,38px);
@@ -325,7 +333,10 @@ blockquote,pre,table{max-width:100%}
 .pay-field select option{background:#17171f;color:#f4f4f8}
 .pay-field textarea{min-height:94px;resize:vertical}
 .pay-field small{color:var(--muted-2);font-size:.7rem;line-height:1.45}
-.pay-field-notes{grid-column:1/-1}
+.pay-field-wide{grid-column:1/-1}
+.pay-terms-inline{grid-column:1/-1;margin:2px 0 0;color:var(--muted-2);font-size:.76rem;line-height:1.6}
+.pay-terms-inline a{color:#c4b5fd;text-decoration:underline;text-decoration-color:rgba(196,181,253,.5);text-underline-offset:3px}
+.pay-terms-inline a:hover{color:#fff}
 .pay-amount-input{position:relative;min-width:0}
 .pay-amount-input>span{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#a5f3fc;font-weight:700;pointer-events:none}
 .pay-amount-input input{padding-left:31px}
@@ -337,30 +348,25 @@ blockquote,pre,table{max-width:100%}
 .pay-checkout-copy .eyebrow{margin-bottom:8px;color:#c4b5fd}
 .pay-checkout-copy h3{font-size:clamp(1.08rem,1.8vw,1.28rem);letter-spacing:-.025em;margin-bottom:9px}
 .pay-checkout-copy>p:last-child{color:var(--muted);font-size:.82rem;line-height:1.65;margin:0}
-.pay-gateway-actions{display:grid;gap:12px;margin-top:22px}
-.pay-submit{
-  display:flex;align-items:center;gap:13px;width:100%;min-width:0;min-height:68px;padding:12px 15px;
-  border:1px solid transparent;border-radius:13px;appearance:none;cursor:pointer;text-align:left;
-  color:#fff;font:inherit;background:linear-gradient(125deg,#7c3aed,#6034d5);
-  box-shadow:0 12px 30px -20px rgba(124,58,237,.9);transition:transform .18s,box-shadow .18s,border-color .18s,filter .18s;
-}
-.pay-submit:hover{transform:translateY(-2px);box-shadow:0 18px 38px -19px rgba(124,58,237,.78);filter:brightness(1.06)}
-.pay-submit:focus-visible{outline:3px solid rgba(34,211,238,.8);outline-offset:3px}
-.pay-submit:active{transform:translateY(0)}
-.pay-submit-stripe{background:linear-gradient(120deg,rgba(26,28,39,.96),rgba(15,19,27,.98));border-color:rgba(34,211,238,.34);box-shadow:0 12px 30px -22px rgba(34,211,238,.55)}
-.pay-submit-stripe:hover{border-color:rgba(34,211,238,.7);box-shadow:0 16px 34px -20px rgba(34,211,238,.46)}
-.pay-submit-mark{display:grid;place-items:center;flex:none;width:40px;height:40px;border-radius:11px;background:rgba(255,255,255,.13);color:#fff}
-.pay-submit-stripe .pay-submit-mark{background:rgba(34,211,238,.1);color:#67e8f9}
-.pay-submit-label{display:grid;gap:4px;flex:1;min-width:0}
-.pay-submit-label strong{font-size:.91rem;line-height:1.25;font-weight:700}
-.pay-submit-label small{font-size:.7rem;line-height:1.35;color:rgba(255,255,255,.74)}
-.pay-submit-arrow{display:grid;place-items:center;flex:none;width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.1)}
-.pay-submit-arrow svg{width:17px;height:17px}
-.pay-terms-note{margin:17px 0 0;color:var(--muted-2);font-size:.74rem;line-height:1.65}
-.pay-terms-note a{color:#c4b5fd;text-decoration:underline;text-decoration-color:rgba(196,181,253,.5);text-underline-offset:3px}
-.pay-terms-note a:hover{color:#fff}
-.pay-no-card{display:flex;align-items:flex-start;gap:7px;margin:12px 0 0;color:var(--muted-2);font-size:.7rem;line-height:1.5}
-.pay-no-card svg{flex:none;margin-top:1px;color:#67e8f9}
+.pay-gateway-actions{display:grid;gap:10px;margin-top:22px}
+.pay-paypal-buttons{width:100%;min-height:48px}
+.pay-paypal-buttons .paypal-buttons{display:block}
+.pay-err{margin:12px 0 0;color:#fca5a5;font-size:.8rem;line-height:1.5;min-height:1.2em}
+/* Exact per-field validation: mark the input and print the message under it. */
+.pay-field input[aria-invalid="true"],.pay-field select[aria-invalid="true"]{border-color:rgba(239,68,68,.75);background:rgba(47,12,16,.35)}
+.pay-field input[aria-invalid="true"]:focus,.pay-field select[aria-invalid="true"]:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(239,68,68,.22)}
+.pay-field-error{margin:0;color:#fca5a5;font-size:.75rem;font-weight:600;line-height:1.45}
+.pay-overlay{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(4,5,10,.72)}
+.pay-overlay.open{display:flex}
+.pay-modal{width:100%;max-width:420px;padding:32px;border:1px solid var(--line);border-radius:18px;background:var(--panel);text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.pay-tick{display:grid;place-items:center;width:64px;height:64px;margin:0 auto 16px;border-radius:50%;background:rgba(74,222,128,.15);color:var(--ok)}
+.pay-modal h2{margin:0 0 6px}
+.pay-modal-sub{margin:0;color:var(--muted);font-size:.92rem}
+.pay-modal dl{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;margin:20px 0;text-align:left;font-size:.92rem}
+.pay-modal dt{color:var(--muted)}
+.pay-modal dd{margin:0;word-break:break-all}
+.pay-modal-close{width:100%;padding:12px 28px;border:0;border-radius:10px;background:var(--accent);color:#1b1230;font:600 1rem system-ui;cursor:pointer}
+@media (prefers-reduced-motion:no-preference){.pay-overlay.open .pay-modal{animation:payPop .25s ease-out}@keyframes payPop{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}}
 .pay-confirmation{display:grid;gap:6px;margin:0 0 22px;padding:17px 19px;border-radius:13px;border:1px solid rgba(34,197,94,.42);background:rgba(34,197,94,.09);color:#d1fae5;font-size:.9rem;line-height:1.65}
 .pay-confirmation[hidden]{display:none}
 .pay-confirmation strong{font-size:.95rem;color:#a7f3d0;font-weight:700}
@@ -383,13 +389,10 @@ blockquote,pre,table{max-width:100%}
   .pay-panel-head{display:block;margin-bottom:22px}
   .pay-secure-mark{margin-top:14px}
   .pay-form-fields{grid-template-columns:minmax(0,1fr);gap:14px}
-  .pay-field-notes{grid-column:auto}
   .pay-field input,.pay-field select,.pay-field textarea{min-height:48px;font-size:16px}
   .pay-field textarea{min-height:92px}
   .pay-checkout-options{padding:19px 16px}
   .pay-gateway-actions{gap:11px;margin-top:18px}
-  .pay-submit{min-height:64px;padding:11px 12px}
-  .pay-submit-label strong{font-size:.88rem}
 }
 
 .pay-faq-section{padding-block:clamp(14px,2.2vw,26px) clamp(48px,6.4vw,80px)}
@@ -456,8 +459,47 @@ blockquote,pre,table{max-width:100%}
   .how-section .stepper .step h4{font-size:.95rem}
 }
 
-/* Short popup form: honeypot, note and the compact two-column grid. */
+/* Short "Start a project" popup: overlay + dialog panel, then the compact
+   two-column form grid. The panel scrolls internally on short viewports and
+   becomes a full-height sheet on phones. */
 .quick-contact-host{display:none}
+.contact-modal{position:fixed;inset:0;z-index:960;display:none}
+.contact-modal.open{display:block}
+.contact-modal__overlay{position:absolute;inset:0;background:rgba(6,7,12,.74);backdrop-filter:blur(4px)}
+.contact-modal__panel{
+  position:relative;display:flex;flex-direction:column;
+  width:min(680px,calc(100vw - 32px));max-height:calc(100dvh - 48px);
+  margin:clamp(16px,6vh,64px) auto 0;padding:clamp(22px,3vw,34px);
+  border:1px solid var(--line-strong);border-radius:20px;
+  background:radial-gradient(620px 260px at 92% -12%,rgba(124,58,237,.2),transparent 62%),var(--surface);
+  box-shadow:0 40px 90px -40px rgba(0,0,0,.85);
+}
+.contact-modal__close{
+  position:absolute;top:14px;right:14px;display:grid;place-items:center;width:40px;height:40px;flex:none;
+  border:1px solid var(--line);border-radius:50%;background:rgba(255,255,255,.04);color:var(--text);cursor:pointer;
+  transition:background .18s,border-color .18s,transform .18s;
+}
+.contact-modal__close:hover{background:rgba(255,255,255,.1);border-color:var(--line-strong);transform:rotate(90deg)}
+.contact-modal__close:focus-visible{outline:2px solid var(--violet-soft);outline-offset:2px}
+.contact-modal__head{padding-right:54px}
+.contact-modal__head .eyebrow{margin-bottom:8px}
+.contact-modal__head h2{margin:0 0 8px;font-size:clamp(1.3rem,2.6vw,1.7rem);letter-spacing:-.03em;line-height:1.25}
+.contact-modal__lead{margin:0;color:var(--muted);font-size:.88rem;line-height:1.65}
+.contact-modal__body{margin-top:22px;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.contact-modal__body .form-success{margin-top:0;text-align:center}
+body.modal-open{overflow:hidden}
+body.modal-open .chatbot,body.modal-open .whatsapp-float,body.modal-open .back-to-top{visibility:hidden;pointer-events:none}
+@media(prefers-reduced-motion:no-preference){
+  .contact-modal.open .contact-modal__overlay{animation:cmFade .2s ease-out}
+  .contact-modal.open .contact-modal__panel{animation:cmRise .28s cubic-bezier(.2,.7,.3,1)}
+  @keyframes cmFade{from{opacity:0}to{opacity:1}}
+  @keyframes cmRise{from{opacity:0;transform:translateY(14px) scale(.99)}to{opacity:1;transform:none}}
+}
+@media(max-width:640px){
+  .contact-modal__panel{width:100%;height:100dvh;max-height:100dvh;margin:0;border:0;border-radius:0;padding:calc(20px + env(safe-area-inset-top)) 20px calc(20px + env(safe-area-inset-bottom))}
+  .contact-modal__head h2{font-size:1.35rem}
+  .contact-modal__body{margin-top:18px}
+}
 .contact-modal .quick-honeypot{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
 .contact-modal .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 16px}
 .contact-modal .form-grid .full{grid-column:1/-1}
@@ -467,7 +509,6 @@ blockquote,pre,table{max-width:100%}
 .contact-modal .form-status{margin-top:12px}
 .quick-contact-note{margin-top:10px;font-size:.78rem;line-height:1.6;color:var(--muted-2);text-align:center}
 .quick-contact-note a{color:var(--violet-soft);text-decoration:underline}
-.contact-modal__body .form-success{margin-top:6px}
 @media(max-width:560px){
   .contact-modal .form-grid{grid-template-columns:minmax(0,1fr)}
 }
