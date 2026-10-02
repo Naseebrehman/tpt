@@ -25,7 +25,7 @@ $paymentFaq = array(
     array('q' => 'Which payment method can I use?', 'a' => 'PayPal. The PayPal button below opens PayPal’s secure checkout, where you can pay with your PayPal balance, a linked bank account, or a debit or credit card.'),
     array('q' => 'Which currency are payments taken in?', 'a' => 'Payments are taken in US dollars (USD). The amount you enter is the amount charged.'),
     array('q' => 'Is my payment secure?', 'a' => 'Yes. You pay on PayPal’s own secure checkout. Your PayPal login and card details are never entered on, or stored by, this website.'),
-    array('q' => 'How do I know my payment went through?', 'a' => 'PayPal shows its own payment confirmation, and this page then displays a success message with the amount, service and PayPal reference. Keep the reference for your records.'),
+    array('q' => 'How do I know my payment went through?', 'a' => 'PayPal shows its own payment confirmation, and this page then shows a short success message. Please keep the receipt from PayPal for your records.'),
 );
 
 require_once __DIR__ . '/includes/header.php';
@@ -54,8 +54,6 @@ require_once __DIR__ . '/includes/header.php';
         </div>
         <span class="pay-secure-mark"><?= icon('lock', 18) ?> Protected checkout</span>
       </div>
-
-      <div class="pay-confirmation" id="tpt-payment-confirmation" role="status" aria-live="polite" hidden></div>
 
       <?php if ($paypalReady): ?>
       <form id="payment-form" class="pay-layout">
@@ -142,14 +140,8 @@ require_once __DIR__ . '/includes/header.php';
 <div class="pay-overlay" id="tpt-modal" aria-hidden="true">
   <div class="pay-modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
     <div class="pay-tick" aria-hidden="true"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></div>
-    <h2 id="mTitle">Payment successful</h2>
-    <p class="pay-modal-sub">Thank you. Your payment has been confirmed.</p>
-    <dl>
-      <dt>Amount</dt><dd id="mAmount"></dd>
-      <dt>Service</dt><dd id="mService"></dd>
-      <dt>Provider</dt><dd id="mProvider"></dd>
-      <dt>Reference</dt><dd id="mRef"></dd>
-    </dl>
+    <h2 id="mTitle">THANK YOU!</h2>
+    <p class="pay-modal-sub">Your Payment Is Successful</p>
     <button class="pay-modal-close" type="button" id="mClose">Close</button>
   </div>
 </div>
@@ -166,19 +158,25 @@ function tptLabel(v){
 var shown = {}, lastFocus = null;
 var overlay = document.getElementById('tpt-modal');
 
-/* p = {provider, amount, service, reference} from PayPal's approved order */
+/* p = {provider, amount, name, service, reference} from PayPal's approved order */
 function showConfirmed(p){
   if (shown[p.reference]) return;
   shown[p.reference] = true;
-  var amount = '$' + Number(p.amount).toFixed(2) + ' USD';
-  var service = tptLabel(p.service);
-  var box = document.getElementById('tpt-payment-confirmation');
-  box.textContent = 'Payment of ' + amount + (service ? ' for ' + service : '') + ' is complete. Reference: ' + p.reference + '.';
-  box.hidden = false;
-  document.getElementById('mAmount').textContent = amount;
-  document.getElementById('mService').textContent = service || '-';
-  document.getElementById('mProvider').textContent = 'PayPal';
-  document.getElementById('mRef').textContent = p.reference;
+  var name = tptLabel(p.name);
+  document.getElementById('mTitle').textContent = name ? 'Thank you, ' + name + '!' : 'Thank you!';
+  /* Clear the paid details so the form never keeps the previous payment. */
+  var form = document.getElementById('payment-form');
+  if (form && form.reset) { form.reset(); }
+  ['payment-name', 'payment-service', 'payment-amount'].forEach(function (id) {
+    var field = document.getElementById(id);
+    if (!field) return;
+    field.removeAttribute('aria-invalid');
+    var wrap = field.closest ? field.closest('.pay-field') : null;
+    var message = wrap ? wrap.querySelector('.pay-field-error') : null;
+    if (message && message.parentNode) { message.parentNode.removeChild(message); }
+  });
+  var clearedErr = document.querySelector('[data-err="pp"]');
+  if (clearedErr) { clearedErr.textContent = ''; }
   lastFocus = document.activeElement;
   overlay.classList.add('open');
   overlay.setAttribute('aria-hidden', 'false');
@@ -321,6 +319,7 @@ document.addEventListener('keydown', function(e){
         showConfirmed({
           provider: 'paypal',
           amount: amount,
+          name: pending ? pending.name : '',
           service: pending ? pending.service : '',
           reference: (captures[0] && captures[0].id) || (data && data.orderID) || ''
         });

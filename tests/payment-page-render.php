@@ -55,7 +55,7 @@ $html = renderPaymentPage();
 $styles = (string) file_get_contents(dirname(__DIR__) . '/assets/css/refinements.css');
 $clientId = $GLOBALS['fake_settings']['paypal_client_id'];
 
-paymentRenderCheck(strpos($html, 'id="payment-form"') !== false && strpos($html, 'id="tpt-payment-confirmation"') !== false, 'real public template renders the stable form and confirmation IDs');
+paymentRenderCheck(strpos($html, 'id="payment-form"') !== false, 'real public template renders the stable form ID');
 paymentRenderCheck(strpos($html, 'id="paypal-button-container"') !== false, 'the single PayPal SDK button container renders');
 paymentRenderCheck(strpos($html, 'https://www.paypal.com/sdk/js?client-id=' . $clientId . '&amp;currency=USD') !== false, 'the PayPal JavaScript SDK is loaded with the saved Client ID');
 paymentRenderCheck(stripos($html, 'stripe') === false, 'the payment page contains no Stripe markup, script or option');
@@ -69,8 +69,16 @@ paymentRenderCheck(strpos($html, 'Powered by PayPal') === false, 'the payment me
 paymentRenderCheck(strpos($html, 'AI Optimization') !== false && strpos($html, 'Web Development') !== false, 'active Services from the existing system render in the form');
 paymentRenderCheck(stripos($html, 'paypal_secret') === false && stripos($html, 'client_secret') === false && stripos($html, 'sk_live') === false && stripos($html, 'sk_test') === false, 'no PayPal secret, Stripe key or server credential appears in the HTML');
 paymentRenderCheck($formHtml !== '' && stripos($formHtml, 'csrf') === false && stripos($formHtml, 'action=') === false && stripos($formHtml, 'paypal-api') === false, 'the payment form posts nowhere and needs no CSRF field');
-paymentRenderCheck((bool) preg_match('/id="tpt-payment-confirmation"[^>]*\shidden/', $html) && strpos($styles, '.pay-confirmation[hidden]{display:none}') !== false, 'the confirmation notice stays hidden until PayPal approves the payment');
-paymentRenderCheck(strpos($html, 'id="tpt-modal"') !== false && strpos($html, 'id="mRef"') !== false, 'the PayPal success popup markup renders');
+paymentRenderCheck(strpos($html, 'tpt-payment-confirmation') === false && strpos($styles, '.pay-confirmation') === false, 'no inline confirmation banner renders — the popup is the only success message');
+paymentRenderCheck(strpos($html, 'id="tpt-modal"') !== false && strpos($html, 'id="mTitle"') !== false, 'the PayPal success popup markup renders');
+paymentRenderCheck(strpos($html, 'id="mTitle">THANK YOU!') !== false
+    && strpos($html, 'Your Payment Is Successful') !== false
+    && strpos($html, 'id="mClose"') !== false, 'the success popup shows only the green check, THANK YOU heading, small success line and Close button');
+paymentRenderCheck(strpos($html, 'id="mAmount"') === false && strpos($html, 'id="mService"') === false && strpos($html, 'id="mRef"') === false && strpos($html, 'id="mThanks"') === false, 'the long amount/service/reference rows are removed from the success popup');
+paymentRenderCheck(strpos($html, "getElementById('mTitle').textContent = name ? 'Thank you, ' + name + '!'") !== false, 'the success popup thanks the customer by name in the heading');
+paymentRenderCheck(strpos($styles, '.pay-modal h2{margin:0 0 8px;text-transform:uppercase') !== false
+    && strpos($styles, '.pay-modal-sub{margin:0 0 22px;color:var(--muted-2);font-size:.8rem;opacity:.85}') !== false, 'the THANK YOU heading is uppercase and the success line is small and faded');
+paymentRenderCheck(strpos($html, 'form.reset()') !== false, 'the payment form is cleared after a successful payment');
 paymentRenderCheck(strpos($styles, '.pay-overlay{position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(4,5,10,.9);backdrop-filter:blur(5px)}') !== false
     && strpos($styles, 'background:#17181f') !== false, 'the payment-success popup keeps the solid dark background');
 paymentRenderCheck(strpos($html, 'refinements.css') !== false && strpos($html, 'pay-layout') !== false, 'rendered payment form uses the responsive checkout stylesheet/classes');
