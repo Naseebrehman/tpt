@@ -78,7 +78,7 @@ class Captcha
         $printed = true;
         $provider = self::provider();
         if ($provider === 'turnstile') {
-            return '<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>';
+            return '<script>window.tptRenderTurnstiles=window.tptRenderTurnstiles||function(scope){if(!window.turnstile||typeof window.turnstile.render!=="function")return;var root=scope||document;Array.prototype.forEach.call(root.querySelectorAll(".cf-turnstile:not([data-tpt-widget-id])"),function(widget){if(!widget.getClientRects().length)return;var id=window.turnstile.render(widget,{sitekey:widget.getAttribute("data-sitekey"),size:widget.getAttribute("data-size")||"normal",theme:widget.getAttribute("data-theme")||"auto",action:widget.getAttribute("data-action")||"tpt_form"});widget.setAttribute("data-tpt-widget-id",String(id));});};</script><script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&amp;onload=tptRenderTurnstiles" async defer></script>';
         }
         if ($provider === 'hcaptcha') {
             return '<script src="https://js.hcaptcha.com/1/api.js" async defer></script>';

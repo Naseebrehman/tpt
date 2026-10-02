@@ -32,14 +32,13 @@ Apache needs mod_rewrite, AllowOverride and the existing Options permissions.
    php bin/cli.php migrate
    php tests/regression.php
    ```
-   This adds missing chatbot/contact columns and creates `schema_migrations`
-   and the existing payment-services list. It does **not** import content or
-   rewrite admin accounts, contact leads or submissions. Migration 011 removes
-   the retired Stripe settings, server-side PayPal credentials, payment email
-   templates and the legacy `payments`/`payment_records` tables, keeping the
-   PayPal Client ID used by the browser SDK. Migration operations check existing
-   columns, so interrupted DDL can be retried. MySQL DDL is not transactional.
-   `GET_LOCK` prevents two migration runners from colliding.
+   This adds missing chatbot/contact columns, creates the payment service list
+   and installs the additive `payment_records` / `payment_events` ledger. It
+   does **not** import content or rewrite admin accounts, contact leads,
+   submissions or portfolio rows. Migration 011 is retained as a no-op
+   compatibility marker; migration 012 adds the server-side payment schema
+   without dropping existing data. Migration operations are re-runnable. MySQL
+   DDL is not transactional; `GET_LOCK` prevents concurrent migration runners.
 7. Complete the staging acceptance checks below before publishing.
 
 **Never re-import database.sql, database-upgrade.sql, schema-mysql.sql or seed.php
@@ -103,7 +102,7 @@ credentials in a public web form. A hosting operator with CLI access is required
   Configured SMTP failures no longer silently fall back to PHP mail. Success means
   the SMTP server accepted the message, not guaranteed inbox delivery; configure
   SPF/DKIM/DMARC and check spam folders. Admin sees the SMTP failure stage/response.
-- **Payments:** PayPal only. The Pay Online page loads the PayPal JavaScript SDK with the Client ID saved in Admin → Payment Settings (the existing settings table) and shows PayPal’s success popup after approval. There is no secret, server-side capture/confirmation, webhook, payment API, payment record or payment history. The existing admin services list still fills the payment form. See [docs/PAYMENTS.md](docs/PAYMENTS.md) for Client ID setup and Sandbox checks.
+- **Payments:** PayPal and Stripe use server-side hosted checkout creation and provider confirmation. PayPal capture runs on the server; Stripe return sessions are retrieved server-side and signed webhooks are verified. Payment state is stored in the additive payment ledger and recent records appear in Admin → Payment Settings. Configure provider secrets only in deployment config/environment variables; never in frontend code. See [docs/PAYMENTS.md](docs/PAYMENTS.md) for Sandbox/test-mode setup.
 
 ## API compatibility
 
@@ -112,7 +111,9 @@ POST `/api/contact`, `/api/lead`, `/api/newsletter` accept existing form fields 
   a flat JSON object with `csrf_token`. Obtain the token from the rendered
   session-bound form. `/api/lead` shares contact validation and stores in
   `contact_submissions` (minimum message length 10). These are same-site APIs,
-  not public cross-origin integrations. Checkout has no server route: the PayPal JavaScript SDK completes the payment in the browser.
+  not public cross-origin integrations. Payment checkout creation uses the
+  CSRF-protected `/api/payments/paypal/create` and `/api/payments/stripe/create`
+  routes; Stripe webhooks use provider signature verification instead of CSRF.
 
 POST `/api/chat` accepts the current Alia JSON payload plus `csrf_token`; it uses
 an authenticated session token for lead ownership, not client-provided session_id.
@@ -139,21 +140,21 @@ rather than letting arbitrary X-Forwarded-For bypass limits.
   new leads/settings/content screens and migrations run twice without data loss.
 - Contact/newsletter/chat success, invalid input, invalid CSRF, throttling,
   database outage, SMTP accepted/rejected credentials, no secrets in public HTML.
-- On staging, run the PayPal Sandbox checklist in
+- On staging, run the PayPal Sandbox and Stripe test-mode checklist in
   [docs/PAYMENTS.md](docs/PAYMENTS.md): successful, cancelled and failed
-  checkout; the saved Client ID being used by the SDK; the success popup with
-  amount/service/reference; changing the Client ID in the dashboard; responsive
-  layout; and no secret or server endpoint in page source or browser requests.
-  The local unit tests do not charge a card or contact a live gateway.
+  checkout; server-confirmed amount/service/reference; correct payment ledger
+  status; the success popup and form reset; modal close; responsive layout; and
+  no secret or provider API credential in public HTML/JavaScript. The local
+  tests do not charge a card or contact a live gateway.
 - Generated canonical/OG/Twitter/JSON-LD/sitemap and noindex overrides.
 
 ## Verified here and remaining scope
 
-The payment tests are dependency-free render/settings checks: the page uses the
-saved PayPal Client ID, offers PayPal only, stores no secret, posts nowhere and
-keeps the existing services/customer fields. They do not perform live provider
-transactions; a PayPal Sandbox Client ID must still be verified on staging
-before a Live Client ID is saved.
+Payment tests are dependency-free render/security checks for the same-origin
+server checkout routes, PayPal/Stripe server configuration, payment record
+schema, provider signature verification and success-only form reset. They do
+not perform live transactions; PayPal Sandbox and Stripe test-mode credentials
+must still be verified on staging before enabling live payments.
 
 `tests/regression.php`: 78 passing route/security/helper/PHP syntax checks under
 PHP 8.5 WebAssembly (development tooling outside the repository). JavaScript

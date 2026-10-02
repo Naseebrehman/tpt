@@ -117,7 +117,7 @@ window.PIE = <?= json_encode(array(
 <?php if (!empty($pageLibs['swiper'])): ?><script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js" defer></script><?php endif; ?>
 <?php if (!empty($pageLibs['chart'])): ?><script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script><?php endif; ?>
 <?php if (!empty($pageLibs['sortable'])): ?><script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js" defer></script><?php endif; ?>
-<?php if (!empty($pageLibs['phone'])): ?>
+<?php if (!empty($pageLibs['phone']) || !empty($contactModalEnabled)): ?>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/css/intlTelInput.min.css">
 <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/intlTelInput.min.js" defer></script>
 <?php endif; ?>

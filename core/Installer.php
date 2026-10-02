@@ -24,7 +24,7 @@ class Installer
         'blog_categories', 'blog_posts', 'blog_comments', 'portfolio', 'team_members',
         'testimonials', 'resources', 'newsletter_subscribers', 'chatbot_leads',
         'settings', 'notification_emails', 'email_templates',
-        'page_views',
+        'page_views', 'payment_services', 'payment_records', 'payment_events',
     );
 
     /* =====================================================================

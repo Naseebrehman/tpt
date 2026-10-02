@@ -26,6 +26,9 @@ class ContactController
             exit;
         }
 
+        $isProjectPopup = isset($_POST['contact_variant'])
+            && is_string($_POST['contact_variant'])
+            && $_POST['contact_variant'] === 'project_popup';
         $name    = sanitize(isset($_POST['name']) ? $_POST['name'] : '');
         $email   = sanitize(isset($_POST['email']) ? $_POST['email'] : '');
         $phone   = sanitize(isset($_POST['phone_e164']) ? $_POST['phone_e164'] : (isset($_POST['phone']) ? $_POST['phone'] : ''));
@@ -34,7 +37,7 @@ class ContactController
         $message = sanitizeMultiline(isset($_POST['message']) ? $_POST['message'] : '');
         /* Kept for API/back-compat only — the form no longer asks these. */
         $budget  = sanitize(isset($_POST['budget']) ? $_POST['budget'] : '');
-        $source  = sanitize(isset($_POST['source']) ? $_POST['source'] : '');
+        $source  = $isProjectPopup ? 'project_popup' : sanitize(isset($_POST['source']) ? $_POST['source'] : '');
 
         $errors = array();
         if (mb_strlen($name) < 2 || mb_strlen($name) > 150)                 { $errors['name'] = 'Please enter your full name.'; }
@@ -43,9 +46,12 @@ class ContactController
         if ($phoneDigits === '' || strlen($phoneDigits) < 7 || strlen($phoneDigits) > 15 || !preg_match('/^\+?[0-9 ()\-]{6,25}$/D', $phone)) {
             $errors['phone'] = 'Please enter a valid phone number (with country code).';
         }
-        if (!in_array($service, $serviceOptions, true))                     { $errors['service'] = 'Please choose a service from the list.'; }
+        if ((!$isProjectPopup && !in_array($service, $serviceOptions, true))
+            || ($isProjectPopup && $service !== '' && !in_array($service, $serviceOptions, true))) {
+            $errors['service'] = 'Please choose a service from the list.';
+        }
         if ($budget !== '' && $budgetOptions && !in_array($budget, $budgetOptions, true)) { $errors['budget'] = 'Please pick a budget range from the list.'; }
-        if ($source !== '' && $sourceOptions && !in_array($source, $sourceOptions, true)) { $errors['source'] = 'Please pick an option from the list.'; }
+        if (!$isProjectPopup && $source !== '' && $sourceOptions && !in_array($source, $sourceOptions, true)) { $errors['source'] = 'Please pick an option from the list.'; }
         if (mb_strlen($message) < 10 || mb_strlen($message) > 10000)        { $errors['message'] = 'Please use between 10 and 10,000 characters.'; }
         if (mb_strlen($company) > 150)                                      { $errors['company'] = 'Company name is too long.'; }
 

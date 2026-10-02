@@ -155,7 +155,7 @@ fbq('track', 'PageView');
         </nav>
 
         <div class="nav-cta">
-            <a href="<?= url('contact') ?>" class="btn btn-primary btn-magnetic btn-sm" data-contact-modal>Start a Project</a>
+            <a href="<?= url('book-appointment') ?>" class="btn btn-primary btn-magnetic btn-sm">Book a Strategy Call</a>
         </div>
 
         <button class="nav-burger" id="navBurger" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">
@@ -195,7 +195,7 @@ fbq('track', 'PageView');
             </li>
             <?php endforeach; ?>
         </ul>
-        <a href="<?= url('contact') ?>" class="btn btn-primary btn-block mobile-project" data-contact-modal>Start a Project <?= icon('arrow-r', 18) ?></a>
+        <a href="<?= url('book-appointment') ?>" class="btn btn-primary btn-block mobile-project">Book a Strategy Call <?= icon('arrow-r', 18) ?></a>
         <div class="mobile-contact">
             <a href="mailto:<?= esc(getSetting('site_email', 'info@thepietechnologies.com')) ?>"><?= esc(getSetting('site_email', 'info@thepietechnologies.com')) ?></a>
             <a href="tel:<?= esc(preg_replace('/[^0-9+]/', '', getSetting('site_phone', '+1 (213) 257 8242'))) ?>"><?= esc(getSetting('site_phone', '+1 (213) 257 8242')) ?></a>
