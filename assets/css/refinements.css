@@ -360,22 +360,11 @@ blockquote,pre,table{max-width:100%}
 .pay-overlay{position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(4,5,10,.9);backdrop-filter:blur(5px)}
 .pay-overlay.open{display:flex}
 .pay-modal{width:100%;max-width:420px;padding:32px;border:1px solid var(--line-strong);border-radius:18px;background:#17181f;color:var(--text);text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.78)}
-.pay-tick{display:grid;place-items:center;width:64px;height:64px;margin:0 auto 16px;border-radius:50%;background:rgba(74,222,128,.15);color:var(--ok)}
-.pay-modal h2{margin:0 0 6px}
-.pay-modal-sub{margin:0;color:var(--muted);font-size:.92rem}
-.pay-modal dl{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;margin:20px 0;text-align:left;font-size:.92rem}
-.pay-modal dt{color:var(--muted)}
-.pay-modal dd{margin:0;word-break:break-all}
-.pay-modal-close{width:100%;padding:12px 28px;border:0;border-radius:10px;background:var(--accent);color:#1b1230;font:600 1rem system-ui;cursor:pointer}
+.pay-tick{display:grid;place-items:center;width:64px;height:64px;margin:0 auto 16px;border-radius:50%;background:#22c55e;color:#fff}
+.pay-modal h2{margin:0 0 8px;text-transform:uppercase;letter-spacing:.02em}
+.pay-modal-sub{margin:0 0 22px;color:var(--muted-2);font-size:.8rem;opacity:.85}
+.pay-modal-close{width:100%;padding:12px 28px;border:0;border-radius:10px;background:var(--violet-soft);color:#1b1230;font:600 1rem system-ui;cursor:pointer}
 @media (prefers-reduced-motion:no-preference){.pay-overlay.open .pay-modal{animation:payPop .25s ease-out}@keyframes payPop{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}}
-.pay-confirmation{display:grid;gap:6px;margin:0 0 22px;padding:17px 19px;border-radius:13px;border:1px solid rgba(34,197,94,.42);background:rgba(34,197,94,.09);color:#d1fae5;font-size:.9rem;line-height:1.65}
-.pay-confirmation[hidden]{display:none}
-.pay-confirmation strong{font-size:.95rem;color:#a7f3d0;font-weight:700}
-.pay-confirmation code{display:inline-block;max-width:100%;padding:3px 8px;border-radius:6px;background:rgba(0,0,0,.28);color:#fff;font-size:.82rem;overflow-wrap:anywhere}
-.pay-confirmation.is-error{border-color:rgba(248,113,113,.4);background:rgba(239,68,68,.09);color:#fecaca}
-.pay-confirmation.is-error strong{color:#fecaca}
-.pay-confirmation.is-cancelled{border-color:rgba(245,158,11,.42);background:rgba(245,158,11,.08);color:#fde68a}
-.pay-confirmation.is-cancelled strong{color:#fde68a}
 .pay-unavailable{padding:19px 21px;border:1px solid rgba(248,113,113,.3);border-radius:13px;background:rgba(239,68,68,.08);color:#fecaca;line-height:1.65}
 .pay-unavailable strong{display:block;margin-bottom:5px;color:#fecaca}
 .pay-unavailable p{margin:0;color:#fca5a5;font-size:.88rem}
