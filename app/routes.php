@@ -2,7 +2,7 @@
 $router = new Router();
 $pages = array('' => 'index.php', 'services' => 'services-index.php', 'work' => 'portfolio.php',
     'legal/privacy-policy' => 'privacy-policy.php', 'legal/terms' => 'terms.php', 'sitemap.xml' => 'sitemap.php');
-foreach (array('about', 'blog', 'contact', 'resources', 'portfolio', 'privacy-policy', 'terms', 'pay-online', 'download', 'newsletter', 'blog-single', 'resource-single', 'sitemap') as $page) { $pages[$page] = $page . '.php'; }
+foreach (array('about', 'blog', 'contact', 'resources', 'portfolio', 'privacy-policy', 'terms', 'pay-online', 'book-appointment', 'download', 'newsletter', 'blog-single', 'resource-single', 'sitemap') as $page) { $pages[$page] = $page . '.php'; }
 foreach ($pages as $path => $file) {
     $router->add(array('GET', 'POST', 'HEAD'), '~^/' . preg_quote($path, '~') . '/?$~D', function () use ($file) { PublicController::page($file); });
 }
@@ -21,6 +21,13 @@ foreach ($admins as $path => $file) {
 $router->add(array('GET', 'HEAD'), '~^/search/?$~D', array('PublicController', 'search'));
 $router->add(array('GET'), '~^/api/search/?$~D', array('ApiController', 'search'));
 $router->add(array('POST'), '~^/api/chat/?$~D', function () { require_once BASE_PATH . '/includes/chatbot-api.php'; handleChatbotRequest(); });
+require_once BASE_PATH . '/app/Controllers/PaymentController.php';
+foreach (array('paypal', 'stripe') as $paymentProvider) {
+    $router->add(array('POST'), '~^/api/payments/' . preg_quote($paymentProvider, '~') . '/create/?$~D', function () use ($paymentProvider) {
+        PaymentController::create($paymentProvider);
+    });
+}
+$router->add(array('POST'), '~^/api/payments/stripe/webhook/?$~D', array('PaymentController', 'stripeWebhook'));
 foreach (array('contact' => array('contact.php', 'contact_submit'), 'lead' => array('contact.php', 'contact_submit'), 'newsletter' => array('newsletter.php', null)) as $path => $handler) {
     $router->add(array('POST'), '~^/api/' . $path . '/?$~D', function () use ($handler) { ApiController::legacy($handler[0], $handler[1]); });
 }

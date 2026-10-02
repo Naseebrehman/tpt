@@ -32,6 +32,7 @@ sitemapAdd($urls, 'portfolio', '0.9', 'weekly');
 sitemapAdd($urls, 'resources', '0.8', 'weekly');
 sitemapAdd($urls, 'blog', '0.9', 'daily');
 sitemapAdd($urls, 'contact', '0.8', 'monthly');
+sitemapAdd($urls, 'book-appointment', '0.7', 'monthly');
 sitemapAdd($urls, 'pay-online', '0.6', 'monthly');
 sitemapAdd($urls, 'services', '0.9', 'weekly');
 foreach (pieServices() as $svc) {

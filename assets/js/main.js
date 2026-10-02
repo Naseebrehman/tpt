@@ -445,6 +445,7 @@
         autoPlaceholder: 'polite',
         utilsScript: 'https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/utils.js'
       });
+      input._tptIntlPhone = iti;
       /* Submit the normalised E.164 number in a hidden companion field. */
       var form = input.closest('form');
       if (form) {
@@ -669,31 +670,34 @@
   }
 
   /* ---------------------------------------------------------------------
-     Start-a-project popup — the SHORT form, only where the popup is offered.
+     Start-a-project popup — the compact Contact Us form.
 
-     Pages that set $contactModalEnabled render a short five-field form into
-     #tpt-quick-contact (includes/quick-contact.php). The popup moves THAT
-     form into the dialog, so submissions still go to the same contact
-     endpoint: same validation, same database row, same SMTP mail and the same
-     admin notification as the Contact Us page.
-
-     The popup opens only from an explicit [data-contact-modal] trigger, so
-     every other "Start a Project" button keeps linking to the Contact Us page.
+     The popup moves the real form into a dialog and posts it to the same
+     ContactController endpoint as Contact Us. CSRF, CAPTCHA, server-side
+     validation, submissions and mail notifications are shared; this is only
+     a compact presentation of the existing contact workflow.
      --------------------------------------------------------------------- */
+  function resetCaptcha(form) {
+    if (!form) return;
+    var turnstile = form.querySelectorAll('.cf-turnstile[data-tpt-widget-id]');
+    if (window.turnstile && typeof window.turnstile.reset === 'function' && turnstile.length) {
+      Array.prototype.forEach.call(turnstile, function (widget) {
+        try { window.turnstile.reset(widget.getAttribute('data-tpt-widget-id')); } catch (error) { /* ignore provider reset errors */ }
+      });
+    } else if (window.hcaptcha && typeof window.hcaptcha.reset === 'function') {
+      try { window.hcaptcha.reset(); } catch (error) { /* ignore provider reset errors */ }
+    } else if (window.grecaptcha && typeof window.grecaptcha.reset === 'function') {
+      try { window.grecaptcha.reset(); } catch (error) { /* ignore provider reset errors */ }
+    }
+  }
+
   function initContactModal() {
     var triggers = document.querySelectorAll('[data-contact-modal]');
-    if (!triggers.length) return;
-    /* Idempotent: if the dialog already exists (a second boot, a script
-       re-dispatched DOMContentLoaded, …) reuse it instead of stacking a
-       second empty overlay over the real one. */
-    if (document.getElementById('contactModal')) return;
+    if (!triggers.length || document.getElementById('contactModal')) return;
 
     var quickHost = document.getElementById('tpt-quick-contact');
     var quickForm = document.getElementById('quickContactForm');
     var quickSuccess = document.getElementById('quickFormSuccess');
-    /* The popup form is rendered only on pages that opt in. Everywhere else a
-       [data-contact-modal] button stays an ordinary link to the Contact Us
-       page, so nothing is injected and no click is intercepted. */
     if (!quickHost || !quickForm) return;
 
     var panel = document.createElement('div');
@@ -703,25 +707,21 @@
     panel.innerHTML =
       '<div class="contact-modal__overlay" data-modal-close></div>' +
       '<div class="contact-modal__panel" role="dialog" aria-modal="true" aria-labelledby="contactModalTitle">' +
-        '<button type="button" class="contact-modal__close" data-modal-close aria-label="Close">' +
-          '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>' +
-        '</button>' +
-        '<div class="contact-modal__head">' +
-          '<p class="eyebrow">Start a project</p>' +
-          '<h2 id="contactModalTitle">Tell us what you are building.</h2>' +
-          '<p class="contact-modal__lead">Five fields, one reply from a senior strategist within one business day.</p>' +
+        '<div class="contact-modal__top">' +
+          '<div class="contact-modal__head">' +
+            '<p class="eyebrow">Start a project</p>' +
+            '<h2 id="contactModalTitle">Tell us what you need.</h2>' +
+            '<p class="contact-modal__lead">Four quick details. A senior strategist will reply within one business day.</p>' +
+          '</div>' +
+          '<button type="button" class="contact-modal__close" data-modal-close aria-label="Close project form">' +
+            '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>' +
+          '</button>' +
         '</div>' +
         '<div class="contact-modal__body"></div>' +
       '</div>';
     document.body.appendChild(panel);
 
     var body = panel.querySelector('.contact-modal__body');
-    var serviceOptions = [];
-    if (quickForm) {
-      Array.prototype.forEach.call(quickForm.querySelectorAll('select[name="service"] option'), function (option) {
-        if (option.value) { serviceOptions.push(option.value); }
-      });
-    }
     var lastFocus = null;
     var isOpen = false;
     var mounted = false;
@@ -734,8 +734,6 @@
 
     function mount() {
       if (mounted || !quickForm || !quickHost) return false;
-      body.innerHTML = '';
-      /* Move the real form (never a copy) and its confirmation block. */
       body.appendChild(quickForm);
       if (quickSuccess) body.appendChild(quickSuccess);
       if (quickHost.parentNode) quickHost.parentNode.removeChild(quickHost);
@@ -744,64 +742,63 @@
       return true;
     }
 
+    function clearQuickStatus() {
+      var status = quickForm && quickForm.querySelector('.form-status');
+      if (status) { status.className = 'form-status'; status.textContent = ''; }
+    }
+
+    function resetQuickForm() {
+      if (!quickForm) return;
+      quickForm.reset();
+      var phone = quickForm.querySelector('[data-intl-phone]');
+      if (phone && phone._tptIntlPhone && typeof phone._tptIntlPhone.setNumber === 'function') {
+        try { phone._tptIntlPhone.setNumber(''); } catch (error) { /* keep the native reset */ }
+      }
+      var normalizedPhone = quickForm.querySelector('input[name="phone_e164"]');
+      if (normalizedPhone && normalizedPhone.parentNode) normalizedPhone.parentNode.removeChild(normalizedPhone);
+      clearFieldErrors(quickForm);
+      clearQuickStatus();
+      resetCaptcha(quickForm);
+    }
+
     function initQuickContactForm() {
       if (!quickForm || quickForm.getAttribute('data-ajax-bound') === '1') return;
       quickForm.setAttribute('data-ajax-bound', '1');
-      initIntlPhone(quickForm);
       ajaxForm(quickForm, function (json) {
+        /* The server has accepted and recorded this contact submission. Clear
+           customer data before showing the confirmation state. */
+        resetQuickForm();
         if (quickSuccess) {
           if (json.message) {
             var message = quickSuccess.querySelector('p');
             if (message) message.textContent = json.message;
           }
           quickForm.style.display = 'none';
+          quickSuccess.setAttribute('aria-hidden', 'false');
           quickSuccess.classList.add('show');
-          quickSuccess.scrollIntoView({ behavior: prefersReduced ? 'auto' : 'smooth', block: 'center' });
-          window.setTimeout(function () {
-            close();
-            reset();
-          }, prefersReduced ? 800 : 3200);
+          var closeButton = panel.querySelector('.contact-modal__close');
+          if (closeButton) closeButton.focus({ preventScroll: true });
         }
       });
     }
 
-    function reset() {
-      if (!quickForm) return;
-      quickForm.style.display = '';
-      quickForm.reset();
-      if (quickSuccess) quickSuccess.classList.remove('show');
-    }
-
-    function open(service) {
+    function open() {
       lastFocus = document.activeElement;
-      if (mounted || mount()) {
-        var select = quickForm.querySelector('select[name="service"]');
-        var custom = document.getElementById('serviceCustom');
-        if (service && select) {
-          var matched = null;
-          serviceOptions.forEach(function (option) {
-            if (option.toLowerCase() === service.toLowerCase()) matched = option;
-          });
-          if (!matched) {
-            serviceOptions.forEach(function (option) {
-              if (!matched && option.toLowerCase().indexOf(service.toLowerCase()) !== -1) matched = option;
-            });
-          }
-          if (matched) { select.value = matched; }
-          else if (custom) { custom.value = service; }
-        }
-      }
+      if (!mounted && !mount()) return;
       if (!isOpen) {
         isOpen = true;
         panel.classList.add('open');
+        panel.inert = false;
         document.body.classList.add('modal-open');
         panel.setAttribute('aria-hidden', 'false');
       }
-      /* Focus lands after the dialog becomes visible (a hidden element cannot
-         take focus), with a second attempt once the open transition ends. */
+      initIntlPhone(quickForm);
+      if (typeof window.tptRenderTurnstiles === 'function') {
+        window.requestAnimationFrame(function () { window.tptRenderTurnstiles(panel); });
+      }
       focusFirstField();
       window.requestAnimationFrame(focusFirstField);
-      window.setTimeout(focusFirstField, 320);
+      window.setTimeout(focusFirstField, 250);
     }
 
     function focusFirstField() {
@@ -817,24 +814,35 @@
       if (!isOpen) return;
       isOpen = false;
       panel.classList.remove('open');
+      panel.inert = true;
       document.body.classList.remove('modal-open');
       panel.setAttribute('aria-hidden', 'true');
-      if (lastFocus && lastFocus.focus) lastFocus.focus({ preventScroll: true });
+      if (quickSuccess && quickSuccess.classList.contains('show')) {
+        quickSuccess.classList.remove('show');
+        quickSuccess.setAttribute('aria-hidden', 'true');
+        quickForm.style.display = '';
+        clearQuickStatus();
+      }
+      var restoreFocus = lastFocus;
+      if (restoreFocus && restoreFocus.closest && restoreFocus.closest('.mobile-menu')) {
+        restoreFocus = document.getElementById('navBurger') || document.getElementById('siteNav');
+      }
+      if (restoreFocus && restoreFocus.focus && restoreFocus.isConnected) {
+        try { restoreFocus.focus({ preventScroll: true }); } catch (error) { /* ignore */ }
+      }
     }
 
+    panel.inert = true;
     window.TPT_CONTACT_MODAL = { open: open, close: close };
 
-    /* Only explicit popup triggers — every other contact link navigates, and a
-       trigger on a page without the popup keeps its normal link behaviour. */
+    /* Intercept only explicit popup triggers; ordinary Contact Us links still navigate. */
     triggers.forEach(function (trigger) {
       if (trigger.getAttribute('data-modal-bound') === '1') return;
       trigger.setAttribute('data-modal-bound', '1');
       trigger.addEventListener('click', function (event) {
         if (event.metaKey || event.ctrlKey || event.shiftKey || event.button) return;
         event.preventDefault();
-        var service = '';
-        try { service = new URL(trigger.href, location.origin).searchParams.get('service') || ''; } catch (error) { service = ''; }
-        open(service);
+        open();
       });
     });
 
@@ -845,8 +853,6 @@
       }
     });
 
-    /* Escape is handled at document level so it works even if focus is still
-       on the button that opened the dialog. */
     document.addEventListener('keydown', function (event) {
       if (!isOpen) return;
       if (event.key === 'Escape' || event.key === 'Esc') { event.preventDefault(); close(); }

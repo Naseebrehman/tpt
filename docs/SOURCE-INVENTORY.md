@@ -264,15 +264,18 @@
 - require_once __DIR__ . '/data.php';
 - require BASE_PATH . '/maintenance.php';
 ## core/Payments.php (legacy wrapper: includes/payments.php)
-PayPal SDK support only — the existing services list, the PayPal Client ID read
-from the settings table and the SDK URL.
+Server-side PayPal/Stripe hosted checkout, provider return verification, Stripe
+webhook signature verification, and the existing payment services/records.
 
 - function piePaymentServices()
 - function piePaymentServiceRows()
+- function piePaymentRecordRows($limit = 100)
 - function piePayPalClientId()
 - function piePayPalClientIdConfigured()
+- function piePayPalConfigured()
+- function pieStripeConfigured()
 - function pieIsValidPayPalClientId($clientId)
-- function piePayPalSdkUrl($clientId = '')
+- class PaymentGateway
 - function pieTermsUrl()
 ## includes/service-page.php
 559 lines; 0 database calls

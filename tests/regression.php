@@ -43,16 +43,40 @@ check(Content::path('/about.php?utm_source=test') === '/about', 'canonical remov
 check(Content::path('/index.php') === '/', 'canonical home');
 check($router->resolve('POST', '/api/payment')['status'] === 404, 'legacy payment API removed');
 check($router->resolve('POST', '/api/webhooks/stripe')['status'] === 404, 'Stripe webhook API removed');
-check($router->resolve('GET', '/paypal-api')['status'] === 404 && $router->resolve('POST', '/paypal-api')['status'] === 404, 'the server-side PayPal checkout route is removed');
-check($router->resolve('POST', '/stripe-api')['status'] === 404 && $router->resolve('POST', '/stripe-webhook')['status'] === 404, 'the Stripe checkout and webhook routes are removed');
+check($router->resolve('POST', '/api/payments/paypal/create')['handler'] !== null, 'PayPal checkout creation is routed server-side');
+check($router->resolve('POST', '/api/payments/stripe/create')['handler'] !== null, 'Stripe checkout creation is routed server-side');
+check($router->resolve('POST', '/api/payments/stripe/webhook')['handler'] !== null, 'Stripe webhook endpoint is routed for signature verification');
+check($router->resolve('GET', '/api/payments/paypal/create')['status'] === 405, 'payment creation is POST-only');
+check($router->resolve('POST', '/paypal-api')['status'] === 404 && $router->resolve('POST', '/stripe-api')['status'] === 404, 'legacy payment APIs remain absent');
+check($router->resolve('GET', '/book-appointment')['handler'] !== null, 'the appointment page has a public route');
+$bookingSource = (string) file_get_contents(BASE_PATH . '/book-appointment.php');
+$calendlyUrl = 'https://calendly.com/mominalitech/book-appointment';
+check(strpos($bookingSource, $calendlyUrl) !== false && strpos($bookingSource, '<iframe') !== false
+    && strpos($bookingSource, 'Book a Free Strategy Call') !== false
+    && strpos($bookingSource, 'background_color=202127') !== false, 'the appointment page embeds branded Calendly and provides a direct booking button');
 
 /* Short "Start a project" popup: opt-in per page, same contact endpoint. */
 $quick = (string) file_get_contents(BASE_PATH . '/includes/quick-contact.php');
 check(strpos($quick, "url('contact')") !== false || strpos($quick, 'url(\'contact\')') !== false, 'the popup form posts to the same contact endpoint');
 check(strpos($quick, 'csrfField()') !== false && strpos($quick, 'website_url') !== false, 'the popup form keeps the CSRF token and honeypot');
 check(strpos($quick, 'name="contact_submit"') !== false, 'the popup form carries the contact_submit marker');
-check(strpos($quick, 'name="message"') !== false && strpos($quick, 'name="service"') !== false, 'the popup form asks for the service and the message');
-check(substr_count($quick, '<textarea') === 1 && substr_count($quick, '<select') === 1, 'the popup form stays short (one message box, one service list)');
+check(strpos($quick, 'name="name"') !== false && strpos($quick, 'name="email"') !== false
+    && strpos($quick, 'name="phone"') !== false && strpos($quick, 'name="message"') !== false, 'the popup asks for only the four requested contact details');
+check(strpos($quick, 'name="service"') === false && strpos($quick, '<select') === false && strpos($quick, 'name="company"') === false, 'the popup removes service, company and other extra fields');
+check(strpos($quick, '<label') === false
+    && strpos($quick, 'aria-label="Name / Business Name"') !== false
+    && strpos($quick, 'aria-label="Email"') !== false
+    && strpos($quick, 'aria-label="Phone Number"') !== false
+    && strpos($quick, 'aria-label="Question / Query"') !== false
+    && substr_count($quick, '<textarea') === 1, 'the popup hides visible labels while keeping all four fields accessible');
+check(strpos($quick, 'contact_variant" value="project_popup') !== false, 'the popup marks its compact variant for the shared contact validator');
+$contactController = (string) file_get_contents(BASE_PATH . '/app/Controllers/ContactController.php');
+check(strpos($contactController, 'public static function handle') !== false
+    && strpos($contactController, '$isProjectPopup') !== false
+    && strpos($contactController, 'Captcha::verify') !== false
+    && strpos($contactController, 'if (!$isProjectPopup && $source !==') !== false
+    && strpos($contactController, 'Repository::createContact') !== false
+    && strpos($contactController, 'Notifications::notifyAdmins') !== false, 'popup submissions share Contact Us verification, recording and notification without extra source/service fields');
 $footerSource = (string) file_get_contents(BASE_PATH . '/includes/footer.php');
 check(strpos($footerSource, '$contactModalEnabled') !== false, 'the popup form is rendered only when a page asks for it');
 $hostPages = array();
@@ -70,8 +94,16 @@ foreach (glob(BASE_PATH . '/*.php') as $pageFile) {
 sort($triggerPages);
 check($triggerPages === array('index.php', 'portfolio.php', 'resource-single.php', 'services-index.php'), 'popup triggers are used on the marketing pages (found: ' . implode(', ', $triggerPages) . ')');
 $headerSource = (string) file_get_contents(BASE_PATH . '/includes/header.php');
-check(substr_count($headerSource, 'data-contact-modal') === 2, 'the desktop and mobile Start a Project buttons are popup triggers');
+check(substr_count($headerSource, "url('book-appointment')") === 2
+    && substr_count($headerSource, 'Book a Strategy Call') === 2
+    && strpos($headerSource, 'data-contact-modal') === false, 'desktop and mobile header buttons link to the strategy-call booking page');
+check(strpos((string) file_get_contents(BASE_PATH . '/sitemap.php'), "book-appointment', '0.7'") !== false, 'the appointment page is included in the sitemap');
 check(strpos((string) file_get_contents(BASE_PATH . '/portfolio/case-study.php'), 'data-contact-modal') !== false, 'case studies offer the popup');
+$homeSource = (string) file_get_contents(BASE_PATH . '/index.php');
+check(strpos($homeSource, 'Selected Work') === false && strpos($homeSource, 'work-grid') === false
+    && strpos($homeSource, 'getPortfolioItems') === false, 'Selected Work cards and spacing are removed only from Home');
+check(is_file(BASE_PATH . '/portfolio.php') && is_file(BASE_PATH . '/admin/portfolio.php')
+    && strpos((string) file_get_contents(BASE_PATH . '/portfolio.php'), 'getPortfolioItems') !== false, 'portfolio remains available outside Home and in Admin');
 $contactSource = (string) file_get_contents(BASE_PATH . '/contact.php');
 check(strpos($contactSource, 'id="contactForm"') !== false, 'the Contact Us page keeps the full form');
 check(strpos($contactSource, 'id="formSuccess"') !== false, 'the Contact Us page keeps its success block');
@@ -80,12 +112,20 @@ check(strpos($contactSource, 'data-contact-modal') === false, 'the Contact Us pa
 /* The popup is only usable when its dialog styles exist and pages without the
    form fall back to the normal Contact Us link. */
 $refinements = (string) file_get_contents(BASE_PATH . '/assets/css/refinements.css');
-foreach (array('.contact-modal{', '.contact-modal.open{display:block}', '.contact-modal__overlay{', '.contact-modal__panel{', '.contact-modal__close{', 'body.modal-open{overflow:hidden}') as $rule) {
+foreach (array('.contact-modal{', '.contact-modal.open{display:flex}', '.contact-modal__overlay{', '.contact-modal__panel{', '.contact-modal__close{', 'body.modal-open{overflow:hidden}', 'z-index:10010', '.contact-modal__top{', 'position:relative;top:auto;z-index:2', '.contact-modal__body{flex:1 1 auto;min-width:0;min-height:0;margin:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain') as $rule) {
     check(strpos($refinements, $rule) !== false, 'popup style present: ' . $rule);
 }
+foreach (array('.book-appointment-hero-grid{', '.book-appointment-hero-card{', '.book-appointment-section-head{', '.book-appointment-calendar{', '.book-appointment-embed iframe{', '@media(max-width:620px){') as $rule) {
+    check(strpos($refinements, $rule) !== false, 'responsive booking-page style present: ' . $rule);
+}
+$chatbotStyles = (string) file_get_contents(BASE_PATH . '/assets/css/style.css');
+check(strpos($chatbotStyles, 'z-index:1200') !== false
+    && strpos($chatbotStyles, 'bottom:calc(100% + 14px)') !== false
+    && strpos($chatbotStyles, 'height:min(640px,calc(var(--tpt-chatbot-vh) - 112px') !== false
+    && strpos($chatbotStyles, 'overflow-x:hidden') !== false, 'Alia stays above the navigation and is constrained to the viewport without horizontal message overflow');
 $mainJs = (string) file_get_contents(BASE_PATH . '/assets/js/main.js');
 check(strpos($mainJs, "if (!quickHost || !quickForm) return;") !== false, 'a Start button on a page without the popup keeps its normal link');
-check(strpos($mainJs, "if (document.getElementById('contactModal')) return;") !== false, 'the popup never stacks a second dialog');
+check(strpos($mainJs, "if (!triggers.length || document.getElementById('contactModal')) return;") !== false, 'the popup never stacks a second dialog');
 check(strpos($mainJs, "trigger.getAttribute('data-modal-bound')") !== false, 'popup triggers are bound once');
 check(strpos($mainJs, 'function safeInit(init)') !== false
     && strpos($mainJs, '].forEach(safeInit);') !== false, 'each widget initializes in isolation so the popup cannot be skipped');
@@ -141,16 +181,24 @@ foreach (array('notification_emails', 'email_templates') as $must) {
     if (strpos((string) file_get_contents(BASE_PATH . '/database/schema-mysql.sql'), $must) === false) { $bad++; }
 }
 check($bad === 0, 'fresh schema includes the notification and email-template tables');
-foreach (array('payments', 'payment_records', 'payment_events') as $gone) {
-    if (strpos((string) file_get_contents(BASE_PATH . '/database/schema-mysql.sql'), 'CREATE TABLE IF NOT EXISTS ' . $gone) !== false) { $bad++; }
-}
-check($bad === 0, 'fresh schema contains no payment tables');
-foreach (array('stripe-api.php', 'stripe-webhook.php', 'paypal-api.php', 'core/Stripe.php', 'core/PayPal.php', 'core/PaymentRecords.php', 'admin/payment-records.php') as $removed) {
-    check(!is_file(BASE_PATH . '/' . $removed), 'removed: ' . $removed);
-}
-check(is_file(BASE_PATH . '/database/migrations/011_paypal_sdk_only.php'), 'migration 011 removes legacy Stripe/payment-server state');
-check(strpos((string) file_get_contents(BASE_PATH . '/core/Payments.php'), 'paypal.com/sdk/js') !== false
-    && strpos((string) file_get_contents(BASE_PATH . '/pay-online.php'), 'piePayPalSdkUrl') !== false, 'the payment page loads the PayPal JavaScript SDK built from the saved Client ID');
+$schemaSource = (string) file_get_contents(BASE_PATH . '/database/schema-mysql.sql');
+check(strpos($schemaSource, 'CREATE TABLE IF NOT EXISTS payment_records') !== false
+    && strpos($schemaSource, 'CREATE TABLE IF NOT EXISTS payment_events') !== false, 'fresh schema preserves a payment ledger and idempotency events');
+check(is_file(BASE_PATH . '/database/migrations/012_server_side_payments.php'), 'migration 012 additively installs server-side payment records');
+$legacyPaymentMigration = (string) file_get_contents(BASE_PATH . '/database/migrations/011_paypal_sdk_only.php');
+check(stripos($legacyPaymentMigration, 'DROP TABLE') === false && stripos($legacyPaymentMigration, 'DELETE FROM settings') === false, 'legacy payment migration no longer drops data or credentials');
+$corePayments = (string) file_get_contents(BASE_PATH . '/core/Payments.php');
+$payOnline = (string) file_get_contents(BASE_PATH . '/pay-online.php');
+check(strpos($corePayments, 'private static function paypalApi') !== false
+    && strpos($corePayments, '/v2/checkout/orders') !== false
+    && strpos($corePayments, 'https://api.stripe.com') !== false
+    && strpos($corePayments, '/v1/checkout/sessions') !== false, 'PayPal and Stripe provider calls execute only in the server module');
+check(strpos($payOnline, 'paypal.com/sdk/js') === false && strpos($payOnline, 'actions.order.capture') === false
+    && strpos($payOnline, 'piePayPalSdkUrl') === false, 'the browser page contains no PayPal SDK or browser-side capture');
+check(strpos($payOnline, 'csrfField()') !== false && strpos($payOnline, 'data-payment-provider="paypal"') !== false
+    && strpos($payOnline, 'data-payment-provider="stripe"') !== false, 'hosted provider checkout buttons use a CSRF-protected shared form');
+check(strpos($payOnline, "if (result.status === 'confirmed')") !== false
+    && strpos($payOnline, 'resetPaymentForm();') !== false, 'payment fields are cleared only on the server-confirmed success path');
 check(is_file(BASE_PATH . '/database/migrations/002_notifications.php'), 'migration 002 exists for existing installations');
 check(strpos((string) file_get_contents(BASE_PATH . '/database/migrations/002_notifications.php'), 'notification_emails') !== false, 'migration 002 creates the notification tables');
 check(strpos((string) file_get_contents(BASE_PATH . '/database.sql'), 'Admin@123') !== false, 'phpMyAdmin dump documents its default password');

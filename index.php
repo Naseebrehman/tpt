@@ -11,7 +11,6 @@ $services     = pieServices();
 $disciplines  = pieDisciplines();
 $industries   = pieIndustries();
 $homeFaq      = pieHomeFaq();
-$portfolio    = array_slice(getPortfolioItems(''), 0, 4);
 $testimonials = getActiveTestimonials();
 $posts        = getRecentPosts(3);
 
@@ -182,38 +181,6 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </div>
 </section>
-
-<!-- ========================== WORK PREVIEW ============================== -->
-<?php if ($portfolio): ?>
-<section class="section" style="padding-top:0">
-    <div class="container">
-        <div class="section-head" data-aos="fade-up">
-            <p class="eyebrow">Selected Work</p>
-            <h2 class="section-title">Systems in the field.</h2>
-            <p class="section-lead">Case studies told the honest way: the challenge, the strategy, the execution — without invented numbers.</p>
-        </div>
-        <div class="work-grid">
-            <?php foreach ($portfolio as $i => $item): $stats = jsonCol($item['stats_json']); $firstStat = $stats ? array_slice($stats, 0, 1) : array(); ?>
-            <a class="work-card" href="<?= url('portfolio/' . $item['slug']) ?>" data-aos="fade-up" data-aos-delay="<?= $i * 90 ?>">
-                <div class="work-media">
-                    <img src="<?= asset($item['thumbnail'] !== '' ? $item['thumbnail'] : 'assets/images/placeholder.svg') ?>" alt="<?= esc($item['client_name']) ?> case study" loading="lazy">
-                </div>
-                <?php if ($firstStat): $fs = reset($firstStat); ?>
-                <span class="work-stat"><?= esc(is_array($fs) ? implode(' ', $fs) : $fs) ?></span>
-                <?php endif; ?>
-                <div class="work-body">
-                    <span class="work-cat"><?= esc($item['service_category']) ?></span>
-                    <h3 class="work-title"><?= esc($item['client_name']) ?></h3>
-                </div>
-            </a>
-            <?php endforeach; ?>
-        </div>
-        <div class="work-more">
-            <a class="link-arrow" href="<?= url('portfolio') ?>">View All Work <?= icon('arrow-r', 16) ?></a>
-        </div>
-    </div>
-</section>
-<?php endif; ?>
 
 <!-- ======================= SERVICES ACCORDION =========================== -->
 <section class="section">

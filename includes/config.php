@@ -46,6 +46,14 @@ define('SITE_URL', rtrim((string) $pieConfigValue('SITE_URL', 'TPT_SITE_URL', 'h
 define('SITE_NAME', (string) $pieConfigValue('SITE_NAME', 'TPT_SITE_NAME', 'The Pie Technologies'));
 define('ADMIN_EMAIL', (string) $pieConfigValue('ADMIN_EMAIL', 'TPT_ADMIN_EMAIL', 'admin@thepietechnologies.com'));
 
+/* Payment credentials are server-only deployment settings. They are never
+   written into page markup or browser JavaScript. The PayPal Client ID itself
+   remains in the existing Admin → Payment Settings field. */
+define('PAYPAL_CLIENT_SECRET', (string) $pieConfigValue('PAYPAL_CLIENT_SECRET', 'TPT_PAYPAL_CLIENT_SECRET', ''));
+define('PAYPAL_ENVIRONMENT', strtolower((string) $pieConfigValue('PAYPAL_ENVIRONMENT', 'TPT_PAYPAL_ENVIRONMENT', 'sandbox')));
+define('STRIPE_SECRET_KEY', (string) $pieConfigValue('STRIPE_SECRET_KEY', 'TPT_STRIPE_SECRET_KEY', ''));
+define('STRIPE_WEBHOOK_SECRET', (string) $pieConfigValue('STRIPE_WEBHOOK_SECRET', 'TPT_STRIPE_WEBHOOK_SECRET', ''));
+
 /* ------------------------- Paths ----------------------------------------- */
 define('BASE_PATH', dirname(__DIR__));                   // absolute filesystem path of the site root
 define('UPLOAD_PATH', BASE_PATH . '/uploads/');

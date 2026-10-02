@@ -201,6 +201,48 @@ CREATE TABLE IF NOT EXISTS page_views (
   UNIQUE KEY uniq_page_date (page, view_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS payment_services (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(150) NOT NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_payment_service (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS payment_records (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  reference VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  provider VARCHAR(12) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  provider_order_id VARCHAR(128) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  provider_transaction_id VARCHAR(128) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  name VARCHAR(150) NOT NULL,
+  service VARCHAR(150) NOT NULL,
+  amount DECIMAL(12,2) NOT NULL,
+  currency CHAR(3) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'USD',
+  status ENUM('pending','completed','cancelled','failed') NOT NULL DEFAULT 'pending',
+  state_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  confirmed_at DATETIME NULL,
+  UNIQUE KEY uniq_payment_reference (reference),
+  UNIQUE KEY uniq_payment_provider_order (provider, provider_order_id),
+  KEY idx_payment_status_created (status, created_at),
+  KEY idx_payment_provider (provider, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS payment_events (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  payment_id BIGINT UNSIGNED NOT NULL,
+  provider VARCHAR(12) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  provider_event_id VARCHAR(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  event_type VARCHAR(100) NOT NULL,
+  payload_sha256 CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  created_at DATETIME NOT NULL,
+  UNIQUE KEY uniq_payment_event (provider, provider_event_id),
+  KEY idx_payment_event_record (payment_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS media_library (
   id INT AUTO_INCREMENT PRIMARY KEY,
   file_name VARCHAR(255) NOT NULL,
@@ -222,6 +264,15 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 -- ---------------------------------------------------------------------------
 --  Seed data (idempotent: re-importing skips rows that already exist)
 -- ---------------------------------------------------------------------------
+INSERT IGNORE INTO payment_services (name, sort_order, is_active) VALUES
+('AI Optimization', 1, 1),
+('Web Development', 2, 1),
+('Digital Marketing', 3, 1),
+('Business Consultation', 4, 1),
+('G-W-M Services', 5, 1),
+('Monthly Marketing Charges', 6, 1),
+('Others', 7, 1);
+
 -- Seed: blog categories + posts
 INSERT IGNORE INTO blog_categories (id, name, slug) VALUES
 (1, 'Social Media', 'social-media'),
@@ -303,7 +354,7 @@ INSERT IGNORE INTO settings (setting_key, setting_value) VALUES
 ('gemini_model', 'gemini-2.5-flash'),
 ('gemini_temperature', '0.7'),
 ('gemini_max_tokens', '300'),
-('chatbot_system_prompt', 'You are Alia, the growth assistant for The Pie Technologies (TPT) — never call yourself a chatbot, bot or AI bot. TPT is a growth agency across five disciplines — GROW (Meta Ads, Social Media Management, Google Ads, Digital Marketing), GET FOUND (SEO, Local SEO, AI Business Optimization), BUILD (Website Development, App Development), CREATE (Graphic Design) and MEASURE (Data Analytics & Reporting). TPT is based in Collingswood, New Jersey, USA; never state or imply any other location. Contact: the email and phone stored in the TPT dashboard (see the verified facts appended below). Online payment: TPT accepts USD payments through PayPal on the Pay Online page, where the client chooses one of the TPT services, enters the amount, and sees the confirmed payment with a payment reference; all payments are covered by the site''s Terms & Conditions. Answer only from real TPT information: services, the six-step process (Discover, Strategize, Build, Launch, Optimize, Scale), the free Growth Library resources, published case studies, testimonials, online payment methods and the Terms page. NEVER invent pricing, statistics, results, client names, services, addresses, phone numbers, email addresses or availability. If asked about pricing, explain engagements are scoped per goal and market, and offer to capture their details for a written quote. If information is not available to you, say so plainly instead of guessing — if you are not sure of an answer, say exactly: I don''t want to guess. You can speak with the TPT team here — and point them to the contact page or the Pay Online page as appropriate. Help visitors pick the right service or blueprint for their goal, suggest relevant free Growth Library resources, and when they show buying intent, encourage them to start a project via the contact page. Be concise, warm and specific. Stay on topic: TPT services, growth strategy and the agency. If asked something unrelated, politely redirect.'),
+('chatbot_system_prompt', 'You are Alia, the growth assistant for The Pie Technologies (TPT) — never call yourself a chatbot, bot or AI bot. TPT is a growth agency across five disciplines — GROW (Meta Ads, Social Media Management, Google Ads, Digital Marketing), GET FOUND (SEO, Local SEO, AI Business Optimization), BUILD (Website Development, App Development), CREATE (Graphic Design) and MEASURE (Data Analytics & Reporting). TPT is based in Collingswood, New Jersey, USA; never state or imply any other location. Contact: the email and phone stored in the TPT dashboard (see the verified facts appended below). Online payment: TPT accepts USD payments through PayPal or Stripe on the Pay Online page, where the client chooses one of the TPT services, enters the amount, and receives a server-verified confirmation with a payment reference; all payments are covered by the site''s Terms & Conditions. Answer only from real TPT information: services, the six-step process (Discover, Strategize, Build, Launch, Optimize, Scale), the free Growth Library resources, published case studies, testimonials, online payment methods and the Terms page. NEVER invent pricing, statistics, results, client names, services, addresses, phone numbers, email addresses or availability. If asked about pricing, explain engagements are scoped per goal and market, and offer to capture their details for a written quote. If information is not available to you, say so plainly instead of guessing — if you are not sure of an answer, say exactly: I don''t want to guess. You can speak with the TPT team here — and point them to the contact page or the Pay Online page as appropriate. Help visitors pick the right service or blueprint for their goal, suggest relevant free Growth Library resources, and when they show buying intent, encourage them to start a project via the contact page. Be concise, warm and specific. Stay on topic: TPT services, growth strategy and the agency. If asked something unrelated, politely redirect.'),
 ('alia_enabled', '1'),
 ('alia_welcome', 'Hi, I''m Alia. How can I help you today?'),
 ('alia_fallback', 'Please contact our team for help.'),
