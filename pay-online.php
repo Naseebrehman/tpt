@@ -1,28 +1,31 @@
 <?php
-/** Pay Online — hosted PayPal and Stripe checkout with server-side confirmation. */
+/** Pay Online — PayPal only.
+ *
+ * The page renders the existing Services form and loads the PayPal JavaScript
+ * SDK with the Client ID saved in the application settings (Admin → Payment
+ * Settings). The order is created and approved in the browser by PayPal; there
+ * is no secret, no server-side capture/confirmation, no webhook and no payment
+ * record stored by this website.
+ */
 require_once __DIR__ . '/includes/init.php';
 require_once __DIR__ . '/includes/payments.php';
 
 $pageTitle = 'Pay Online — The Pie Technologies';
-$metaDesc = 'Pay securely in USD through PayPal or Stripe hosted checkout.';
+$metaDesc = 'Pay securely by PayPal in USD. Choose a service, enter the amount and pay on PayPal’s secure checkout.';
 $activeNav = 'pay';
 
-$paypalReady = piePayPalConfigured();
-$stripeReady = pieStripeConfigured();
+$paypalClientId = piePayPalClientId();
+$paypalReady = piePayPalClientIdConfigured();
 $termsUrl = pieTermsUrl();
 $supportEmail = getSetting('site_email', 'info@thepietechnologies.com');
 $supportPhone = getSetting('site_phone', '');
 $paymentServices = piePaymentServices();
-$paymentReturn = PaymentGateway::processReturn($_GET);
-$paymentProviders = array();
-if ($paypalReady) { $paymentProviders[] = 'PayPal'; }
-if ($stripeReady) { $paymentProviders[] = 'Stripe'; }
 
 $paymentFaq = array(
-    array('q' => 'Which payment methods can I use?', 'a' => 'Use PayPal or Stripe when shown in the checkout. Each button opens that provider’s secure hosted checkout, where you enter payment details directly with the provider.'),
+    array('q' => 'Which payment method can I use?', 'a' => 'PayPal. The PayPal button below opens PayPal’s secure checkout, where you can pay with your PayPal balance, a linked bank account, or a debit or credit card.'),
     array('q' => 'Which currency are payments taken in?', 'a' => 'Payments are taken in US dollars (USD). The amount you enter is the amount charged.'),
-    array('q' => 'Is my payment secure?', 'a' => 'Yes. Payment details are entered on PayPal or Stripe’s secure checkout. This website does not receive or store your card number or provider login.'),
-    array('q' => 'How do I know my payment went through?', 'a' => 'After checkout, this page verifies the transaction directly with the payment provider and saves a payment record before showing the confirmation popup. Keep the reference for your records.'),
+    array('q' => 'Is my payment secure?', 'a' => 'Yes. You pay on PayPal’s own secure checkout. Your PayPal login and card details are never entered on, or stored by, this website.'),
+    array('q' => 'How do I know my payment went through?', 'a' => 'PayPal shows its own payment confirmation, and this page then displays a success message with the amount, service and PayPal reference. Keep the reference for your records.'),
 );
 
 require_once __DIR__ . '/includes/header.php';
@@ -31,13 +34,11 @@ require_once __DIR__ . '/includes/header.php';
   <div class="container">
     <p class="eyebrow crumbs"><a href="<?= url('') ?>">Home</a> &nbsp;/&nbsp; Pay Online</p>
     <h1>Pay online, securely.</h1>
-    <p class="lead">A straightforward checkout through PayPal or Stripe.</p>
+    <p class="lead">A straightforward checkout through PayPal.</p>
     <ul class="pay-badges" aria-label="Payment facts">
-      <?php foreach ($paymentProviders as $providerName): ?>
-      <li><?= icon('check', 14) ?> <?= esc($providerName) ?></li>
-      <?php endforeach; ?>
+      <li><?= icon('check', 14) ?> PayPal</li>
       <li><?= icon('check', 14) ?> USD</li>
-      <li><?= icon('lock', 14) ?> Hosted secure checkout</li>
+      <li><?= icon('lock', 14) ?> Secure PayPal checkout</li>
     </ul>
   </div>
 </section>
@@ -49,18 +50,15 @@ require_once __DIR__ . '/includes/header.php';
         <div>
           <p class="eyebrow">Secure checkout</p>
           <h2 id="paymentHeading">Payment details</h2>
-          <p class="sub">Choose your service and amount. You’ll enter payment details on the provider’s secure hosted checkout.</p>
+          <p class="sub">Enter your details and the amount, then pay with the PayPal button. Your PayPal login and card details stay on PayPal’s secure checkout.</p>
         </div>
-        <span class="pay-secure-mark"><?= icon('lock', 18) ?> Provider-verified payment</span>
+        <span class="pay-secure-mark"><?= icon('lock', 18) ?> Protected checkout</span>
       </div>
 
       <div class="pay-confirmation" id="tpt-payment-confirmation" role="status" aria-live="polite" hidden></div>
 
-      <?php if ($paypalReady || $stripeReady): ?>
-      <form id="payment-form" class="pay-layout" method="post" action="<?= esc(url('pay-online')) ?>" autocomplete="off" novalidate
-            data-paypal-endpoint="<?= esc(url('api/payments/paypal/create')) ?>"
-            data-stripe-endpoint="<?= esc(url('api/payments/stripe/create')) ?>">
-        <?= csrfField() ?>
+      <?php if ($paypalReady): ?>
+      <form id="payment-form" class="pay-layout">
         <div class="pay-form-fields">
           <div class="pay-field pay-field-wide">
             <label for="payment-name">Name / Business name <span aria-hidden="true">*</span></label>
@@ -82,25 +80,15 @@ require_once __DIR__ . '/includes/header.php';
           <p class="pay-terms-inline">By continuing with your payment, you agree to our <a href="<?= esc($termsUrl) ?>" target="_blank" rel="noopener">Terms &amp; Conditions</a>.</p>
         </div>
 
-        <aside class="pay-checkout-options" aria-label="Choose a payment method">
+        <aside class="pay-checkout-options" aria-label="Pay with PayPal">
           <div class="pay-checkout-copy">
             <p class="eyebrow">Payment method</p>
-            <h3>Continue securely</h3>
-            <p>Your payment is completed on the provider’s hosted checkout. Card and account details never pass through this form.</p>
+            <h3>Pay with PayPal</h3>
           </div>
           <div class="pay-gateway-actions">
-            <?php if ($paypalReady): ?>
-            <button class="pay-provider-button pay-provider-paypal" type="submit" data-payment-provider="paypal">
-              <span>Continue with PayPal</span><?= icon('arrow-r', 17) ?>
-            </button>
-            <?php endif; ?>
-            <?php if ($stripeReady): ?>
-            <button class="pay-provider-button pay-provider-stripe" type="submit" data-payment-provider="stripe">
-              <span>Pay by card with Stripe</span><?= icon('arrow-r', 17) ?>
-            </button>
-            <?php endif; ?>
+            <div id="paypal-button-container" class="pay-paypal-buttons"></div>
           </div>
-          <p class="pay-err" id="paymentStatus" role="status" aria-live="polite"></p>
+          <p class="pay-err" data-err="pp" role="alert"></p>
         </aside>
       </form>
       <?php else: ?>
@@ -120,7 +108,7 @@ require_once __DIR__ . '/includes/header.php';
       <div class="founder-note">
         <p class="eyebrow">Payment support</p>
         <h2 id="payHelpHeading">Need help or having difficulties?</h2>
-        <p>If a payment does not go through or something looks wrong, stop before paying again and talk to us first. Quote the amount and any provider reference shown, and we will check the payment.</p>
+        <p>If a payment does not go through or something looks wrong, stop before paying again and talk to us first. Quote the amount and any PayPal reference shown, and we will check the payment with PayPal.</p>
         <span class="founder-sig">Email <a href="mailto:<?= esc($supportEmail) ?>"><?= esc($supportEmail) ?></a><?php if ($supportPhone !== ''): ?> · Call <a href="tel:<?= esc(preg_replace('/[^0-9+]/', '', $supportPhone)) ?>"><?= esc($supportPhone) ?></a><?php endif; ?></span>
       </div>
       <a class="btn btn-primary founder-book" href="<?= url('contact') ?>">Send us the details <?= icon('arrow-r', 18) ?></a>
@@ -151,11 +139,11 @@ require_once __DIR__ . '/includes/header.php';
   </div>
 </section>
 
-<div class="pay-overlay" id="tpt-modal" aria-hidden="true" hidden>
+<div class="pay-overlay" id="tpt-modal" aria-hidden="true">
   <div class="pay-modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
     <div class="pay-tick" aria-hidden="true"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></div>
     <h2 id="mTitle">Payment successful</h2>
-    <p class="pay-modal-sub">Thank you. Your payment has been confirmed by the provider.</p>
+    <p class="pay-modal-sub">Thank you. Your payment has been confirmed.</p>
     <dl>
       <dt>Amount</dt><dd id="mAmount"></dd>
       <dt>Service</dt><dd id="mService"></dd>
@@ -166,224 +154,192 @@ require_once __DIR__ . '/includes/header.php';
   </div>
 </div>
 
+<?php if ($paypalReady): ?>
+<script src="<?= esc(piePayPalSdkUrl($paypalClientId)) ?>"></script>
 <script>
-window.TPT_PAYMENT_RETURN = <?= json_encode($paymentReturn, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-(function(){
-  'use strict';
-  var form = document.getElementById('payment-form');
-  var result = window.TPT_PAYMENT_RETURN || {status:'none'};
-  var overlay = document.getElementById('tpt-modal');
-  var statusBox = document.getElementById('paymentStatus');
-  var closeButton = document.getElementById('mClose');
-  var originalFocus = null;
-  var storageKey = 'tpt-payment-pending';
-  if (!form || !overlay || !closeButton) return;
+/* Always convert objects to plain text so "[object Object]" can never appear. */
+function tptLabel(v){
+  if (v == null) return '';
+  if (typeof v === 'string' || typeof v === 'number') return String(v);
+  return String(v.name || v.title || v.label || v.description || '');
+}
+var shown = {}, lastFocus = null;
+var overlay = document.getElementById('tpt-modal');
 
+/* p = {provider, amount, service, reference} from PayPal's approved order */
+function showConfirmed(p){
+  if (shown[p.reference]) return;
+  shown[p.reference] = true;
+  var amount = '$' + Number(p.amount).toFixed(2) + ' USD';
+  var service = tptLabel(p.service);
+  var box = document.getElementById('tpt-payment-confirmation');
+  box.textContent = 'Payment of ' + amount + (service ? ' for ' + service : '') + ' is complete. Reference: ' + p.reference + '.';
+  box.hidden = false;
+  document.getElementById('mAmount').textContent = amount;
+  document.getElementById('mService').textContent = service || '-';
+  document.getElementById('mProvider').textContent = 'PayPal';
+  document.getElementById('mRef').textContent = p.reference;
+  lastFocus = document.activeElement;
+  overlay.classList.add('open');
+  overlay.setAttribute('aria-hidden', 'false');
+  document.getElementById('mClose').focus();
+}
+function closeModal(){
+  overlay.classList.remove('open');
+  overlay.setAttribute('aria-hidden', 'true');
+  if (lastFocus) lastFocus.focus();
+}
+document.getElementById('mClose').onclick = closeModal;
+overlay.addEventListener('click', function(e){ if (e.target === overlay) closeModal(); });
+document.addEventListener('keydown', function(e){
+  if (!overlay.classList.contains('open')) return;
+  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Tab'){ e.preventDefault(); document.getElementById('mClose').focus(); }
+});
+
+/* PayPal JavaScript SDK — the Client ID above comes from Admin → Payment Settings. */
+(function(){
+  var container = document.getElementById('paypal-button-container');
+  var errBox = document.querySelector('[data-err="pp"]');
+  if (!container || !errBox) { return; }
+
+  function value(id){ var el = document.getElementById(id); return el ? String(el.value).trim() : ''; }
+  function fail(message){ errBox.textContent = message || ''; }
+
+  if (typeof paypal === 'undefined' || !paypal.Buttons) {
+    fail('PayPal could not be loaded. Refresh the page, or contact us before paying.');
+    return;
+  }
+  function amountValue(raw){
+    if (!/^\d{1,7}(\.\d{1,2})?$/.test(raw)) return '';
+    var amount = parseFloat(raw);
+    if (!isFinite(amount) || amount < 0.01 || amount > 1000000) return '';
+    return amount.toFixed(2);
+  }
+
+  /* ---------------------------------------------------------------------
+     Exact, per-field validation.
+
+     A missing field is marked where it is (red border + its own message
+     under the input) and the alert beside the PayPal button repeats the
+     first problem, so the visitor is never left guessing which field to
+     fill. The message set here is also what PayPal's onError must not
+     overwrite: when validation fails we reject the button click, and the
+     SDK may report that rejection as a generic PayPal error.
+     --------------------------------------------------------------------- */
   var fields = {
     name: document.getElementById('payment-name'),
     service: document.getElementById('payment-service'),
     amount: document.getElementById('payment-amount')
   };
-  var buttons = Array.prototype.slice.call(form.querySelectorAll('[data-payment-provider]'));
-  buttons.forEach(function(button){ button._tptOriginalHtml = button.innerHTML; });
+  var validationMessage = '';
 
-  function setStatus(message, kind){
-    if (!statusBox) return;
-    statusBox.className = 'pay-err' + (kind ? ' ' + kind : '');
-    statusBox.textContent = message || '';
+  function fieldBox(field){
+    return field && field.closest ? field.closest('.pay-field') : null;
   }
   function clearFieldError(key){
     var field = fields[key];
     if (!field) return;
     field.removeAttribute('aria-invalid');
-    var holder = field.closest('.pay-field');
-    var message = holder ? holder.querySelector('.pay-field-error') : null;
-    if (message) message.parentNode.removeChild(message);
+    var box = fieldBox(field);
+    var message = box ? box.querySelector('.pay-field-error') : null;
+    if (message) { message.parentNode.removeChild(message); }
   }
-  function clearErrors(){
-    Object.keys(fields).forEach(clearFieldError);
-    setStatus('', '');
+  function setFieldError(key, message){
+    var field = fields[key];
+    if (!field) return;
+    field.setAttribute('aria-invalid', 'true');
+    var box = fieldBox(field);
+    if (!box) return;
+    var node = box.querySelector('.pay-field-error');
+    if (!node) {
+      node = document.createElement('p');
+      node.className = 'pay-field-error';
+      box.appendChild(node);
+    }
+    node.textContent = message;
   }
-  function showErrors(errors){
-    Object.keys(errors || {}).forEach(function(key){
-      var field = fields[key];
-      if (!field) return;
-      field.setAttribute('aria-invalid', 'true');
-      var holder = field.closest('.pay-field');
-      if (!holder) return;
-      var message = holder.querySelector('.pay-field-error');
-      if (!message) {
-        message = document.createElement('p');
-        message.className = 'pay-field-error';
-        holder.appendChild(message);
-      }
-      message.textContent = errors[key];
+  Object.keys(fields).forEach(function (key) {
+    var field = fields[key];
+    if (!field) return;
+    ['input', 'change'].forEach(function (eventName) {
+      field.addEventListener(eventName, function () { clearFieldError(key); });
     });
-  }
-  Object.keys(fields).forEach(function(key){
-    if (!fields[key]) return;
-    ['input','change'].forEach(function(type){ fields[key].addEventListener(type, function(){ clearFieldError(key); }); });
   });
-  function validate(){
-    clearErrors();
-    var errors = {};
-    var name = String(fields.name.value || '').trim();
-    var service = String(fields.service.value || '').trim();
-    var amount = String(fields.amount.value || '').trim();
-    if (name.length < 2 || name.length > 150) errors.name = 'Please enter a valid name or business name.';
-    if (!service) errors.service = 'Please choose a service.';
-    if (!/^\d{1,7}(?:\.\d{1,2})?$/.test(amount) || Number(amount) < 0.01 || Number(amount) > 1000000) {
-      errors.amount = 'Please enter a valid amount in USD (0.01 to 1,000,000.00).';
+
+  /* Returns the payload, or null after reporting every empty/invalid field. */
+  function details(){
+    ['name', 'service', 'amount'].forEach(clearFieldError);
+    var name = value('payment-name');
+    var service = value('payment-service');
+    var amountRaw = value('payment-amount');
+    var problems = [];
+    if (!name) { problems.push({ key: 'name', message: 'Please fill the required field: Name / Business name.' }); }
+    if (!service) { problems.push({ key: 'service', message: 'Please fill the required field: Service.' }); }
+    if (!amountRaw) { problems.push({ key: 'amount', message: 'Please fill the required field: Amount (USD).' }); }
+    var amount = amountRaw ? amountValue(amountRaw) : '';
+    if (amountRaw && !amount) { problems.push({ key: 'amount', message: 'Please enter a valid amount in USD (0.01 to 1,000,000.00).' }); }
+    if (problems.length) {
+      problems.forEach(function (problem) { setFieldError(problem.key, problem.message); });
+      validationMessage = problems[0].message
+        + (problems.length > 1 ? ' Please complete the ' + problems.length + ' highlighted fields.' : '');
+      fail(validationMessage);
+      var first = fields[problems[0].key];
+      if (first && first.focus) { try { first.focus({ preventScroll: false }); } catch (error) { first.focus(); } }
+      return null;
     }
-    if (Object.keys(errors).length) {
-      showErrors(errors);
-      setStatus(Object.keys(errors).map(function(key){return errors[key];}).join(' '), 'is-error');
-      var first = fields[Object.keys(errors)[0]];
-      if (first) first.focus();
-      return false;
-    }
-    return true;
-  }
-  function setBusy(button, busy){
-    form.setAttribute('aria-busy', busy ? 'true' : 'false');
-    buttons.forEach(function(item){
-      item.disabled = !!busy;
-      if (busy && item === button) item.textContent = 'Opening secure checkout…';
-      else item.innerHTML = item._tptOriginalHtml;
-    });
-  }
-  function savePending(paymentId){
-    try {
-      sessionStorage.setItem(storageKey, JSON.stringify({
-        payment_id: paymentId,
-        name: fields.name.value,
-        service: fields.service.value,
-        amount: fields.amount.value
-      }));
-    } catch (error) { /* Browser storage may be unavailable; payment remains safe. */ }
-  }
-  function restorePending(){
-    var pending = null;
-    try { pending = JSON.parse(sessionStorage.getItem(storageKey) || 'null'); } catch (error) { pending = null; }
-    if (!pending || typeof pending !== 'object') return;
-    if (result.payment_id && pending.payment_id && result.payment_id !== pending.payment_id) return;
-    if (fields.name && !fields.name.value) fields.name.value = String(pending.name || '');
-    if (fields.service && !fields.service.value) fields.service.value = String(pending.service || '');
-    if (fields.amount && !fields.amount.value) fields.amount.value = String(pending.amount || '');
-  }
-  function clearPending(){
-    try { sessionStorage.removeItem(storageKey); } catch (error) { /* ignore */ }
-  }
-  function resetPaymentForm(){
-    form.reset();
-    clearErrors();
-    form.removeAttribute('aria-busy');
-    buttons.forEach(function(button){ button.disabled = false; button.innerHTML = button._tptOriginalHtml; });
-    var hiddenErrors = form.querySelectorAll('.pay-field-error');
-    Array.prototype.forEach.call(hiddenErrors, function(message){ if (message.parentNode) message.parentNode.removeChild(message); });
-  }
-  function closeModal(){
-    overlay.classList.remove('open');
-    overlay.hidden = true;
-    overlay.setAttribute('aria-hidden', 'true');
-    document.body.classList.remove('payment-modal-open');
-    if (originalFocus && originalFocus.focus && originalFocus.isConnected) {
-      try { originalFocus.focus({preventScroll:true}); } catch (error) { originalFocus.focus(); }
-    }
-  }
-  function openModal(payment){
-    var amount = Number(payment.amount);
-    document.getElementById('mAmount').textContent = '$' + (isFinite(amount) ? amount.toFixed(2) : '0.00') + ' USD';
-    document.getElementById('mService').textContent = String(payment.service || '—');
-    document.getElementById('mProvider').textContent = String(payment.provider || '');
-    document.getElementById('mRef').textContent = String(payment.reference || '');
-    originalFocus = document.activeElement;
-    overlay.hidden = false;
-    overlay.classList.add('open');
-    overlay.setAttribute('aria-hidden', 'false');
-    document.body.classList.add('payment-modal-open');
-    closeButton.focus();
-  }
-  function cleanReturnUrl(){
-    if (!window.history || !window.history.replaceState) return;
-    try {
-      var clean = new URL(window.location.href);
-      ['payment_return','payment_cancelled','payment_id','state','token','session_id','PayerID'].forEach(function(key){ clean.searchParams.delete(key); });
-      window.history.replaceState({}, document.title, clean.pathname + clean.search + clean.hash);
-    } catch (error) { /* leave a valid provider return URL in place */ }
+    validationMessage = '';
+    fail('');
+    return { name: name, service: service, amount: amount };
   }
 
-  buttons.forEach(function(button){
-    button.addEventListener('click', function(){ button.dataset.clicked = '1'; });
-  });
-  form.addEventListener('submit', function(event){
-    event.preventDefault();
-    var button = event.submitter || buttons.filter(function(item){return item.dataset.clicked === '1';})[0] || buttons[0];
-    buttons.forEach(function(item){ delete item.dataset.clicked; });
-    if (!button || !validate()) return;
-    var provider = button.getAttribute('data-payment-provider');
-    var endpoint = form.getAttribute('data-' + provider + '-endpoint');
-    if (!endpoint) { setStatus('This payment method is unavailable. Please contact us.', 'is-error'); return; }
-    setStatus('', '');
-    setBusy(button, true);
-    var data = new FormData(form);
-    fetch(endpoint, {
-      method: 'POST',
-      body: data,
-      credentials: 'same-origin',
-      headers: {'X-Requested-With':'XMLHttpRequest','Accept':'application/json'}
-    }).then(function(response){
-      return response.text().then(function(body){
-        var json;
-        try { json = JSON.parse(body); } catch (error) { throw new Error('The payment service returned an invalid response.'); }
-        return {ok:response.ok,json:json};
+  var pending = null;
+  paypal.Buttons({
+    style: { layout: 'vertical', shape: 'rect', label: 'paypal', height: 48 },
+    /* Validate before an order is ever created: PayPal only opens once the
+       form is complete, and the visitor sees the exact field message. */
+    onClick: function(data, actions){
+      if (!details()) { return actions.reject(); }
+      return actions.resolve();
+    },
+    createOrder: function(data, actions){
+      pending = details();
+      if (!pending) { return actions.reject(); }
+      return actions.order.create({
+        purchase_units: [{
+          description: (pending.service + ' — ' + pending.name).slice(0, 127),
+          amount: { currency_code: 'USD', value: pending.amount }
+        }],
+        application_context: { shipping_preference: 'NO_SHIPPING', user_action: 'PAY_NOW' }
       });
-    }).then(function(response){
-      var json = response.json || {};
-      if (!response.ok || !json.success) {
-        showErrors(json.errors || {});
-        setBusy(null, false);
-        setStatus(json.message || 'We could not start checkout. Your form details have been kept.', 'is-error');
-        return;
-      }
-      var checkoutUrl = new URL(String(json.redirect_url || ''), window.location.href);
-      var host = checkoutUrl.hostname.toLowerCase();
-      var safeHost = provider === 'paypal'
-        ? ['www.paypal.com','www.sandbox.paypal.com','sandbox.paypal.com'].indexOf(host) !== -1
-        : host === 'checkout.stripe.com';
-      if (checkoutUrl.protocol !== 'https:' || !safeHost) {
-        setBusy(null, false);
-        setStatus('We could not verify the secure checkout link. Please contact us.', 'is-error');
-        return;
-      }
-      savePending(json.payment_id || '');
-      window.location.assign(checkoutUrl.href);
-    }).catch(function(error){
-      setBusy(null, false);
-      setStatus(error && error.message ? error.message : 'Network error — your form details have been kept. Please try again.', 'is-error');
-    });
-  });
-
-  closeButton.addEventListener('click', closeModal);
-  overlay.addEventListener('click', function(event){ if (event.target === overlay) closeModal(); });
-  document.addEventListener('keydown', function(event){
-    if (!overlay.classList.contains('open')) return;
-    if (event.key === 'Escape') { event.preventDefault(); closeModal(); }
-    if (event.key === 'Tab') { event.preventDefault(); closeButton.focus(); }
-  });
-
-  if (result.status === 'confirmed') {
-    clearPending();
-    resetPaymentForm();
-    openModal(result);
-    cleanReturnUrl();
-  } else {
-    restorePending();
-    if (result.status === 'cancelled') setStatus(result.message || 'Checkout was cancelled. Your form details have been kept.', 'is-cancelled');
-    else if (result.status === 'processing') setStatus(result.message || 'Payment confirmation is still processing. Your form details have been kept.', 'is-cancelled');
-    else if (result.status === 'error') setStatus(result.message || 'We could not confirm the payment. Your form details have been kept.', 'is-error');
-    if (result.status && result.status !== 'none') cleanReturnUrl();
-  }
+    },
+    onApprove: function(data, actions){
+      return actions.order.capture().then(function(capture){
+        var purchase = (capture && capture.purchase_units && capture.purchase_units[0]) || {};
+        var captures = (purchase.payments && purchase.payments.captures) || [];
+        var amount = (captures[0] && captures[0].amount && captures[0].amount.value) || (pending ? pending.amount : '');
+        showConfirmed({
+          provider: 'paypal',
+          amount: amount,
+          service: pending ? pending.service : '',
+          reference: (captures[0] && captures[0].id) || (data && data.orderID) || ''
+        });
+      });
+    },
+    onCancel: function(){ fail('PayPal checkout was cancelled. You can try again whenever you are ready.'); },
+    onError: function(err){
+      /* The rejected click above is a validation problem, not a PayPal one —
+         keep the exact field message instead of the generic wording. */
+      if (validationMessage) { fail(validationMessage); return; }
+      var detail = '';
+      if (err && (err.message || err.name)) { detail = String(err.message || err.name); }
+      if (detail.length > 160) { detail = detail.slice(0, 157) + '…'; }
+      fail(detail
+        ? 'PayPal reported: ' + detail + ' — please try again, or contact us before paying twice.'
+        : 'PayPal could not complete the payment. Please try again or contact us before paying twice.');
+    }
+  }).render('#paypal-button-container');
 })();
 </script>
+<?php endif; ?>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

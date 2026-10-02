@@ -600,6 +600,67 @@
       holder.appendChild(msg);
     });
   }
+  function readFormCaptchaToken(form, data) {
+    var existing = data.get('captcha_token') || data.get('cf-turnstile-response') || data.get('h-captcha-response') || data.get('g-recaptcha-response');
+    if (existing) return existing;
+    var hidden = form.querySelector('input[name="captcha_token"], input[name="cf-turnstile-response"], textarea[name="g-recaptcha-response"], textarea[name="h-captcha-response"]');
+    if (hidden && hidden.value) {
+      data.set('captcha_token', hidden.value);
+      return hidden.value;
+    }
+    var tsWidget = form.querySelector('.cf-turnstile[data-tpt-widget-id]');
+    if (tsWidget && window.turnstile && typeof window.turnstile.getResponse === 'function') {
+      try {
+        var tsToken = window.turnstile.getResponse(tsWidget.getAttribute('data-tpt-widget-id'));
+        if (tsToken) {
+          data.set('cf-turnstile-response', tsToken);
+          data.set('captcha_token', tsToken);
+          return tsToken;
+        }
+      } catch (err) { /* ignore */ }
+    } else if (form.querySelector('.h-captcha') && window.hcaptcha && typeof window.hcaptcha.getResponse === 'function') {
+      try {
+        var hcToken = window.hcaptcha.getResponse();
+        if (hcToken) {
+          data.set('h-captcha-response', hcToken);
+          data.set('captcha_token', hcToken);
+          return hcToken;
+        }
+      } catch (err) { /* ignore */ }
+    } else if (form.querySelector('.g-recaptcha') && window.grecaptcha && typeof window.grecaptcha.getResponse === 'function') {
+      try {
+        var rcToken = window.grecaptcha.getResponse();
+        if (rcToken) {
+          data.set('g-recaptcha-response', rcToken);
+          data.set('captcha_token', rcToken);
+          return rcToken;
+        }
+      } catch (err) { /* ignore */ }
+    }
+    return '';
+  }
+
+  function ensureFormCaptcha(form, data, done) {
+    if (typeof window.tptRenderTurnstiles === 'function') {
+      window.tptRenderTurnstiles(form);
+    }
+    if (readFormCaptchaToken(form, data) || !form.querySelector('.cf-turnstile') || !window.turnstile) {
+      done();
+      return;
+    }
+    var attempts = 0;
+    var timer = window.setInterval(function () {
+      attempts++;
+      if (typeof window.tptRenderTurnstiles === 'function') {
+        window.tptRenderTurnstiles(form);
+      }
+      if (readFormCaptchaToken(form, data) || attempts >= 20) {
+        window.clearInterval(timer);
+        done();
+      }
+    }, 150);
+  }
+
   function ajaxForm(form, onSuccess) {
     form.addEventListener('submit', function (e) {
       e.preventDefault();
@@ -612,39 +673,44 @@
       /* FormData(form) omits the clicked submit button. The PHP contact handler
          uses this marker to distinguish a real submission from a page request. */
       if (form.id === 'contactForm' || form.hasAttribute('data-quick-contact')) data.set('contact_submit', '1');
-      fetch(form.getAttribute('action') || window.location.href, {
-        method: 'POST',
-        body: data,
-        credentials: 'same-origin',
-        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
-      })
-        .then(function (res) {
-          return res.text().then(function (body) {
-            var json;
-            try { json = JSON.parse(body); } catch (error) { throw new Error('unexpected response'); }
-            if (!res.ok && json && json.success === undefined) throw new Error('request failed');
-            return json;
-          });
+      ensureFormCaptcha(form, data, function () {
+        fetch(form.getAttribute('action') || window.location.href, {
+          method: 'POST',
+          body: data,
+          credentials: 'same-origin',
+          headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
         })
-        .then(function (json) {
-          if (json && json.success) {
-            onSuccess(json, form);
-          } else {
-            if (json && json.errors) showFieldErrors(form, json.errors);
+          .then(function (res) {
+            return res.text().then(function (body) {
+              var json;
+              try { json = JSON.parse(body); } catch (error) { throw new Error('unexpected response'); }
+              if (!res.ok && json && json.success === undefined) throw new Error('request failed');
+              return json;
+            });
+          })
+          .then(function (json) {
+            if (json && json.success) {
+              onSuccess(json, form);
+            } else {
+              if (json && json.errors) {
+                showFieldErrors(form, json.errors);
+                if (json.errors.captcha) resetCaptcha(form);
+              }
+              if (status) {
+                status.className = 'form-status err show';
+                status.textContent = (json && json.message) ? json.message : 'Something went wrong. Please try again.';
+              }
+              if (submitBtn) submitBtn.disabled = false;
+            }
+          })
+          .catch(function () {
             if (status) {
               status.className = 'form-status err show';
-              status.textContent = (json && json.message) ? json.message : 'Something went wrong. Please try again.';
+              status.textContent = 'Network error — please try again or email us directly.';
             }
             if (submitBtn) submitBtn.disabled = false;
-          }
-        })
-        .catch(function () {
-          if (status) {
-            status.className = 'form-status err show';
-            status.textContent = 'Network error — please try again or email us directly.';
-          }
-          if (submitBtn) submitBtn.disabled = false;
-        });
+          });
+      });
     });
   }
 
@@ -679,6 +745,8 @@
      --------------------------------------------------------------------- */
   function resetCaptcha(form) {
     if (!form) return;
+    var tokenInput = form.querySelector('input[name="captcha_token"]');
+    if (tokenInput) tokenInput.value = '';
     var turnstile = form.querySelectorAll('.cf-turnstile[data-tpt-widget-id]');
     if (window.turnstile && typeof window.turnstile.reset === 'function' && turnstile.length) {
       Array.prototype.forEach.call(turnstile, function (widget) {
@@ -794,7 +862,9 @@
       }
       initIntlPhone(quickForm);
       if (typeof window.tptRenderTurnstiles === 'function') {
+        window.tptRenderTurnstiles(panel);
         window.requestAnimationFrame(function () { window.tptRenderTurnstiles(panel); });
+        window.setTimeout(function () { window.tptRenderTurnstiles(panel); }, 250);
       }
       focusFirstField();
       window.requestAnimationFrame(focusFirstField);
@@ -832,6 +902,7 @@
       }
     }
 
+    mount();
     panel.inert = true;
     window.TPT_CONTACT_MODAL = { open: open, close: close };
 

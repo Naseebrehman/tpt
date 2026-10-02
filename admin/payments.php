@@ -98,22 +98,18 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
 $services = piePaymentServiceRows();
 $paypalClientId = piePayPalClientId();
-$paypalClientIdConfigured = piePayPalClientIdConfigured();
-$paypalReady = piePayPalConfigured();
-$stripeReady = pieStripeConfigured();
-$paymentRecords = piePaymentRecordRows(100);
+$paypalReady = piePayPalClientIdConfigured();
 
 require_once dirname(__DIR__) . '/includes/admin-header.php';
 ?>
 <div class="a-card payment-admin-overview">
     <div>
         <p class="eyebrow">Payment settings</p>
-        <h2>PayPal + Stripe</h2>
-        <p class="hint">Checkout creation, payment capture and confirmation run server-side. Visitors are redirected to the providers’ hosted checkout; payment secrets are read only from deployment configuration and never rendered into the site.</p>
+        <h2>PayPal</h2>
+        <p class="hint">The Pay Online page loads the PayPal JavaScript SDK with the Client ID saved below. Payments are completed on PayPal’s secure checkout — no secret or other credential is stored on this server.</p>
     </div>
     <div class="payment-admin-status">
-        <span>PayPal <span class="badge <?= $paypalReady ? 'active' : 'inactive' ?>"><?= $paypalReady ? 'Ready' : 'Needs server credentials' ?></span></span>
-        <span>Stripe <span class="badge <?= $stripeReady ? 'active' : 'inactive' ?>"><?= $stripeReady ? 'Ready' : 'Needs server credentials' ?></span></span>
+        <span>PayPal <span class="badge <?= $paypalReady ? 'active' : 'inactive' ?>"><?= $paypalReady ? 'Configured' : 'Not configured' ?></span></span>
         <a class="a-btn" href="<?= esc(url('pay-online')) ?>" target="_blank" rel="noopener">Preview Pay Online</a>
     </div>
 </div>
@@ -122,7 +118,7 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
     <div class="payment-settings-title">
         <h3><?= icon('card', 18) ?> PayPal Client ID</h3>
     </div>
-    <p class="hint">Save the REST app <strong>Client ID</strong> here. The matching Client Secret must be configured as <code>PAYPAL_CLIENT_SECRET</code> (or <code>TPT_PAYPAL_CLIENT_SECRET</code>) on the server, with <code>PAYPAL_ENVIRONMENT</code> set to <code>sandbox</code> or <code>live</code>. Secret values are never stored in this form or sent to visitors.</p>
+    <p class="hint">Create (or open) a REST app in the PayPal Developer Dashboard and copy its <strong>Client ID</strong>. The Client ID is public and is used by the browser SDK; a Client Secret is not needed.</p>
     <form method="post" class="payment-admin-form">
         <?= csrfField() ?>
         <input type="hidden" name="payment_action" value="save_paypal">
@@ -133,12 +129,6 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
         </div>
         <div class="a-toolbar"><button class="a-btn primary" type="submit"><?= icon('check', 16) ?> Save</button></div>
     </form>
-</section>
-
-<section class="a-card payment-settings-card">
-    <div class="payment-settings-title"><h3><?= icon('lock', 18) ?> Stripe server credentials</h3></div>
-    <p class="hint">Configure <code>STRIPE_SECRET_KEY</code> and <code>STRIPE_WEBHOOK_SECRET</code> (or the <code>TPT_</code>-prefixed environment variables) in the server-only <code>config.local.php</code>. Never paste secret values into page content or frontend code.</p>
-    <p class="hint">Stripe webhook endpoint: <code><?= esc(rtrim(SITE_URL, '/') . url('api/payments/stripe/webhook')) ?></code>. Subscribe it to <code>checkout.session.completed</code> and <code>checkout.session.async_payment_succeeded</code>. The success return is also verified directly with Stripe before the site marks a payment complete.</p>
 </section>
 
 <section class="a-card">
@@ -204,33 +194,6 @@ require_once dirname(__DIR__) . '/includes/admin-header.php';
                         </form>
                     </div>
                 </td>
-            </tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
-    <?php endif; ?>
-</section>
-
-<section class="a-card">
-    <h3>Recent payment records</h3>
-    <p class="hint">Only server-confirmed provider transactions show as completed. Card numbers and provider login details are never stored here.</p>
-    <?php if (!$paymentRecords): ?>
-        <p class="hint">No payment records yet.</p>
-    <?php else: ?>
-    <div class="a-table-wrap">
-        <table class="a-table">
-            <thead><tr><th>Reference</th><th>Provider</th><th>Name / Business</th><th>Service</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
-            <tbody>
-            <?php foreach ($paymentRecords as $payment): ?>
-            <tr>
-                <td><code><?= esc($payment['provider_transaction_id'] !== '' ? $payment['provider_transaction_id'] : $payment['reference']) ?></code></td>
-                <td><?= esc(ucfirst((string) $payment['provider'])) ?></td>
-                <td><?= esc($payment['name']) ?></td>
-                <td><?= esc($payment['service']) ?></td>
-                <td><?= esc((string) $payment['currency']) ?> <?= esc(number_format((float) $payment['amount'], 2)) ?></td>
-                <td><span class="badge <?= $payment['status'] === 'completed' ? 'active' : 'inactive' ?>"><?= esc(ucfirst((string) $payment['status'])) ?></span></td>
-                <td><?= esc((string) $payment['confirmed_at'] ?: (string) $payment['created_at']) ?></td>
             </tr>
             <?php endforeach; ?>
             </tbody>

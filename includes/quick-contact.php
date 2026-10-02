@@ -6,6 +6,7 @@
  *
  * Rendered by includes/footer.php only on pages that opt into the modal.
  */
+require_once BASE_PATH . '/core/Captcha.php';
 ?>
 <div id="tpt-quick-contact" class="quick-contact-host" hidden>
     <form id="quickContactForm" method="post" action="<?= url('contact') ?>" novalidate data-quick-contact>

@@ -1,93 +1,83 @@
-# Pay Online — server-side PayPal and Stripe
+# Pay Online — PayPal JavaScript SDK
 
-The Pay Online page creates hosted checkout sessions on the server for PayPal
-and Stripe. The browser only posts the form to this site's same-origin API and
-redirects to the validated provider checkout URL. PayPal capture and Stripe
-session retrieval/webhook verification happen server-side. A payment is marked
-`completed` only after the provider confirms its amount, currency and transaction
-reference; the verified result is saved in `payment_records`.
+The payment page (`pay-online.php`) offers **PayPal only**. It uses the official
+PayPal JavaScript SDK with the Client ID saved in the application settings.
+There is no secret, no server-side capture, no webhook, no payment API and no
+payment record: the order is created, approved and confirmed by PayPal in the
+browser, and the page then shows the success popup with the amount, service and
+PayPal reference.
 
-## Server configuration
+## Configure the Client ID
 
-Payment secrets belong in the deployment-only `config/config.local.php` file
-(or environment variables), never in page content, Admin fields, HTML or
-JavaScript. The file is excluded from Git and blocked from web access.
+1. Sign in to the admin dashboard and open **Admin → Payment Settings**.
+2. Paste the **Client ID** of your PayPal REST app (PayPal Developer Dashboard
+   → Apps & Credentials).
+3. Press **Save**.
 
-```php
-return array(
-    // Existing database/site values omitted here.
-    'PAYPAL_CLIENT_SECRET' => '...',
-    'PAYPAL_ENVIRONMENT' => 'sandbox', // switch to 'live' only after staging checks
-    'STRIPE_SECRET_KEY' => 'sk_test_...',
-    'STRIPE_WEBHOOK_SECRET' => 'whsec_...',
-);
-```
+The Client ID is stored in the existing `settings` table under
+`paypal_client_id` and is read live when the page renders, so changing it takes
+effect on the next page load — nothing is hard-coded and no deployment or cache
+clear is needed.
 
-The supported environment-variable equivalents are `TPT_PAYPAL_CLIENT_SECRET`,
-`TPT_PAYPAL_ENVIRONMENT`, `TPT_STRIPE_SECRET_KEY` and
-`TPT_STRIPE_WEBHOOK_SECRET`. The PayPal REST **Client ID** remains managed in
-Admin → Payment Settings; the matching Client Secret stays server-only. Stripe
-credentials are not editable in the dashboard and are never returned by an API.
-The Admin payment page displays readiness without showing secret values.
+A Client Secret is **not** required and must not be entered: this integration
+never talks to the PayPal REST API from the server. When no Client ID is saved,
+the Pay Online page shows a “payments are currently unavailable” notice and
+loads no SDK or button.
 
-Configure the Stripe webhook to this same-site endpoint:
+The same admin screen keeps the existing **Payment form services** manager that
+feeds the service dropdown on the payment page.
 
-```text
-https://your-domain.example/api/payments/stripe/webhook
-```
+## What the page does
 
-Subscribe to `checkout.session.completed` and
-`checkout.session.async_payment_succeeded`. Signature and timestamp are
-verified with the server-only webhook signing secret. PayPal uses the REST API
-with server-side OAuth and captures its approved order on the signed-state
-return to this site.
+1. The visitor enters their name, email, optional phone/notes, an active service
+   and a USD amount.
+2. The PayPal SDK button validates those fields in the browser and creates the
+   order via `actions.order.create()` with the entered amount and service.
+3. PayPal’s own secure checkout opens. Card/PayPal details are entered on
+   PayPal, never on this site.
+4. On approval `actions.order.capture()` completes the payment and the page
+   shows the PayPal success popup (`#tpt-modal`) plus the inline confirmation
+   with the amount, service and reference.
 
-## Checkout and reset behavior
+## What is deliberately not part of this integration
 
-1. The page validates name/business name, configured service and USD amount.
-2. A CSRF-protected same-origin POST creates a pending server-side payment
-   record and asks the selected provider to create a hosted checkout.
-3. The browser redirects to PayPal or Stripe. This page does not load the
-   PayPal JavaScript SDK, call browser-side capture, or load payment snippets.
-4. On return, the server validates a high-entropy state token and confirms the
-   transaction directly with the provider. Stripe webhooks provide an
-   additional signed confirmation path.
-5. Only after the server reports a confirmed, recorded payment does the page
-   clear the name, service, amount, validation state and button state and show
-   the success popup. On cancel or an unconfirmed result, the form values are
-   restored so the customer can review them instead of losing them.
+- PayPal Client Secret or any other PayPal credential
+- Server-side PayPal confirmation/capture
+- PayPal webhooks
+- Payment verification or status tracking
+- Payment database tables, records, history, dashboard or CSV export
+- Payment APIs or confirmation endpoints
 
-The `payment_records` ledger stores the service, amount, provider, local
-reference, provider transaction reference and payment status. It does not store
-card numbers or PayPal login details. Admin → Payment Settings shows recent
-records and preserves the existing service manager.
+`core/Payments.php` only reads the settings written by the admin screen and
+builds the SDK URL (`https://www.paypal.com/sdk/js?client-id=…&currency=USD`).
 
 ## Database upgrade
 
-Back up the database, then run:
+Existing installations that still carry the old Stripe settings, encrypted
+PayPal secrets, payment email templates or `payments`/`payment_records` tables
+are cleaned up by `database/migrations/011_paypal_sdk_only.php`:
 
 ```sh
 php bin/cli.php migrate
 ```
 
-Migration 011 is now a compatibility no-op; migration 012 additively creates
-the payment ledger and event tables. No portfolio, contact, payment or other
-existing rows are dropped by these changes. `database/schema-mysql.sql` and the
-legacy import/upgrade SQL contain the same payment schema for fresh installs.
+The migration keeps `paypal_client_id`, drops the legacy payment tables and
+deletes every Stripe/secret setting. Customer payment details were never stored
+by this site, so no payment data needs to be preserved.
 
-## Verification and staging
+## Staging verification
 
-Local checks cover the rendered form, CSRF wiring, provider endpoints, secret
-non-disclosure, signed Stripe webhook validation, amount validation and the
-payment-success reset code. They do not charge a card or call provider APIs.
-Before using live credentials, test both providers on staging:
+1. Save a PayPal **Sandbox** Client ID, open `/pay-online`, and confirm the
+   PayPal button renders.
+2. Pay with a sandbox buyer account and confirm the PayPal success popup shows
+   the amount, service and reference.
+3. Change the Client ID in Admin → Payment Settings and reload the page; confirm
+   the SDK now loads with the new Client ID.
+4. Clear the Client ID and confirm the page shows the unavailable notice and
+   loads no PayPal SDK.
+5. Inspect page source and browser requests: only the public Client ID appears —
+   no secret, no server endpoint, no payment record request.
 
-- Use PayPal Sandbox and Stripe test-mode credentials.
-- Confirm success, cancellation and failed/unconfirmed returns.
-- Confirm only server-verified success produces a completed payment record and
-  opens the confirmation popup.
-- Confirm close and outside-click hide the popup and restore normal scrolling.
-- Confirm successful payment clears every form field and prior validation
-  state; cancellation keeps/restores the entered details.
-- Verify that no secret, browser payment SDK, browser capture code or payment
-  snippet appears in public source/network requests.
+`node tests/harness/cli.mjs tests/payment-page-render.php` renders the real page
+against an in-memory fixture and checks the Client-ID wiring, the single PayPal
+option and the absence of secrets.

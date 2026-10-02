@@ -20,12 +20,12 @@ reimport the legacy SQL seeds into production. New installs can use
 The existing frontend, assets and dashboard remain. Clean URLs now have a
 compatibility router (`front.php`, `app/routes.php`); contact handling has a
 controller/repository boundary; working SMTP, Gemini and uploads live in `core/`
-with legacy include wrappers. Pay Online uses server-side PayPal and Stripe
-hosted checkout: secrets stay in deployment configuration, provider confirmation
-is verified on the server, and completed payments are recorded. Admin → Payment
-Settings preserves the service manager and displays recent payment records.
-Branding, Alia controls/leads, content/SEO overrides and dependency-free
-regression tests were added.
+with legacy include wrappers. Payments are PayPal only: the Pay Online page loads
+the PayPal JavaScript SDK with the Client ID saved in Admin → Payment Settings
+(stored in the settings table), and the existing admin-managed service list fills
+the payment form. There is no secret, server-side capture, webhook, payment API
+or payment record. Branding, Alia controls/leads, content/SEO
+overrides and dependency-free regression tests were added.
 See [the audit](docs/AUDIT.md) and deployment guide for limitations and pending
 staging checks. This is an incremental upgrade, not a claim that every legacy
 page has been rewritten into MVC or every requested CMS feature is complete.
@@ -98,7 +98,7 @@ chart, service bar chart, recent submissions, quick links, system status), `subm
 `portfolio.php` + `portfolio-edit.php` (Sortable.js reorder, stats/chart JSON editors),
 `team.php` (drag-and-drop order), `testimonials.php`, `subscribers.php`,
 `chats.php` (Alia conversations: full transcript, status, edit, delete),
-`payments.php` (Payment Settings: PayPal Client ID, server-only PayPal/Stripe credential status, service manager and recent server-confirmed records; see [docs/PAYMENTS.md](docs/PAYMENTS.md)),
+`payments.php` (Payment Settings: the PayPal Client ID used by the PayPal JavaScript SDK plus the existing services manager; see [docs/PAYMENTS.md](docs/PAYMENTS.md)),
 `settings.php` (SMTP / AI providers / notifications / email templates / Site / Social /
 Maintenance tabs with live test buttons),
 `password.php`, `actions.php` (AJAX router), `export.php` (CSV).
@@ -127,8 +127,8 @@ contains safe defaults and computes the paths automatically.
 | `BASE_URL` | Auto-detected, so sub-folder installs work too. |
 
 Other site settings (SMTP, Gemini, agency info, socials, analytics, maintenance mode, founder
-name and default SEO tags) live in the **settings table**. The PayPal Client ID is managed in
-Admin → Payment Settings; PayPal and Stripe secrets stay in server-only deployment config.
+name and default SEO tags) live in the **settings table**, as does the PayPal Client ID
+managed in Admin → Payment Settings.
 
 ---
 
