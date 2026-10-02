@@ -21,13 +21,6 @@ foreach ($admins as $path => $file) {
 $router->add(array('GET', 'HEAD'), '~^/search/?$~D', array('PublicController', 'search'));
 $router->add(array('GET'), '~^/api/search/?$~D', array('ApiController', 'search'));
 $router->add(array('POST'), '~^/api/chat/?$~D', function () { require_once BASE_PATH . '/includes/chatbot-api.php'; handleChatbotRequest(); });
-require_once BASE_PATH . '/app/Controllers/PaymentController.php';
-foreach (array('paypal', 'stripe') as $paymentProvider) {
-    $router->add(array('POST'), '~^/api/payments/' . preg_quote($paymentProvider, '~') . '/create/?$~D', function () use ($paymentProvider) {
-        PaymentController::create($paymentProvider);
-    });
-}
-$router->add(array('POST'), '~^/api/payments/stripe/webhook/?$~D', array('PaymentController', 'stripeWebhook'));
 foreach (array('contact' => array('contact.php', 'contact_submit'), 'lead' => array('contact.php', 'contact_submit'), 'newsletter' => array('newsletter.php', null)) as $path => $handler) {
     $router->add(array('POST'), '~^/api/' . $path . '/?$~D', function () use ($handler) { ApiController::legacy($handler[0], $handler[1]); });
 }

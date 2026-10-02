@@ -25,10 +25,4 @@ return array(
     'SITE_NAME'  => 'The Pie Technologies',
     'ADMIN_EMAIL'=> 'you@your-domain.com',
     'PRETTY_URLS'=> true,                      // false only if mod_rewrite is unavailable
-
-    // Optional payment credentials are server-only; never put them in HTML or JavaScript.
-    'PAYPAL_CLIENT_SECRET' => '',              // REST app secret; keep the Client ID in Admin → Payment Settings
-    'PAYPAL_ENVIRONMENT'   => 'sandbox',       // 'sandbox' or 'live'
-    'STRIPE_SECRET_KEY'    => '',              // Stripe secret key (sk_test_... or sk_live_...)
-    'STRIPE_WEBHOOK_SECRET'=> '',              // webhook signing secret (whsec_...)
 );

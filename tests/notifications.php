@@ -11,10 +11,6 @@ define('BASE_PATH', dirname(__DIR__));
 define('BASE_URL', ''); define('SITE_URL', 'https://example.test');
 define('SITE_NAME', 'The Pie Technologies'); define('ADMIN_EMAIL', 'admin@example.test');
 define('PRETTY_URLS', true); define('DB_OK', true); define('UPLOAD_PATH', BASE_PATH . '/uploads/');
-define('PAYPAL_CLIENT_SECRET', 'unit-test-paypal-secret');
-define('PAYPAL_ENVIRONMENT', 'sandbox');
-define('STRIPE_SECRET_KEY', 'sk_test_unit_test_only');
-define('STRIPE_WEBHOOK_SECRET', 'whsec_unit_test_only');
 
 /* Fake settings + tables so the modules run without MySQL. */
 $GLOBALS['fake_settings'] = array();
@@ -197,28 +193,22 @@ setFakeSetting('ai_provider2_model', 'bad model!!');
 $result = AIProviders::chat(array(array('role' => 'user', 'content' => 'hi')), '');
 check(!$result['ok'] && $result['error'] === 'model', 'invalid model name rejected before any network call');
 
-/* ------------------------- Server-side payments ----------------------- */
-check(function_exists('piePaymentServices') && function_exists('piePaymentRecordRows'), 'the service manager and payment ledger helpers remain available');
-check(function_exists('piePayPalConfigured') && function_exists('pieStripeConfigured') && class_exists('PaymentGateway'), 'both server-side hosted payment gateways are available');
+/* ------------------------- PayPal SDK payment page ---------------------- */
+check(function_exists('piePaymentServices'), 'the existing Admin Services list remains available');
+check(function_exists('piePayPalClientId') && function_exists('piePayPalClientIdConfigured') && function_exists('piePayPalSdkUrl'), 'the stored PayPal Client ID helpers are available');
+check(!function_exists('piePaymentCreateAttempt') && !function_exists('piePaymentCompleteAttempt') && !function_exists('piePaymentValidateSubmission'), 'no pending payment attempts, server validation or confirmed completion remain');
+check(!function_exists('piePayPalCreateOrder') && !function_exists('piePayPalCaptureOrder') && !function_exists('pieStripeCreateCheckoutSession') && !function_exists('pieStripeConfirmCheckoutSession'), 'no server-side PayPal/Stripe checkout or confirmation helpers remain');
+check(!function_exists('piePaymentCredentialEncrypt') && !function_exists('piePayPalSecret') && !function_exists('pieStripeSecret'), 'no credential encryption or secret accessors remain');
 setFakeSetting('paypal_client_id', 'Axxxxxxxxxxxxxxxxxxxxxxxx');
-check(piePayPalClientId() === 'Axxxxxxxxxxxxxxxxxxxxxxxx' && piePayPalClientIdConfigured() && piePayPalConfigured(), 'PayPal Client ID is read from settings and combined with the server secret');
-check(pieStripeConfigured(), 'Stripe is enabled from a server-only secret key');
+check(piePayPalClientId() === 'Axxxxxxxxxxxxxxxxxxxxxxxx' && piePayPalClientIdConfigured(), 'the Client ID is read from the settings system');
+check(piePayPalSdkUrl() === 'https://www.paypal.com/sdk/js?client-id=Axxxxxxxxxxxxxxxxxxxxxxxx&currency=USD&components=buttons', 'the PayPal SDK URL is built from the stored Client ID');
 setFakeSetting('paypal_client_id', 'not a valid id');
-check(!piePayPalClientIdConfigured() && !piePayPalConfigured(), 'an invalid PayPal Client ID disables PayPal');
-check(PaymentGateway::normalizeAmount('500.5') === array('decimal' => '500.50', 'cents' => 50050), 'payment amounts normalize to exact USD cents');
-check(PaymentGateway::normalizeAmount('0') === false && PaymentGateway::normalizeAmount('1000000.01') === false
-    && PaymentGateway::normalizeAmount('1.999') === false, 'zero, over-limit and excess-decimal amounts are rejected');
-$webhookPayload = '{"id":"evt_test","type":"checkout.session.completed"}';
-$webhookTimestamp = 1000;
-$webhookSignature = hash_hmac('sha256', $webhookTimestamp . '.' . $webhookPayload, STRIPE_WEBHOOK_SECRET);
-check(PaymentGateway::validStripeSignature($webhookPayload, 't=' . $webhookTimestamp . ',v1=' . $webhookSignature, STRIPE_WEBHOOK_SECRET, $webhookTimestamp), 'Stripe webhook signature verifies with its timestamp');
-check(!PaymentGateway::validStripeSignature($webhookPayload, 't=' . $webhookTimestamp . ',v1=' . str_repeat('0', 64), STRIPE_WEBHOOK_SECRET, $webhookTimestamp)
-    && !PaymentGateway::validStripeSignature($webhookPayload, 't=1,v1=' . $webhookSignature, STRIPE_WEBHOOK_SECRET, $webhookTimestamp), 'bad and stale Stripe webhook signatures are rejected');
+check(!piePayPalClientIdConfigured() && piePayPalSdkUrl('') === 'https://www.paypal.com/sdk/js?client-id=not%20a%20valid%20id&currency=USD&components=buttons', 'an invalid Client ID is not treated as configured');
+setFakeSetting('paypal_client_id', '');
+check(!piePayPalClientIdConfigured(), 'an empty Client ID disables the PayPal button');
 $adminPayments = file_get_contents(BASE_PATH . '/admin/payments.php');
-check(stripos($adminPayments, 'Stripe server credentials') !== false && stripos($adminPayments, 'Recent payment records') !== false
-    && stripos($adminPayments, 'value="' . STRIPE_SECRET_KEY . '"') === false, 'Admin shows gateway readiness and records without rendering Stripe secrets');
-check(strpos((string) file_get_contents(BASE_PATH . '/pay-online.php'), 'paypal.com/sdk/js') === false
-    && strpos((string) file_get_contents(BASE_PATH . '/pay-online.php'), 'actions.order.capture') === false, 'public payment page does not include browser-side PayPal processing');
+check(stripos($adminPayments, 'stripe') === false && stripos($adminPayments, 'paypal_secret') === false, 'Admin Payment Settings contains no Stripe or secret fields');
+check(stripos((string) file_get_contents(BASE_PATH . '/core/Payments.php'), 'stripe') === false, 'core/Payments.php contains no Stripe code');
 
 /* -------------------------------- done ---------------------------------- */
 echo "\n$count checks passed.\n";

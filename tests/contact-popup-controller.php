@@ -39,8 +39,24 @@ function dbInsert($sql, $params = array())
     return 1;
 }
 require BASE_PATH . '/includes/functions.php';
+require BASE_PATH . '/includes/data.php';
+$GLOBALS['fake_contact_settings'] = array(
+    'captcha_enabled' => '1',
+    'captcha_provider' => 'turnstile',
+    'captcha_site_key' => '0x4AAAAAA_popup_site_key',
+    'captcha_secret_key' => '0x4AAAAAA_popup_secret_key',
+);
 settingsCache(true);
-require BASE_PATH . '/core/Captcha.php';
+ob_start();
+require BASE_PATH . '/includes/quick-contact.php';
+$popupMarkup = (string) ob_get_clean();
+$GLOBALS['popup_captcha_rendered'] = class_exists('Captcha')
+    && strpos($popupMarkup, 'cf-turnstile') !== false
+    && strpos($popupMarkup, '0x4AAAAAA_popup_site_key') !== false
+    && strpos($popupMarkup, 'tptRenderTurnstiles') !== false;
+$GLOBALS['fake_contact_settings'] = array();
+settingsCache(true);
+require_once BASE_PATH . '/core/Captcha.php';
 require BASE_PATH . '/core/Notifications.php';
 require BASE_PATH . '/includes/email-templates.php';
 require BASE_PATH . '/app/Models/Repository.php';
@@ -68,8 +84,9 @@ register_shutdown_function(function () {
     $saved = count($row) === 10 && ($row[0] ?? '') === 'Test Business' && ($row[1] ?? '') === 'customer@example.test'
         && ($row[4] ?? '') === '' && ($row[7] ?? '') === 'project_popup';
     $emails = count($GLOBALS['fake_contact_deliveries']) === 2;
-    $passed = $saved && $emails;
+    $passed = !empty($GLOBALS['popup_captcha_rendered']) && $saved && $emails;
     echo "\nContact popup shared-controller integration: " . ($passed ? 'PASS' : 'FAIL') . PHP_EOL;
+    echo '  Popup renders Captcha widget & script without caller preloading Captcha.php: ' . (!empty($GLOBALS['popup_captcha_rendered']) ? 'YES' : 'NO') . PHP_EOL;
     echo '  Admin/customer notification delivery attempts (SMTP intentionally unconfigured): ' . count($GLOBALS['fake_contact_deliveries']) . PHP_EOL;
     if (!$passed) { exit(1); }
 });

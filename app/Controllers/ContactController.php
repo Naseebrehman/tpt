@@ -64,8 +64,11 @@ class ContactController
         }
 
         /* CAPTCHA — verified server-side (Task 20/22). */
-        if (class_exists('Captcha') && !Captcha::verify(Captcha::tokenFromRequest(), pieClientIp())) {
-            $errors['captcha'] = 'Please complete the security check and try again.';
+        if (class_exists('Captcha') && Captcha::enabled()) {
+            $captchaToken = Captcha::tokenFromRequest();
+            if ($captchaToken === '' || (empty($errors) && !Captcha::verify($captchaToken, pieClientIp()))) {
+                $errors['captcha'] = 'Please complete the security check and try again.';
+            }
         }
 
         if ($errors) {

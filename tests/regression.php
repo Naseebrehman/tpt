@@ -43,11 +43,8 @@ check(Content::path('/about.php?utm_source=test') === '/about', 'canonical remov
 check(Content::path('/index.php') === '/', 'canonical home');
 check($router->resolve('POST', '/api/payment')['status'] === 404, 'legacy payment API removed');
 check($router->resolve('POST', '/api/webhooks/stripe')['status'] === 404, 'Stripe webhook API removed');
-check($router->resolve('POST', '/api/payments/paypal/create')['handler'] !== null, 'PayPal checkout creation is routed server-side');
-check($router->resolve('POST', '/api/payments/stripe/create')['handler'] !== null, 'Stripe checkout creation is routed server-side');
-check($router->resolve('POST', '/api/payments/stripe/webhook')['handler'] !== null, 'Stripe webhook endpoint is routed for signature verification');
-check($router->resolve('GET', '/api/payments/paypal/create')['status'] === 405, 'payment creation is POST-only');
-check($router->resolve('POST', '/paypal-api')['status'] === 404 && $router->resolve('POST', '/stripe-api')['status'] === 404, 'legacy payment APIs remain absent');
+check($router->resolve('GET', '/paypal-api')['status'] === 404 && $router->resolve('POST', '/paypal-api')['status'] === 404, 'the server-side PayPal checkout route is removed');
+check($router->resolve('POST', '/stripe-api')['status'] === 404 && $router->resolve('POST', '/stripe-webhook')['status'] === 404, 'the Stripe checkout and webhook routes are removed');
 check($router->resolve('GET', '/book-appointment')['handler'] !== null, 'the appointment page has a public route');
 $bookingSource = (string) file_get_contents(BASE_PATH . '/book-appointment.php');
 $calendlyUrl = 'https://calendly.com/mominalitech/book-appointment';
@@ -70,6 +67,7 @@ check(strpos($quick, '<label') === false
     && strpos($quick, 'aria-label="Question / Query"') !== false
     && substr_count($quick, '<textarea') === 1, 'the popup hides visible labels while keeping all four fields accessible');
 check(strpos($quick, 'contact_variant" value="project_popup') !== false, 'the popup marks its compact variant for the shared contact validator');
+check(strpos($quick, "require_once BASE_PATH . '/core/Captcha.php';") !== false && strpos($quick, 'Captcha::field()') !== false, 'the popup loads Captcha.php so the security check renders like Contact Us');
 $contactController = (string) file_get_contents(BASE_PATH . '/app/Controllers/ContactController.php');
 check(strpos($contactController, 'public static function handle') !== false
     && strpos($contactController, '$isProjectPopup') !== false
@@ -181,24 +179,16 @@ foreach (array('notification_emails', 'email_templates') as $must) {
     if (strpos((string) file_get_contents(BASE_PATH . '/database/schema-mysql.sql'), $must) === false) { $bad++; }
 }
 check($bad === 0, 'fresh schema includes the notification and email-template tables');
-$schemaSource = (string) file_get_contents(BASE_PATH . '/database/schema-mysql.sql');
-check(strpos($schemaSource, 'CREATE TABLE IF NOT EXISTS payment_records') !== false
-    && strpos($schemaSource, 'CREATE TABLE IF NOT EXISTS payment_events') !== false, 'fresh schema preserves a payment ledger and idempotency events');
-check(is_file(BASE_PATH . '/database/migrations/012_server_side_payments.php'), 'migration 012 additively installs server-side payment records');
-$legacyPaymentMigration = (string) file_get_contents(BASE_PATH . '/database/migrations/011_paypal_sdk_only.php');
-check(stripos($legacyPaymentMigration, 'DROP TABLE') === false && stripos($legacyPaymentMigration, 'DELETE FROM settings') === false, 'legacy payment migration no longer drops data or credentials');
-$corePayments = (string) file_get_contents(BASE_PATH . '/core/Payments.php');
-$payOnline = (string) file_get_contents(BASE_PATH . '/pay-online.php');
-check(strpos($corePayments, 'private static function paypalApi') !== false
-    && strpos($corePayments, '/v2/checkout/orders') !== false
-    && strpos($corePayments, 'https://api.stripe.com') !== false
-    && strpos($corePayments, '/v1/checkout/sessions') !== false, 'PayPal and Stripe provider calls execute only in the server module');
-check(strpos($payOnline, 'paypal.com/sdk/js') === false && strpos($payOnline, 'actions.order.capture') === false
-    && strpos($payOnline, 'piePayPalSdkUrl') === false, 'the browser page contains no PayPal SDK or browser-side capture');
-check(strpos($payOnline, 'csrfField()') !== false && strpos($payOnline, 'data-payment-provider="paypal"') !== false
-    && strpos($payOnline, 'data-payment-provider="stripe"') !== false, 'hosted provider checkout buttons use a CSRF-protected shared form');
-check(strpos($payOnline, "if (result.status === 'confirmed')") !== false
-    && strpos($payOnline, 'resetPaymentForm();') !== false, 'payment fields are cleared only on the server-confirmed success path');
+foreach (array('payments', 'payment_records', 'payment_events') as $gone) {
+    if (strpos((string) file_get_contents(BASE_PATH . '/database/schema-mysql.sql'), 'CREATE TABLE IF NOT EXISTS ' . $gone) !== false) { $bad++; }
+}
+check($bad === 0, 'fresh schema contains no payment tables');
+foreach (array('stripe-api.php', 'stripe-webhook.php', 'paypal-api.php', 'core/Stripe.php', 'core/PayPal.php', 'core/PaymentRecords.php', 'admin/payment-records.php', 'app/Controllers/PaymentController.php', 'database/migrations/012_server_side_payments.php') as $removed) {
+    check(!is_file(BASE_PATH . '/' . $removed), 'removed: ' . $removed);
+}
+check(is_file(BASE_PATH . '/database/migrations/011_paypal_sdk_only.php'), 'migration 011 removes legacy Stripe/payment-server state');
+check(strpos((string) file_get_contents(BASE_PATH . '/core/Payments.php'), 'paypal.com/sdk/js') !== false
+    && strpos((string) file_get_contents(BASE_PATH . '/pay-online.php'), 'piePayPalSdkUrl') !== false, 'the payment page loads the PayPal JavaScript SDK built from the saved Client ID');
 check(is_file(BASE_PATH . '/database/migrations/002_notifications.php'), 'migration 002 exists for existing installations');
 check(strpos((string) file_get_contents(BASE_PATH . '/database/migrations/002_notifications.php'), 'notification_emails') !== false, 'migration 002 creates the notification tables');
 check(strpos((string) file_get_contents(BASE_PATH . '/database.sql'), 'Admin@123') !== false, 'phpMyAdmin dump documents its default password');
